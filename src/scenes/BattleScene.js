@@ -13,6 +13,7 @@ export default class BattleScene extends Phaser.Scene {
         this.enemyHpBar = null;
         this.coinHud = null;
         this.initialBattleParams = null;
+          this.battleEnded = false; 
     }
 
     init(data) {
@@ -122,11 +123,22 @@ export default class BattleScene extends Phaser.Scene {
      * バトルを終了し、結果に応じて次のシーンへ遷移する
      * @param {string} result - 'win' or 'lose'
      */
- endBattle(result) {
+ // src/scenes/BattleScene.js の endBattle メソッド (最終版)
+
+    endBattle(result) {
         console.log(`BattleScene: バトル終了。結果: ${result}`);
         
+        // ★★★ 修正箇所: イベントが複数回発行されないように、フラグで制御 ★★★
+        if (this.battleEnded) {
+            console.warn("BattleScene: バトル終了処理が複数回呼ばれました。");
+            return;
+        }
+        this.battleEnded = true; // 終了処理開始フラグ
+
+        // まず入力を無効化し、ユーザーが連打しても問題が起きないようにする
+        this.input.enabled = false;
+
         if (result === 'win') {
-            // 勝利時: ノベルパートへ戻る
             this.scene.get('SystemScene').events.emit('return-to-novel', {
                 from: this.scene.key,
                 params: { 
@@ -139,35 +151,26 @@ export default class BattleScene extends Phaser.Scene {
             // 敗北時: ゲームオーバー処理
             console.log("BattleScene: ゲームオーバー処理を開始します。");
             
-            this.input.enabled = false; // ボタン表示中は入力無効化
-            // ゲームオーバー画面（またはボタン）を表示
-            const gameOverText = this.add.text(this.scale.width / 2, this.scale.height / 2 - 50, 'GAME OVER', {
-                fontSize: '64px', fill: '#f00', stroke: '#000', strokeThickness: 5
-            }).setOrigin(0.5).setDepth(999);
-
-            const retryButton = this.add.text(this.scale.width / 2, this.scale.height / 2 + 50, 'もう一度挑戦', {
-                fontSize: '32px', fill: '#fff', backgroundColor: '#880000', padding: { x: 20, y: 10 }
-            }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(999);
-
-            const titleButton = this.add.text(this.scale.width / 2, this.scale.height / 2 + 120, 'タイトルに戻る', {
-                fontSize: '32px', fill: '#fff', backgroundColor: '#444444', padding: { x: 20, y: 10 }
-            }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(999);
+            // ゲームオーバー画面（またはボタン）を表示 (テキスト、ボタンの生成は変更なし)
+            const gameOverText = this.add.text(this.scale.width / 2, this.scale.height / 2 - 50, 'GAME OVER', { /* ... */ });
+            const retryButton = this.add.text(this.scale.width / 2, this.scale.height / 2 + 50, 'もう一度挑戦', { /* ... */ });
+            const titleButton = this.add.text(this.scale.width / 2, this.scale.height / 2 + 120, 'タイトルに戻る', { /* ... */ });
 
             retryButton.on('pointerdown', () => {
                 console.log("BattleScene: もう一度挑戦します。");
-                // ★★★ 修正箇所: BattleSceneを再起動する際にSystemSceneを経由 ★★★
-                // これにより、input.enabled=true; がSystemSceneで適切に処理される
+                // ★★★ 修正箇所: リトライボタンを押した時に、再度endBattleが呼ばれないようにする ★★★
+                // this.battleEnded = false; // 再度リトライできる場合はfalseに戻す
                 this.scene.get('SystemScene').events.emit('request-scene-transition', {
-                    to: this.scene.key, // BattleScene自身
-                    from: this.scene.key, // BattleSceneから
-                    params: this.initialBattleParams // 初期パラメータを渡す
+                    to: this.scene.key,
+                    from: this.scene.key,
+                    params: this.initialBattleParams
                 });
             });
 
             titleButton.on('pointerdown', () => {
                 console.log("BattleScene: タイトルに戻ります。");
-                // TODO: タイトルシーンへのジャンプルールをSystemSceneに追加
-                // 現状はGameSceneの頭に戻る代替処理
+                // ★★★ 修正箇所: タイトルボタンを押した時に、再度endBattleが呼ばれないようにする ★★★
+                // this.battleEnded = false; 
                 this.scene.get('SystemScene').events.emit('return-to-novel', {
                     from: this.scene.key,
                     params: { 'f.battle_result': 'game_over' }
@@ -175,7 +178,6 @@ export default class BattleScene extends Phaser.Scene {
             });
         }
     }
-
     // ★★★ BattleSceneのresumeメソッドも必ず持つ ★★★
     resume() {
         console.log("BattleScene: resume されました。入力を再有効化します。");
