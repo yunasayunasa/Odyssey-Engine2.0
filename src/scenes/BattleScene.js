@@ -116,27 +116,24 @@ export default class BattleScene extends Phaser.Scene {
      * バトルを終了し、結果に応じて次のシーンへ遷移する
      * @param {string} result - 'win' or 'lose'
      */
-    endBattle(result) {
+ endBattle(result) {
         console.log(`BattleScene: バトル終了。結果: ${result}`);
         
         if (result === 'win') {
-            // ★★★ 勝利時: ノベルパートへ戻る ★★★
+            // 勝利時: ノベルパートへ戻る
             this.scene.get('SystemScene').events.emit('return-to-novel', {
                 from: this.scene.key,
                 params: { 
                     'f.battle_result': 'win',
-                    'f.player_hp': this.stateManager.f.player_hp, // 最終HPをノベルに戻す
-                    'f.coin': this.stateManager.f.coin // 最終コイン数をノベルに戻す
-                    // ... 取得アイテムなど
+                    'f.player_hp': this.stateManager.f.player_hp,
+                    'f.coin': this.stateManager.f.coin
                 }
             });
         } else {
-            // ★★★ 敗北時: ゲームオーバー処理 ★★★
+            // 敗北時: ゲームオーバー処理
             console.log("BattleScene: ゲームオーバー処理を開始します。");
             
-            // 入力を一時的に無効化し、誤操作を防ぐ
-            this.input.enabled = false;
-
+            this.input.enabled = false; // ボタン表示中は入力無効化
             // ゲームオーバー画面（またはボタン）を表示
             const gameOverText = this.add.text(this.scale.width / 2, this.scale.height / 2 - 50, 'GAME OVER', {
                 fontSize: '64px', fill: '#f00', stroke: '#000', strokeThickness: 5
@@ -152,27 +149,29 @@ export default class BattleScene extends Phaser.Scene {
 
             retryButton.on('pointerdown', () => {
                 console.log("BattleScene: もう一度挑戦します。");
-                // 現在のシーンを停止し、初期パラメータで再起動
-                this.scene.stop();
-                this.scene.start(this.scene.key, { transitionParams: this.initialBattleParams });
+                // ★★★ 修正箇所: BattleSceneを再起動する際にSystemSceneを経由 ★★★
+                // これにより、input.enabled=true; がSystemSceneで適切に処理される
+                this.scene.get('SystemScene').events.emit('request-scene-transition', {
+                    to: this.scene.key, // BattleScene自身
+                    from: this.scene.key, // BattleSceneから
+                    params: this.initialBattleParams // 初期パラメータを渡す
+                });
             });
 
             titleButton.on('pointerdown', () => {
                 console.log("BattleScene: タイトルに戻ります。");
-                // TODO: タイトルシーンへのジャンプロジック
-                // this.scene.stop();
-                // this.scene.start('TitleScene'); // TitleSceneがあれば
-                // 一旦GameSceneの頭に戻る代替処理
+                // TODO: タイトルシーンへのジャンプルールをSystemSceneに追加
+                // 現状はGameSceneの頭に戻る代替処理
                 this.scene.get('SystemScene').events.emit('return-to-novel', {
                     from: this.scene.key,
-                    params: { 'f.battle_result': 'game_over' } // ゲームオーバー結果を渡す
+                    params: { 'f.battle_result': 'game_over' }
                 });
             });
         }
     }
 
+    // ★★★ BattleSceneのresumeメソッドも必ず持つ ★★★
     resume() {
         console.log("BattleScene: resume されました。入力を再有効化します。");
         this.input.enabled = true;
     }
-}
