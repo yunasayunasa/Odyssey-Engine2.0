@@ -8,6 +8,7 @@ import BacklogScene from './scenes/BacklogScene.js';
 import ActionScene from './scenes/ActionScene.js';
 import NovelOverlayScene from './scenes/NovelOverlayScene.js';
 import ConfigManager from './core/ConfigManager.js';
+import BattleScene from './scenes/BattleScene.js';
 
 const config = {
     type: Phaser.AUTO,
@@ -28,7 +29,8 @@ const config = {
         ConfigScene, 
         BacklogScene, 
         ActionScene, 
-        NovelOverlayScene
+        NovelOverlayScene,
+        BattleScene
     ]
 };
 
