@@ -1,6 +1,7 @@
 import ScenarioManager from '../core/ScenarioManager.js';
 import SoundManager from '../core/SoundManager.js';
 import CoinHud from '../ui/CoinHud.js';
+import HpBar from '../ui/HpBar.js';
 import StateManager from '../core/StateManager.js';
 import MessageWindow from '../ui/MessageWindow.js';
 import { handleCharaShow } from '../handlers/chara_show.js';
@@ -106,6 +107,14 @@ export default class GameScene extends Phaser.Scene {
     // ★★★ ゲームループの 'update' イベントで f.coin の値を監視し、HUDを更新 ★★★
     this.events.on('update', this.updateCoinHud, this);
     // または、StateManagerにf.coinの変更を通知する仕組みを作る（より高度）
+    // ★★★ HPバーHUDをインスタンス化 (画面右上に隠しておくか、表示しない) ★★★
+    // ノベルパートでは基本HPバーは非表示だが、テスト用に配置
+    this.playerHpBar = new HpBar(this, 100, 100, 200, 25, 'player'); // プレイヤーHPバー
+    this.playerHpBar.setVisible(false); // 通常は非表示
+
+    // ★★★ ゲームループの 'update' イベントで f.player_hp の値を監視し、HUDを更新 ★★★
+    this.events.on('update', this.updatePlayerHpBar, this);
+
         
         // --- タグハンドラの登録 ---
         this.scenarioManager.registerTag('chara_show', handleCharaShow);
@@ -170,6 +179,14 @@ this.scenarioManager.registerTag('stopvideo', handleStopVideo);
         this.input.on('pointerdown', () => this.scenarioManager.onClick());
         console.log("GameScene: create 完了");
     }
+
+    // ★★★ プレイヤーHPバーを更新するメソッドを追加 ★★★
+updatePlayerHpBar() {
+    const currentPlayerHp = this.stateManager.f.player_hp || 0;
+    const maxPlayerHp = this.stateManager.f.player_max_hp || 100; // 最大HPも変数で管理
+    if (this.playerHpBar.currentHp !== currentPlayerHp || this.playerHpBar.maxHp !== maxPlayerHp) {
+        this.playerHpBar.setHp(currentPlayerHp, maxPlayerHp);
+    }}
 
     // ★★★ コインHUDを更新するメソッドを追加 ★★★
 updateCoinHud() {
