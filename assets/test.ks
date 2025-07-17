@@ -159,7 +159,7 @@ kaito:「いよいよアクションシーンへ突入！戻ってきたら結�
 [wait time=500]
 ; ★★★ jumpタグにparams属性を追加 ★★★
 ; ActionSceneに、f.love_meter (player_level), f.player_name, f.coin を渡す
-[jump storage="ButtleScene" params="{player_level:f.love_meter, player_name:'&f.player_name;', start_area:'bridge', current_coin:f.coin, player_max_hp:f.player_max_hp, player_hp:f.player_hp}"]
+[jump storage="BattleScene" params="{player_level:f.love_meter, player_name:'&f.player_name;', start_area:'bridge', current_coin:f.coin, player_max_hp:f.player_max_hp, player_hp:f.player_hp}"]
 [fadein time=500]
 
 [chara_show name="yuna" pos="left" time=500] 
