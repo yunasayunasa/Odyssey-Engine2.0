@@ -1,12 +1,10 @@
-// SystemScene.js (最終版 Ver.4)
+// src/scenes/SystemScene.js (最終版 Ver.8 - UISceneの起動を一本化)
 
 export default class SystemScene extends Phaser.Scene {
     constructor() {
         super({ key: 'SystemScene', active: true });
         this.globalCharaDefs = null;
     }
-
-  // src/scenes/SystemScene.js の create メソッド内 (最終版 Ver.7)
 
     create() {
         console.log("SystemScene: 起動・イベント監視開始");
@@ -20,14 +18,13 @@ export default class SystemScene extends Phaser.Scene {
         this.events.on('request-scene-transition', (data) => {
             console.log(`[SystemScene] シーン遷移リクエスト: ${data.from} -> ${data.to}`, data.params);
 
-            // 現在のシーンの入力を完全に無効化 (安全のため)
+            // 現在のシーンの入力を完全に無効化
             if (this.scene.isActive('GameScene')) { this.scene.get('GameScene').input.enabled = false; }
-            if (this.scene.isActive('UIScene')) { this.scene.get('UIScene').input.enabled = false; }
-            if (this.scene.isActive('BattleScene')) { this.scene.get('BattleScene').input.enabled = false; } // BattleSceneも考慮
+            if (this.scene.isActive('BattleScene')) { this.scene.get('BattleScene').input.enabled = false; } 
+            if (this.scene.isActive('UIScene')) { this.scene.get('UIScene').input.enabled = false; } // UIも無効化
 
-            // 現在アクティブなシーンを停止
+            // 現在アクティブなシーンを停止 (UISceneは停止しない)
             if (this.scene.isActive('GameScene')) { this.scene.stop('GameScene'); }
-            if (this.scene.isActive('UIScene')) { this.scene.stop('UIScene'); }
             if (this.scene.isActive('BattleScene')) { this.scene.stop('BattleScene'); }
 
             // 新しいシーンを起動
@@ -37,16 +34,15 @@ export default class SystemScene extends Phaser.Scene {
                 startScenario: data.to === 'GameScene' ? 'test.ks' : null,
                 startLabel: null,
             });
-            // ★ UISceneは、GameSceneが起動するなら、ここで起動する ★
-            if (data.to === 'GameScene' || data.to === 'BattleScene') { // BattleSceneでもUISceneが必要なら
-                this.scene.launch('UIScene'); 
-            }
+            // ★★★ 修正箇所: UISceneをlaunchしない！常にアクティブなものとして扱う ★★★
+            // if (data.to === 'GameScene' || data.to === 'BattleScene') {
+            //     this.scene.launch('UIScene'); 
+            // }
             
             // ★★★ 起動したシーンの入力を有効化 ★★★
             this.scene.get(data.to).input.enabled = true;
-            if (data.to === 'GameScene' || data.to === 'BattleScene') {
-                 this.scene.get('UIScene').input.enabled = true;
-            }
+            // UISceneは常にアクティブなので、その入力を制御する
+            this.scene.get('UIScene').input.enabled = true;
             console.log(`SystemScene: シーン[${data.to}]とUISceneの入力を再有効化しました。`);
         });
 
@@ -69,9 +65,10 @@ export default class SystemScene extends Phaser.Scene {
                 resumedFrom: data.from,
                 returnParams: data.params,
             });
-            this.scene.launch('UIScene'); // UISceneも起動
+            // ★★★ 修正箇所: UISceneをlaunchしない！常にアクティブなものとして扱う ★★★
+            // this.scene.launch('UIScene'); 
 
-            // ★★★ 起動したシーンの入力を有効化 ★★★
+            // ★★★ 起動したGameSceneとUISceneの入力を有効化 ★★★
             this.scene.get('GameScene').input.enabled = true;
             this.scene.get('UIScene').input.enabled = true;
             console.log("SystemScene: GameSceneとUISceneの入力を再有効化しました。");
@@ -79,22 +76,16 @@ export default class SystemScene extends Phaser.Scene {
 
 
         // --- オーバーレイ関連のイベントリスナー ---
-        // (request-overlayとend-overlayリスナーは変更なし)
-        // ...
-    
-
-
-              // --- オーバーレイ関連のイベントリスナー ---
-
         this.events.on('request-overlay', (data) => {
             console.log("[SystemScene] オーバーレイ表示リクエスト", data);
             
-            // ★★★ 修正箇所: ここで requestScene.scene.pause() を呼び出さない ★★★
-            // ActionSceneは実行状態のままにする。入力はNovelOverlaySceneがブロックする。
-            // const requestScene = this.scene.get(data.from);
-            // if (requestScene) {
-            //     requestScene.scene.pause(); 
-            // }
+            const requestScene = this.scene.get(data.from);
+            if (requestScene) {
+                requestScene.input.enabled = false; // リクエスト元の入力を無効化
+                console.log(`SystemScene: シーン[${data.from}]の入力を無効化しました。`);
+            }
+            // ★★★ 修正箇所: UISceneの入力を無効化 ★★★
+            this.scene.get('UIScene').input.enabled = false;
 
             this.scene.launch('NovelOverlayScene', { 
                 scenario: data.scenario,
@@ -108,13 +99,12 @@ export default class SystemScene extends Phaser.Scene {
             
             this.scene.stop(data.from); // NovelOverlaySceneを停止
             
-            // ★★★ 修正箇所: 戻り先のシーンを resume しない ★★★
-            // ActionSceneはpauseされていないのでresume不要。入力を再有効化する
+            // ★★★ 戻り先のシーンとUISceneの入力を有効化 ★★★
             const returnScene = this.scene.get(data.returnTo);
             if (returnScene) {
-                // 明示的に入力を有効化する
-                returnScene.input.enabled = true; 
+                returnScene.input.enabled = true;
                 console.log(`SystemScene: シーン[${data.returnTo}]の入力を再有効化しました。`);
             }
+            this.scene.get('UIScene').input.enabled = true; // UISceneの入力を有効化
         });
     }}
