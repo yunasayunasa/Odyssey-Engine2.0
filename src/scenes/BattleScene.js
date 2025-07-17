@@ -14,22 +14,27 @@ export default class BattleScene extends Phaser.Scene {
         // this.battleEnded = false; // 二重発火防止フラグも後で追加
     }
 
+    // src/scenes/BattleScene.js の init() メソッド (最終版)
+
     init(data) {
         // ノベルパートから渡されたパラメータを受け取る
-        // SystemSceneで渡したキー名 ('transitionParams') と一致させる
-        this.receivedParams = data.transitionParams || {}; 
+        // data.transitionParams が undefined の場合を考慮して {} をデフォルトとする
+        this.receivedParams = data.transitionParams || {};
         console.log("BattleScene: init 完了。受け取ったパラメータ:", this.receivedParams);
 
-        // ★★★ この試合の初期状態を保持する (リトライ用) ★★★
-        // 現時点では、ここで受け取ったパラメータをそのまま初期状態として使う
+        // ★★★ 修正箇所: this.receivedParams の参照を修正 ★★★
         this.initialBattleParams = {
             playerLevel: this.receivedParams.player_level || 1,
             playerName: this.receivedParams.player_name || 'プレイヤー',
             initialCoin: this.receivedParams.current_coin || 0,
             initialPlayerMaxHp: this.receivedParams.player_max_hp || 100, 
-            initialPlayerHp: this.receivedParams.player_hp || this.receivedParams.receivedParams.player_max_hp || 100,
+            // 修正: this.receivedParams.player_hp を直接参照する
+            initialPlayerHp: this.receivedParams.player_hp || this.receivedParams.player_max_hp || 100, 
         };
         console.log("BattleScene: 初期バトルパラメータ:", this.initialBattleParams);
+
+        // シーンが再利用される可能性があるため、init時にbattleEndedフラグをリセット
+        this.battleEnded = false; 
     }
 
     create() {
