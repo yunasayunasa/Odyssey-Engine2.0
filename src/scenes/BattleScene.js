@@ -175,3 +175,4 @@ export default class BattleScene extends Phaser.Scene {
         console.log("BattleScene: resume されました。入力を再有効化します。");
         this.input.enabled = true;
     }
+}
