@@ -1,4 +1,4 @@
-extends Phaser.Scene {
+export default class SystemScene extends Phaser.Scene {
     constructor() {
         super({ key: 'SystemScene', active: true });
         this.globalCharaDefs = null;
