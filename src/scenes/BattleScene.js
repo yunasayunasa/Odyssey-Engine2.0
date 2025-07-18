@@ -1,9 +1,9 @@
 // src/scenes/BattleScene.js (ActionSceneベースで再構築)
 
 // HPバーやコインHUDは後で追加します。まずはシンプルな構造で。
-// import HpBar from '../ui/HpBar.js'; 
-// import CoinHud from '../ui/CoinHud.js'; 
-// import StateManager from '../core/StateManager.js'; 
+ import HpBar from '../ui/HpBar.js'; 
+ import CoinHud from '../ui/CoinHud.js'; 
+ import StateManager from '../core/StateManager.js'; 
 
 export default class BattleScene extends Phaser.Scene {
     constructor() {
