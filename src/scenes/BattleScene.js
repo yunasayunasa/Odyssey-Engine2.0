@@ -1,24 +1,18 @@
-// src/scenes/BattleScene.js (ActionSceneベースで再構築)
+// src/scenes/BattleScene.js
 
-// HPバーやコインHUDは後で追加します。まずはシンプルな構造で。// src/scenes/BattleScene.js
-
-// HPバーやコインHUDは後で追加します。まずはシンプルな構造で。
-import HpBar from '../ui/HpBar.js'; 
-import CoinHud from '../ui/CoinHud.js'; 
-import StateManager from '../core/StateManager.js'; 
+// ... (他の import)
 
 export default class BattleScene extends Phaser.Scene {
     constructor() {
         super('BattleScene');
-        this.receivedParams = null; // ノベルから渡されたパラメータ
-        // this.stateManager = null; // StateManagerへの参照は必要に応じてcreate内で取得
-        this.initialBattleParams = null; // リトライ機能で使う初期パラメータ
-        this.battleEnded = false; // 二重発火防止フラグ
-        
-        // UI要素への参照を初期化 (ゲームオーバー画面用)
+        this.receivedParams = null;
+        this.initialBattleParams = null;
+        this.battleEnded = false; 
+        this.eventEmitted = false;
         this.gameOverText = null;
         this.retryButton = null;
         this.titleButton = null;
+    
     }
 
     init(data) {
@@ -106,7 +100,7 @@ export default class BattleScene extends Phaser.Scene {
         console.log("BattleScene: create 完了");
     }
 
-    start() {
+ start() {
         super.start();
         console.log("BattleScene: start されました。");
     }
@@ -131,34 +125,36 @@ export default class BattleScene extends Phaser.Scene {
      * @param {Object} [returnParams] - GameSceneに引き渡す変数オブジェクト (optional)
      */
     endBattle(result, returnParams = {}) { 
-        // バトル終了処理が複数回呼ばれるのを防ぐためのフラグ
         if (this.battleEnded) {
             console.warn(`BattleScene: バトル終了処理が複数回呼ばれました (結果: ${result})。スキップします。`);
             return;
         }
-        this.battleEnded = true; // 終了処理開始フラグを立てる
+        this.battleEnded = true; 
 
         console.log(`BattleScene: バトル終了。結果: ${result}`);
         
-        // まず入力を無効化し、誤操作を防ぐ (ボタンが残っている場合)
         this.input.enabled = false;
 
-        // 既存の勝利/敗北ボタンのリスナーを解除し、オブジェクトも破棄
         if (this.winButton) { this.winButton.off('pointerdown'); this.winButton.destroy(); this.winButton = null; }
         if (this.loseButton) { this.loseButton.off('pointerdown'); this.loseButton.destroy(); this.loseButton = null; }
 
 
         if (result === 'win') {
             // 勝利時: ノベルパートへ戻る
-            this.scene.get('SystemScene').events.emit('return-to-novel', {
-                from: this.scene.key,
-                params: returnParams 
-            });
+            // ★★★ 修正箇所: イベントがまだ発行されていない場合のみ発行 ★★★
+            if (!this.eventEmitted) {
+                this.eventEmitted = true; // フラグを立てる
+                this.scene.get('SystemScene').events.emit('return-to-novel', {
+                    from: this.scene.key,
+                    params: returnParams 
+                });
+            } else {
+                console.warn("BattleScene: return-to-novel イベントは既に発行されています。スキップします。");
+            }
         } else {
             // 敗北時: ゲームオーバー処理
             console.log("BattleScene: ゲームオーバー処理を開始します。");
             
-            // ゲームオーバー画面（またはボタン）を表示
             this.gameOverText = this.add.text(this.scale.width / 2, this.scale.height / 2 - 50, 'GAME OVER', {
                 fontSize: '64px', fill: '#f00', stroke: '#000', strokeThickness: 5
             }).setOrigin(0.5).setDepth(999);
@@ -171,28 +167,39 @@ export default class BattleScene extends Phaser.Scene {
                 fontSize: '32px', fill: '#fff', backgroundColor: '#444444', padding: { x: 20, y: 10 }
             }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(999);
 
-            // ★★★ 修正箇所: ゲームオーバー画面のボタンにも入力無効化を追加 ★★★
             this.retryButton.on('pointerdown', () => {
                 if (this.retryButton) this.retryButton.disableInteractive();
                 if (this.titleButton) this.titleButton.disableInteractive();
                 
-                console.log("BattleScene: もう一度挑戦します。");
-                this.scene.get('SystemScene').events.emit('request-scene-transition', {
-                    to: this.scene.key, 
-                    from: this.scene.key, 
-                    params: this.initialBattleParams 
-                });
+                // ★★★ 修正箇所: イベントがまだ発行されていない場合のみ発行 ★★★
+                if (!this.eventEmitted) {
+                    this.eventEmitted = true;
+                    console.log("BattleScene: もう一度挑戦します。");
+                    this.scene.get('SystemScene').events.emit('request-scene-transition', {
+                        to: this.scene.key, 
+                        from: this.scene.key, 
+                        params: this.initialBattleParams 
+                    });
+                } else {
+                    console.warn("BattleScene: request-scene-transition イベントは既に発行されています。スキップします。");
+                }
             });
 
             this.titleButton.on('pointerdown', () => {
                 if (this.retryButton) this.retryButton.disableInteractive();
                 if (this.titleButton) this.titleButton.disableInteractive();
 
-                console.log("BattleScene: タイトルに戻ります。");
-                this.scene.get('SystemScene').events.emit('return-to-novel', {
-                    from: this.scene.key,
-                    params: returnParams 
-                });
+                // ★★★ 修正箇所: イベントがまだ発行されていない場合のみ発行 ★★★
+                if (!this.eventEmitted) {
+                    this.eventEmitted = true;
+                    console.log("BattleScene: タイトルに戻ります。");
+                    this.scene.get('SystemScene').events.emit('return-to-novel', {
+                        from: this.scene.key,
+                        params: returnParams 
+                    });
+                } else {
+                    console.warn("BattleScene: return-to-novel イベントは既に発行されています。スキップします。");
+                }
             });
         }
     }
