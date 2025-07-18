@@ -1,10 +1,8 @@
-// src/scenes/SystemScene.js
-
 export default class SystemScene extends Phaser.Scene {
     constructor() {
         super({ key: 'SystemScene', active: true });
         this.globalCharaDefs = null;
-        this.isProcessingTransition = false; // ★★★ 新しいフラグを追加 ★★★
+        this.isProcessingTransition = false; // ★★★ フラグの追加済みを確認 ★★★
     }
 
     create() {
@@ -17,29 +15,21 @@ export default class SystemScene extends Phaser.Scene {
 
         // --- 1. [jump] や [call] によるシーン遷移リクエストを処理 ---
         this.events.on('request-scene-transition', (data) => {
-            // ★★★ 修正箇所: 処理中の場合はスキップ ★★★
             if (this.isProcessingTransition) {
                 console.warn("[SystemScene] 遷移処理中。新しいリクエストをスキップします。", data);
                 return;
             }
             this.isProcessingTransition = true; // 処理開始
-
             console.log(`[SystemScene] シーン遷移リクエスト: ${data.from} -> ${data.to}`, data.params);
 
-            // 現在のノベルパートのシーンの入力を完全に無効化 (もし有効であれば)
             if (this.scene.isActive('GameScene')) {
                 this.scene.get('GameScene').input.enabled = false;
+                this.scene.stop('GameScene');
             }
-            // UISceneは停止しない。入力だけ無効化。
             if (this.scene.isActive('UIScene')) {
                 this.scene.get('UIScene').input.enabled = false;
-                // this.scene.stop('UIScene'); // 削除済みのはず
             }
             
-            // GameSceneを停止
-            this.scene.stop('GameScene'); // GameSceneは停止して再起動
-
-            // 新しいシーンを開始
             this.scene.start(data.to, {
                 charaDefs: this.globalCharaDefs,
                 transitionParams: data.params, 
@@ -47,26 +37,27 @@ export default class SystemScene extends Phaser.Scene {
                 startLabel: null,
             });
 
-            // ★★★ 追加: 遷移完了を待ってフラグをリセットする ★★★
-            // scene.start() は非同期なので、少し遅延させてフラグをリセット
-            this.time.delayedCall(100, () => { // 例: 100msの遅延
+            // ★★★ 修正箇所: シーンの起動完了イベントを待つ ★★★
+            // targetSceneが完全に起動し、create()が完了した後にフラグをリセットする
+            this.scene.get(data.to).events.once(Phaser.Scenes.Events.CREATE, () => {
+                // GameSceneの場合はperformLoad完了後のnext()まで考慮する必要がある
+                // しかし、PhaserのCREATEイベントでフラグ解除するのが安全。
+                // GameScene側でperformLoadが完了したことをSystemSceneに通知する仕組みがあればより理想的だが、
+                // 現状はCREATEイベントで一旦解除し、次のクリックまで待つロジックで試す。
                 this.isProcessingTransition = false;
-                console.log("[SystemScene] 遷移処理フラグをリセットしました。");
+                console.log(`[SystemScene] シーン[${data.to}]のCREATEイベント受信。遷移処理フラグをリセットしました。`);
             });
         });
 
         // --- 2. サブシーンからノベルパートへの復帰リクエストを処理 ---
         this.events.on('return-to-novel', (data) => {
-            // ★★★ 修正箇所: 処理中の場合はスキップ ★★★
             if (this.isProcessingTransition) {
                 console.warn("[SystemScene] 遷移処理中。新しいノベル復帰リクエストをスキップします。", data);
                 return;
             }
             this.isProcessingTransition = true; // 処理開始
-
             console.log(`[SystemScene] ノベル復帰リクエスト: from ${data.from}`, data.params);
 
-            // 戻り元のシーンの入力を無効化し、停止 (例: BattleSceneを停止)
             const fromScene = this.scene.get(data.from);
             if (fromScene) {
                 fromScene.input.enabled = false;
@@ -75,27 +66,25 @@ export default class SystemScene extends Phaser.Scene {
                 this.scene.stop(data.from);
             }
 
-            // GameSceneを「復帰モード」で再開
             this.scene.start('GameScene', {
                 charaDefs: this.globalCharaDefs,
                 resumedFrom: data.from,
                 returnParams: data.params,
             });
-            // this.scene.launch('UIScene'); // 削除済みのはず
-
-            // GameSceneとUISceneの入力を明示的に有効化
+            
             this.scene.get('GameScene').input.enabled = true;
             if (this.scene.isActive('UIScene')) { 
                 this.scene.get('UIScene').input.enabled = true;
             }
             console.log("SystemScene: GameSceneとUISceneの入力を再有効化しました。");
 
-            // ★★★ 追加: 遷移完了を待ってフラグをリセットする ★★★
-            this.time.delayedCall(100, () => { // 例: 100msの遅延
+            // ★★★ 修正箇所: GameSceneの起動完了イベントを待つ ★★★
+            this.scene.get('GameScene').events.once(Phaser.Scenes.Events.CREATE, () => {
                 this.isProcessingTransition = false;
-                console.log("[SystemScene] 遷移処理フラグをリセットしました。");
+                console.log("[SystemScene] GameSceneのCREATEイベント受信。遷移処理フラグをリセットしました。");
             });
         });
+
 
 
               // --- オーバーレイ関連のイベントリスナー ---
