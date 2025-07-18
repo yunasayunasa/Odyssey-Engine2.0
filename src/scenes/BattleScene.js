@@ -67,6 +67,43 @@ export default class BattleScene extends Phaser.Scene {
         this.onFVariableChangedListener = this.onFVariableChanged.bind(this);
         this.stateManager.events.on('f-variable-changed', this.onFVariableChangedListener);
 
+        // ★★★ バックパックのグリッド表示 ★★★
+        const backpackGridSize = 6; // 例: 6x6マス
+        const cellSize = 60; // 1マスあたりのサイズ (px)
+        const gridWidth = backpackGridSize * cellSize;
+        const gridHeight = backpackGridSize * cellSize;
+        const gridX = this.scale.width / 2 - gridWidth / 2; // 中央に配置
+        const gridY = this.scale.height / 2 - gridHeight / 2 + 50; // 中央より少し下に
+
+        // グリッドの背景
+        this.add.rectangle(gridX + gridWidth / 2, gridY + gridHeight / 2, gridWidth, gridHeight, 0x333333, 0.9)
+            .setOrigin(0.5)
+            .setDepth(10); // キャラクタやメッセージより奥、UIより手前
+
+        // グリッドの線を描画 (オプション)
+        for (let i = 0; i <= backpackGridSize; i++) {
+            // 横線
+            this.add.line(0, 0, gridX, gridY + i * cellSize, gridX + gridWidth, gridY + i * cellSize, 0x666666, 0.5)
+                .setOrigin(0).setDepth(11);
+            // 縦線
+            this.add.line(0, 0, gridX + i * cellSize, gridY, gridX + i * cellSize, gridY + gridHeight, 0x666666, 0.5)
+                .setOrigin(0).setDepth(11);
+        }
+
+        // ★★★ インベントリのプレースホルダー ★★★
+        const inventoryX = gridX - 180; // グリッドの左側に配置
+        const inventoryY = gridY;
+        const inventoryWidth = 150;
+        const inventoryHeight = gridHeight;
+
+        this.add.rectangle(inventoryX + inventoryWidth / 2, inventoryY + inventoryHeight / 2, inventoryWidth, inventoryHeight, 0x555555, 0.8)
+            .setOrigin(0.5)
+            .setDepth(10);
+        this.add.text(inventoryX + inventoryWidth / 2, inventoryY + 20, 'インベントリ', {
+            fontSize: '24px', fill: '#fff'
+        }).setOrigin(0.5).setDepth(11);
+
+
         // --- テスト用のバトル進行ボタン ---
         this.winButton = this.add.text(320, 600, '勝利してノベルパートに戻る', { fontSize: '32px', fill: '#0c0', backgroundColor: '#000' })
             .setOrigin(0.5).setInteractive({ useHandCursor: true });
