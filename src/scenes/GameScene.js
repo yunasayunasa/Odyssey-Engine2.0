@@ -276,6 +276,10 @@ clearChoiceButtons() {
 
   // GameScene.js の performLoad メソッド (最終版)
 
+    // src/scenes/GameScene.js
+
+// ... (他の import や GameScene クラスの定義)
+
     async performLoad(slot, returnParams = null) {
         try {
             const jsonString = localStorage.getItem(`save_data_${slot}`);
@@ -285,16 +289,40 @@ clearChoiceButtons() {
             }
             const loadedState = JSON.parse(jsonString);
             
-            // ★ StateManagerに変数を復元する (まずはセーブされた状態を反映)
+            // StateManagerに変数を復元する (まずはセーブされた状態を反映)
             this.stateManager.setState(loadedState);
 
             // ★★★ 修正箇所: returnParams は StateManager.eval() を使って反映する ★★★
             if (returnParams) {
                 console.log("復帰パラメータを反映します:", returnParams);
                 for (const key in returnParams) {
-                    // key は "f.battle_result" のような形式を想定
-                    // 例: "f.battle_result='win'" のような式をevalする
-                    const evalExp = `${key} = '${returnParams[key]}'`; // 文字列はクォーテーションで囲む
+                    const value = returnParams[key];
+                    let evalExp;
+
+                    // 値の型に応じて eval() に渡す式を動的に生成
+                    if (typeof value === 'string') {
+                        // 文字列の場合: バッククォートで囲み、内部のバッククォートをエスケープ
+                        evalExp = `${key} = \`${value.replace(/`/g, '\\`')}\``;
+                    } else if (typeof value === 'number' || typeof value === 'boolean') {
+                        // 数値や真偽値の場合: そのまま埋め込む (クォーテーション不要)
+                        evalExp = `${key} = ${value}`;
+                    } else if (typeof value === 'object' && value !== null) {
+                        // オブジェクトや配列の場合: JSON.stringify で文字列化し、それを JSON.parse で評価させる
+                        // これにより、ネストされたオブジェクトなども f 変数に正しく代入される
+                        try {
+                            const stringifiedValue = JSON.stringify(value).replace(/`/g, '\\`'); // バッククォートをエスケープ
+                            evalExp = `${key} = JSON.parse(\`${stringifiedValue}\`)`;
+                        } catch (e) {
+                            console.warn(`[GameScene] returnParamsでJSONシリアライズできないオブジェクトが検出されました。スキップします: ${key} =`, value, e);
+                            continue; // このパラメータはスキップして次へ
+                        }
+                    } else {
+                        // その他の型 (undefined, functionなど) は警告を出してスキップ
+                        console.warn(`[GameScene] 未知の型のreturnParams値が検出されました。スキップします: ${key} =`, value);
+                        continue; // このパラメータはスキップして次へ
+                    }
+
+                    // 生成された式を StateManager.eval() で実行
                     this.stateManager.eval(evalExp);
                 }
             }
@@ -314,6 +342,8 @@ clearChoiceButtons() {
             console.error(`ロード処理でエラーが発生しました。`, e);
         }
     }}
+
+// ... (rebuildScene ヘルパー関数など、後続のコード)
 // ★★★ rebuildScene ヘルパー関数 (最終版) ★★★
 async function rebuildScene(manager, state) {
     console.log("--- rebuildScene 開始 ---", state);
