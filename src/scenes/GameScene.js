@@ -347,48 +347,31 @@ clearChoiceButtons() {
 
 
 
-  // GameScene.js の performLoad メソッド (最終版)
+ // src/scenes/GameScene.js の performLoad メソッド (最終版)
 
-    // src/scenes/GameScene.js
-
-// ... (他の import や GameScene クラスの定義)
-
-   async performLoad(slot, returnParams = null) {
+    async performLoad(slot, returnParams = null) {
         try {
             const jsonString = localStorage.getItem(`save_data_${slot}`);
             if (!jsonString) {
                 console.error(`スロット[${slot}]のセーブデータが見つかりません。復帰できません。`);
-                // ★★★ 追加: ロード失敗時もイベントを発行して SystemScene のフラグを解除する ★★★
-                this.scene.get('SystemScene').events.emit('gameScene-load-complete');
                 return;
             }
             const loadedState = JSON.parse(jsonString);
             
+            // StateManagerに変数を復元 (まずはセーブされた状態を反映)
             this.stateManager.setState(loadedState);
 
+            // returnParamsを反映 (StateManager.eval()でf変数が最新になる)
             if (returnParams) {
                 console.log("復帰パラメータを反映します:", returnParams);
                 for (const key in returnParams) {
                     const value = returnParams[key];
                     let evalExp;
-
                     if (typeof value === 'string') {
                         evalExp = `${key} = \`${value.replace(/`/g, '\\`')}\``;
-                    } else if (typeof value === 'number' || typeof value === 'boolean') {
-                        evalExp = `${key} = ${value}`;
-                    } else if (typeof value === 'object' && value !== null) {
-                        try {
-                            const stringifiedValue = JSON.stringify(value).replace(/`/g, '\\`');
-                            evalExp = `${key} = JSON.parse(\`${stringifiedValue}\`)`;
-                        } catch (e) {
-                            console.warn(`[GameScene] returnParamsでJSONシリアライズできないオブジェクトが検出されました。スキップします: ${key} =`, value, e);
-                            continue;
-                        }
                     } else {
-                        console.warn(`[GameScene] 未知の型のreturnParams値が検出されました。スキップします: ${key} =`, value);
-                        continue;
+                        evalExp = `${key} = ${value}`;
                     }
-
                     this.stateManager.eval(evalExp);
                 }
             }
@@ -397,6 +380,23 @@ clearChoiceButtons() {
 
             await rebuildScene(this.scenarioManager, loadedState);
             
+            // ★★★ 修正箇所: rebuildSceneの後に、HUDを再生成・初期化する ★★★
+            // まずは既存のHUDを念のため破棄 (rebuildSceneでも行うが、二重に呼んでも問題ない)
+            if (this.coinHud) { this.coinHud.destroy(); this.coinHud = null; }
+            if (this.playerHpBar) { this.playerHpBar.destroy(); this.playerHpBar = null; }
+
+            // 新しくHUDをインスタンス化
+            this.coinHud = new CoinHud(this, 100, 50);
+            this.playerHpBar = new HpBar(this, 100, 100, 200, 25, 'player');
+            this.playerHpBar.setVisible(false); // ノベルパートでは基本非表示
+            
+            // ★★★ StateManagerの最新のf変数から、HUDの表示を初期化する ★★★
+            this.coinHud.setCoin(this.stateManager.f.coin || 0);
+            this.playerHpBar.setHp(this.stateManager.f.player_hp || 100, this.stateManager.f.player_max_hp || 100);
+            
+            // ★★★ シーンの準備完了フラグを立てる ★★★
+            this.isSceneFullyReady = true;
+
             if (loadedState.scenario.isWaitingClick || loadedState.scenario.isWaitingChoice) {
                 console.log("ロード完了: 待機状態のため、ユーザーの入力を待ちます。");
             } else {
@@ -404,19 +404,10 @@ clearChoiceButtons() {
                 this.time.delayedCall(10, () => this.scenarioManager.next());
             }
             
-            // ★★★ 追加: 全ての復帰処理が完了した後にフラグを立てる ★★★
-            this.isSceneFullyReady = true; 
-            // SystemSceneにロード完了を通知するカスタムイベントを発行
-            this.scene.get('SystemScene').events.emit('gameScene-load-complete');
-        
         } catch (e) {
             console.error(`ロード処理でエラーが発生しました。`, e);
-            // ★★★ 追加: ロード失敗時もイベントを発行して SystemScene のフラグを解除する ★★★
-            this.scene.get('SystemScene').events.emit('gameScene-load-complete');
         }
     }}
-
-// ... (rebuildScene ヘルパー関数など、後続のコード)
 // ★★★ rebuildScene ヘルパー関数 (最終版) ★★★
 async function rebuildScene(manager, state) {
     console.log("--- rebuildScene 開始 ---", state);
