@@ -106,7 +106,7 @@ export default class GameScene extends Phaser.Scene {
         this.layer.message.add(this.messageWindow); // MessageWindowがmessageレイヤーの子になる
         this.scenarioManager = new ScenarioManager(this, this.layer, this.charaDefs, this.messageWindow, this.soundManager, this.stateManager, this.configManager);
         
-        // --- タグハンドラの登録 ---
+// --- タグハンドラの登録 ---
         this.scenarioManager.registerTag('chara_show', handleCharaShow);
         this.scenarioManager.registerTag('chara_hide', handleCharaHide);
         this.scenarioManager.registerTag('chara_mod', handleCharaMod);
@@ -141,12 +141,11 @@ export default class GameScene extends Phaser.Scene {
         this.scenarioManager.registerTag('return', handleReturn);
         this.scenarioManager.registerTag('stop_anim', handleStopAnim);
         this.scenarioManager.registerTag('fadeout', handleFadeout);
-        this.scenarioManager.registerTag('fadein', handleFadein);
-        this.scenarioManager.registerTag('video', handleVideo);
-        this.scenarioManager.registerTag('stopvideo', handleStopVideo);
-        // ★★★ ActionScene側にあるhandleOverlayEndはGameSceneには不要 ★★★
-        // this.scenarioManager.registerTag('overlay_end', handleOverlayEnd);
-
+this.scenarioManager.registerTag('fadein', handleFadein);
+this.scenarioManager.registerTag('video', handleVideo);
+this.scenarioManager.registerTag('stopvideo', handleStopVideo);
+      this.scenarioManager.registerTag('voice', handleVoice);
+     
 
         // --- ゲーム開始ロジック ---
         if (this.isResuming) {
