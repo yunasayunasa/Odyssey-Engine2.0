@@ -211,7 +211,7 @@ export default class BattleScene extends Phaser.Scene {
                         params: this.initialBattleParams 
                     });
                 } else {
-                    console.warn("BattleScene: request-scene-transition イベントは既に発行されています。スキップします。");
+                    console.warn("BattleScene: request-scene-transition 勝ちイベントは既に発行されています。スキップします。");
                 }
             });
 
@@ -229,7 +229,7 @@ export default class BattleScene extends Phaser.Scene {
                         params: returnParams 
                     });
                 } else {
-                    console.warn("BattleScene: return-to-novel イベントは既に発行されています。スキップします。");
+                    console.warn("BattleScene: return-to-novel 負けイベントは既に発行されています。スキップします。");
                 }
             });
         }
