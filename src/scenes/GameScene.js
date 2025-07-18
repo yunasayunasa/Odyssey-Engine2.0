@@ -164,6 +164,12 @@ this.scenarioManager.registerTag('stopvideo', handleStopVideo);
             console.log("GameScene: 通常起動します。");
             this.performSave(0);
             this.scenarioManager.loadScenario(this.startScenario, this.startLabel);
+
+            this.coinHud.setCoin(this.stateManager.f.coin || 0);
+            this.playerHpBar.setHp(this.stateManager.f.player_hp || 100, this.stateManager.f.player_max_hp || 100);
+
+            // シーンの準備完了フラグを立てる
+            this.isSceneFullyReady = true; 
             this.time.delayedCall(10, () => this.scenarioManager.next());
         }
         
