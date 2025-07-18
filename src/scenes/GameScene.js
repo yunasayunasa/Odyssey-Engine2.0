@@ -38,7 +38,6 @@ import { handleButton } from '../handlers/button.js';
 import { handleCall } from '../handlers/call.js';
 import { handleReturn } from '../handlers/return.js';
 import { handleStopAnim } from '../handlers/stop_anim.js';
-// import文に追加
 import { handleFadeout } from '../handlers/fadeout.js';
 import { handleFadein } from '../handlers/fadein.js';
 import { handleVideo } from '../handlers/video.js';
@@ -60,132 +59,107 @@ export default class GameScene extends Phaser.Scene {
         this.choiceButtons = [];
         this.pendingChoices = [];
         this.uiButtons = [];
-         this.isSceneFullyReady = false; // ★★★ 追加: シーンが完全に準備完了したかのフラグ ★★★
+        this.coinHud = null;
+        this.playerHpBar = null;
+        this.isSceneFullyReady = false; // シーンが完全に準備完了したかのフラグ
     }
 
     init(data) {
         this.charaDefs = data.charaDefs;
-        this.startScenario = data.startScenario || 'scene1.ks';
+        this.startScenario = data.startScenario || 'test.ks';
         this.startLabel = data.startLabel || null;
 
-        // ★ isResumingとreturnParamsはSystemSceneとの連携で使うので残しておく
         this.isResuming = data.resumedFrom ? true : false;
         this.returnParams = data.returnParams || null;
-         this.isSceneFullyReady = false; // ★init時にリセット★
+        this.isSceneFullyReady = false; // init時にリセット
     }
 
     preload() {
-        // PreloadSceneでロード済みのはずだが、念のため
-        this.load.text('scene1', 'assets/scene1.ks');
+        this.load.text('test.ks', 'assets/test.ks'); 
+        this.load.text('scene2.ks', 'assets/scene2.ks'); 
+        this.load.text('overlay_test.ks', 'assets/overlay_test.ks');
     }
 
     create() {
         this.cameras.main.setBackgroundColor('#000000');
         
-         // --- レイヤー生成とdepth設定 (最終版) ---
-        // 数値が大きいほど手前に描画される
-        this.layer.background = this.add.container(0, 0).setDepth(0);  // 最奥
-        this.layer.cg = this.add.container(0, 0).setDepth(0);         // 背景CGなど
-        this.layer.character = this.add.container(0, 0).setDepth(0); // キャラクター
-        this.layer.message = this.add.container(0, 0).setDepth(20);   // メッセージウィンドウ、選択肢ボタン
+        // --- レイヤー生成とdepth設定 ---
+        this.layer.background = this.add.container(0, 0).setDepth(0);
+        this.layer.cg = this.add.container(0, 0).setDepth(5);
+        this.layer.character = this.add.container(0, 0).setDepth(10);
+        this.layer.message = this.add.container(0, 0).setDepth(20);
 
-        // ★★★ GameSceneのコンストラクタで生成される inputBlocker も depth 設定 ★★★
-        this.choiceInputBlocker = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height)
+        // --- 入力ブロッカー ---
+        this.choiceInputBlocker = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x000000, 0.001)
             .setInteractive()
             .setVisible(false)
-            .setDepth(0); // メッセージウィンドウよりさらに手前（最前面）
+            .setDepth(25);
+        this.choiceInputBlocker.on('pointerdown', () => console.log("選択肢を選んでください"));
+        this.choiceInputBlocker.input.enabled = false;
 
         // --- マネージャー/UIクラスの生成 ---
         this.configManager = this.sys.registry.get('configManager');
-        this.stateManager = new StateManager();
+        this.stateManager = new StateManager(); 
         this.soundManager = new SoundManager(this, this.configManager);
         this.messageWindow = new MessageWindow(this, this.soundManager, this.configManager);
-        this.layer.message.add(this.messageWindow);
+        this.layer.message.add(this.messageWindow); 
         this.scenarioManager = new ScenarioManager(this, this.layer, this.charaDefs, this.messageWindow, this.soundManager, this.stateManager, this.configManager);
 
-         // ★★★ コイン表示HUDをインスタンス化 ★★★
-    this.coinHud = new CoinHud(this, 100, 50); // 画面左上 (X=100, Y=50) に配置
-    
-    // ★★★ ゲームループの 'update' イベントで f.coin の値を監視し、HUDを更新 ★★★
-    this.events.on('update', this.updateCoinHud, this);
-    // または、StateManagerにf.coinの変更を通知する仕組みを作る（より高度）
-    // ★★★ HPバーHUDをインスタンス化 (画面右上に隠しておくか、表示しない) ★★★
-    // ノベルパートでは基本HPバーは非表示だが、テスト用に配置
-    this.playerHpBar = new HpBar(this, 100, 100, 200, 25, 'player'); // プレイヤーHPバー
-    this.playerHpBar.setVisible(false); // 通常は非表示
+        // --- HUDのインスタンス化 ---
+        this.coinHud = new CoinHud(this, 100, 50); 
+        this.playerHpBar = new HpBar(this, 100, 100, 200, 25, 'player'); 
+        this.playerHpBar.setVisible(false);
 
-    // ★★★ ゲームループの 'update' イベントで f.player_hp の値を監視し、HUDを更新 ★★★
-    this.events.on('update', this.updatePlayerHpBar, this);
+        // --- StateManagerからのイベントでHUDを更新するリスナーを登録 ---
+        this.stateManager.events.on('f-variable-changed', this.onFVariableChanged, this);
 
-        
         // --- タグハンドラの登録 ---
-        this.scenarioManager.registerTag('chara_show', handleCharaShow);
-        this.scenarioManager.registerTag('chara_hide', handleCharaHide);
-        this.scenarioManager.registerTag('chara_mod', handleCharaMod);
-        this.scenarioManager.registerTag('p', handlePageBreak);
-        this.scenarioManager.registerTag('wait', handleWait);
-        this.scenarioManager.registerTag('bg', handleBg);
-        this.scenarioManager.registerTag('playse', handlePlaySe);
-        this.scenarioManager.registerTag('playbgm', handlePlayBgm);
-        this.scenarioManager.registerTag('stopbgm', handleStopBgm);
-        this.scenarioManager.registerTag('link', handleLink);
-        this.scenarioManager.registerTag('jump', handleJump);
-        this.scenarioManager.registerTag('move', handleMove);
-        this.scenarioManager.registerTag('walk', handleWalk);
-        this.scenarioManager.registerTag('shake', handleShake);
-        this.scenarioManager.registerTag('vibrate', handleVibrate);
-        this.scenarioManager.registerTag('flip', handleFlip);
-        this.scenarioManager.registerTag('chara_jump', handleCharaJump);
-        this.scenarioManager.registerTag('eval', handleEval);
-        this.scenarioManager.registerTag('log', handleLog);
-        this.scenarioManager.registerTag('if', handleIf);
-        this.scenarioManager.registerTag('elsif', handleElsif);
-        this.scenarioManager.registerTag('else', handleElse);
-        this.scenarioManager.registerTag('endif', handleEndif);
-        this.scenarioManager.registerTag('s', handleStop);
-　　　　　this.scenarioManager.registerTag('cm', handleClearMessage);
-　　　　　this.scenarioManager.registerTag('er', handleErase);
-        this.scenarioManager.registerTag('delay', handleDelay);
-        this.scenarioManager.registerTag('image', handleImage);
-        this.scenarioManager.registerTag('freeimage', handleFreeImage);
-        this.scenarioManager.registerTag('button', handleButton);
-        this.scenarioManager.registerTag('call', handleCall);
-        this.scenarioManager.registerTag('return', handleReturn);
-        this.scenarioManager.registerTag('stop_anim', handleStopAnim);
-        this.scenarioManager.registerTag('fadeout', handleFadeout);
-this.scenarioManager.registerTag('fadein', handleFadein);
-this.scenarioManager.registerTag('video', handleVideo);
-this.scenarioManager.registerTag('stopvideo', handleStopVideo);
-      this.scenarioManager.registerTag('voice', handleVoice);
-     
-
+        // (省略)
+        
         // --- ゲーム開始ロジック ---
-          // --- ★★★ ゲーム開始ロジック (最終版) ★★★ ---
         if (this.isResuming) {
-            // --- サブシーンからの復帰の場合 ---
             console.log("GameScene: 復帰処理を開始します。");
-            
-            // ★ 最後にセーブした「スロット0」をオートセーブとしてロードする
             this.performLoad(0, this.returnParams); 
-
         } else {
-            // --- 通常の初回起動の場合 ---
             console.log("GameScene: 通常起動します。");
-            // [jump]の前にオートセーブを実行しておく
-            this.performSave(0); 
-            
+            this.performSave(0);
             this.scenarioManager.loadScenario(this.startScenario, this.startLabel);
             this.time.delayedCall(10, () => this.scenarioManager.next());
         }
-         // ★★★ ゲームループの 'update' イベントで f.coin の値を監視し、HUDを更新 ★★★
-        // イベントリスナーをプロパティに保持し、stop() で解除できるようにする
-        this.updateCoinHudListener = this.events.on('update', this.updateCoinHud, this);
         
-        // ★★★ ゲームループの 'update' イベントで f.player_hp の値を監視し、HUDを更新 ★★★
-        // イベントリスナーをプロパティに保持し、stop() で解除できるようにする
-        this.updatePlayerHpBarListener = this.events.on('update', this.updatePlayerHpBar, this);
         this.input.on('pointerdown', () => this.scenarioManager.onClick());
         console.log("GameScene: create 完了");
+    }
+
+    stop() {
+        super.stop();
+        console.log("GameScene: stop されました。UI要素とイベントリスナーを破棄します。");
+        
+        // StateManagerのイベントリスナーを解除
+        if (this.stateManager) {
+            this.stateManager.events.off('f-variable-changed', this.onFVariableChanged, this);
+        }
+        // HUDオブジェクトを破棄
+        if (this.coinHud) { this.coinHud.destroy(); this.coinHud = null; }
+        if (this.playerHpBar) { this.playerHpBar.destroy(); this.playerHpBar = null; }
+    }
+
+    onFVariableChanged(key, value) {
+        if (!this.isSceneFullyReady) return; // シーンが準備完了するまで更新しない
+
+        if (key === 'coin' && this.coinHud && this.coinHud.coinText.text !== value.toString()) {
+            this.coinHud.setCoin(value);
+        } else if (key === 'player_hp' && this.playerHpBar) {
+            const maxHp = this.stateManager.f.player_max_hp || 100;
+            if (this.playerHpBar.currentHp !== value || this.playerHpBar.maxHp !== maxHp) {
+                 this.playerHpBar.setHp(value, maxHp);
+            }
+        } else if (key === 'player_max_hp' && this.playerHpBar) {
+             const currentHp = this.stateManager.f.player_hp || 0;
+             if (this.playerHpBar.currentHp !== currentHp || this.playerHpBar.maxHp !== value) {
+                 this.playerHpBar.setHp(currentHp, value);
+             }
+        }
     }
 
      // ★★★ GameSceneに stop() メソッドを追加 ★★★
