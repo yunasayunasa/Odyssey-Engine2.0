@@ -1,9 +1,10 @@
-// src/scenes/SystemScene.js (修正版)
+// src/scenes/SystemScene.js
 
 export default class SystemScene extends Phaser.Scene {
     constructor() {
         super({ key: 'SystemScene', active: true });
         this.globalCharaDefs = null;
+        this.isProcessingTransition = false; // ★★★ 新しいフラグを追加 ★★★
     }
 
     create() {
@@ -16,20 +17,28 @@ export default class SystemScene extends Phaser.Scene {
 
         // --- 1. [jump] や [call] によるシーン遷移リクエストを処理 ---
         this.events.on('request-scene-transition', (data) => {
+            // ★★★ 修正箇所: 処理中の場合はスキップ ★★★
+            if (this.isProcessingTransition) {
+                console.warn("[SystemScene] 遷移処理中。新しいリクエストをスキップします。", data);
+                return;
+            }
+            this.isProcessingTransition = true; // 処理開始
+
             console.log(`[SystemScene] シーン遷移リクエスト: ${data.from} -> ${data.to}`, data.params);
 
-            // GameSceneの入力を無効化し、停止
+            // 現在のノベルパートのシーンの入力を完全に無効化 (もし有効であれば)
             if (this.scene.isActive('GameScene')) {
                 this.scene.get('GameScene').input.enabled = false;
-                this.scene.stop('GameScene'); // GameSceneは停止して再起動
             }
-            
-            // ★★★ 修正箇所: UISceneは「停止しない」。入力だけ無効化。 ★★★
+            // UISceneは停止しない。入力だけ無効化。
             if (this.scene.isActive('UIScene')) {
                 this.scene.get('UIScene').input.enabled = false;
-                // this.scene.stop('UIScene'); // <<< この行を削除
+                // this.scene.stop('UIScene'); // 削除済みのはず
             }
             
+            // GameSceneを停止
+            this.scene.stop('GameScene'); // GameSceneは停止して再起動
+
             // 新しいシーンを開始
             this.scene.start(data.to, {
                 charaDefs: this.globalCharaDefs,
@@ -37,10 +46,24 @@ export default class SystemScene extends Phaser.Scene {
                 startScenario: data.to === 'GameScene' ? 'test_main.ks' : null,
                 startLabel: null,
             });
+
+            // ★★★ 追加: 遷移完了を待ってフラグをリセットする ★★★
+            // scene.start() は非同期なので、少し遅延させてフラグをリセット
+            this.time.delayedCall(100, () => { // 例: 100msの遅延
+                this.isProcessingTransition = false;
+                console.log("[SystemScene] 遷移処理フラグをリセットしました。");
+            });
         });
 
         // --- 2. サブシーンからノベルパートへの復帰リクエストを処理 ---
         this.events.on('return-to-novel', (data) => {
+            // ★★★ 修正箇所: 処理中の場合はスキップ ★★★
+            if (this.isProcessingTransition) {
+                console.warn("[SystemScene] 遷移処理中。新しいノベル復帰リクエストをスキップします。", data);
+                return;
+            }
+            this.isProcessingTransition = true; // 処理開始
+
             console.log(`[SystemScene] ノベル復帰リクエスト: from ${data.from}`, data.params);
 
             // 戻り元のシーンの入力を無効化し、停止 (例: BattleSceneを停止)
@@ -58,16 +81,20 @@ export default class SystemScene extends Phaser.Scene {
                 resumedFrom: data.from,
                 returnParams: data.params,
             });
-            // ★★★ 修正箇所: UISceneは「常にアクティブ」なので、ここで launch は不要。 ★★★
-            // 既に動いているUISceneの入力を再有効化するだけでよい。
-            // this.scene.launch('UIScene'); // <<< この行を削除
+            // this.scene.launch('UIScene'); // 削除済みのはず
 
             // GameSceneとUISceneの入力を明示的に有効化
             this.scene.get('GameScene').input.enabled = true;
-            if (this.scene.isActive('UIScene')) { // 念のためUISceneがアクティブか確認
+            if (this.scene.isActive('UIScene')) { 
                 this.scene.get('UIScene').input.enabled = true;
             }
             console.log("SystemScene: GameSceneとUISceneの入力を再有効化しました。");
+
+            // ★★★ 追加: 遷移完了を待ってフラグをリセットする ★★★
+            this.time.delayedCall(100, () => { // 例: 100msの遅延
+                this.isProcessingTransition = false;
+                console.log("[SystemScene] 遷移処理フラグをリセットしました。");
+            });
         });
 
 
