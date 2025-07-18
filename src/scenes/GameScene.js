@@ -1,10 +1,8 @@
-// src/scenes/GameScene.js (最終版)
-
+import ScenarioManager from '../core/ScenarioManager.js';
+import SoundManager from '../core/SoundManager.js';
 import CoinHud from '../ui/CoinHud.js';
 import StateManager from '../core/StateManager.js';
 import MessageWindow from '../ui/MessageWindow.js';
-import SoundManager from '../core/SoundManager.js'; 
-import ScenarioManager from '../core/ScenarioManager.js'; 
 import { handleCharaShow } from '../handlers/chara_show.js';
 import { handleCharaHide } from '../handlers/chara_hide.js';
 import { handleCharaMod } from '../handlers/chara_mod.js';
@@ -18,6 +16,7 @@ import ConfigManager from '../core/ConfigManager.js';
 import { handleLink } from '../handlers/link.js';
 import { handleJump } from '../handlers/jump.js';
 import { handleMove } from '../handlers/move.js';
+import { handleWalk } from '../handlers/walk.js';
 import { handleShake } from '../handlers/shake.js';
 import { handleVibrate } from '../handlers/vibrate.js';
 import { handleFlip } from '../handlers/flip.js';
@@ -36,13 +35,15 @@ import { handleImage } from '../handlers/image.js';
 import { handleFreeImage } from '../handlers/freeimage.js';
 import { handleButton } from '../handlers/button.js';
 import { handleCall } from '../handlers/call.js';
-import { handleWalk } from '../handlers/walk.js';
 import { handleReturn } from '../handlers/return.js';
 import { handleStopAnim } from '../handlers/stop_anim.js';
+// import文に追加
 import { handleFadeout } from '../handlers/fadeout.js';
 import { handleFadein } from '../handlers/fadein.js';
 import { handleVideo } from '../handlers/video.js';
 import { handleStopVideo } from '../handlers/stopvideo.js';
+import { handleVoice } from '../handlers/voice.js';
+
 // ★★★ 追加: HpBarをインポート ★★★
 import HpBar from '../ui/HpBar.js'; 
 
