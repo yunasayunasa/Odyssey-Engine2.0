@@ -60,6 +60,7 @@ export default class GameScene extends Phaser.Scene {
         this.choiceButtons = [];
         this.pendingChoices = [];
         this.uiButtons = [];
+         this.isSceneFullyReady = false; // ★★★ 追加: シーンが完全に準備完了したかのフラグ ★★★
     }
 
     init(data) {
@@ -70,6 +71,7 @@ export default class GameScene extends Phaser.Scene {
         // ★ isResumingとreturnParamsはSystemSceneとの連携で使うので残しておく
         this.isResuming = data.resumedFrom ? true : false;
         this.returnParams = data.returnParams || null;
+         this.isSceneFullyReady = false; // ★init時にリセット★
     }
 
     preload() {
@@ -225,20 +227,26 @@ this.scenarioManager.registerTag('stopvideo', handleStopVideo);
         // rebuildSceneでremoveAll(true)しているので、ここではUI要素のdestroyに焦点を当てる
     }
 
-    // ★★★ プレイヤーHPバーを更新するメソッドを追加 ★★★
-updatePlayerHpBar() {
-    const currentPlayerHp = this.stateManager.f.player_hp || 0;
-    const maxPlayerHp = this.stateManager.f.player_max_hp || 100; // 最大HPも変数で管理
-    if (this.playerHpBar.currentHp !== currentPlayerHp || this.playerHpBar.maxHp !== maxPlayerHp) {
-        this.playerHpBar.setHp(currentPlayerHp, maxPlayerHp);
-    }}
+     // ★★★ プレイヤーHPバーを更新するメソッドを修正 ★★★
+    updatePlayerHpBar() {
+        if (!this.isSceneFullyReady) return; // ★★★ シーンが準備完了するまで更新しない ★★★
 
-    // ★★★ コインHUDを更新するメソッドを追加 ★★★
-updateCoinHud() {
-    const currentCoin = this.stateManager.f.coin || 0; // f.coin の現在の値を取得
-    if (this.coinHud.coinText.text !== currentCoin.toString()) { // 表示が変わった場合のみ更新
-        this.coinHud.setCoin(currentCoin);
-    }}
+        const currentPlayerHp = this.stateManager.f.player_hp || 0;
+        const maxPlayerHp = this.stateManager.f.player_max_hp || 100;
+        if (this.playerHpBar.currentHp !== currentPlayerHp || this.playerHpBar.maxHp !== maxPlayerHp) {
+            this.playerHpBar.setHp(currentPlayerHp, maxPlayerHp);
+        }
+    }
+
+   // ★★★ コインHUDを更新するメソッドを修正 ★★★
+    updateCoinHud() {
+        if (!this.isSceneFullyReady) return; // ★★★ シーンが準備完了するまで更新しない ★★★
+
+        const currentCoin = this.stateManager.f.coin || 0;
+        if (this.coinHud.coinText.text !== currentCoin.toString()) {
+            this.coinHud.setCoin(currentCoin);
+        }
+    }
 
  // ★★★ セーブ処理 ★★★
      // ★★★ セーブ処理 (スロット0をオートセーブスロットとして使う) ★★★
@@ -325,49 +333,42 @@ clearChoiceButtons() {
 
 // ... (他の import や GameScene クラスの定義)
 
-    async performLoad(slot, returnParams = null) {
+   async performLoad(slot, returnParams = null) {
         try {
             const jsonString = localStorage.getItem(`save_data_${slot}`);
             if (!jsonString) {
                 console.error(`スロット[${slot}]のセーブデータが見つかりません。復帰できません。`);
+                // ★★★ 追加: ロード失敗時もイベントを発行して SystemScene のフラグを解除する ★★★
+                this.scene.get('SystemScene').events.emit('gameScene-load-complete');
                 return;
             }
             const loadedState = JSON.parse(jsonString);
             
-            // StateManagerに変数を復元する (まずはセーブされた状態を反映)
             this.stateManager.setState(loadedState);
 
-            // ★★★ 修正箇所: returnParams は StateManager.eval() を使って反映する ★★★
             if (returnParams) {
                 console.log("復帰パラメータを反映します:", returnParams);
                 for (const key in returnParams) {
                     const value = returnParams[key];
                     let evalExp;
 
-                    // 値の型に応じて eval() に渡す式を動的に生成
                     if (typeof value === 'string') {
-                        // 文字列の場合: バッククォートで囲み、内部のバッククォートをエスケープ
                         evalExp = `${key} = \`${value.replace(/`/g, '\\`')}\``;
                     } else if (typeof value === 'number' || typeof value === 'boolean') {
-                        // 数値や真偽値の場合: そのまま埋め込む (クォーテーション不要)
                         evalExp = `${key} = ${value}`;
                     } else if (typeof value === 'object' && value !== null) {
-                        // オブジェクトや配列の場合: JSON.stringify で文字列化し、それを JSON.parse で評価させる
-                        // これにより、ネストされたオブジェクトなども f 変数に正しく代入される
                         try {
-                            const stringifiedValue = JSON.stringify(value).replace(/`/g, '\\`'); // バッククォートをエスケープ
+                            const stringifiedValue = JSON.stringify(value).replace(/`/g, '\\`');
                             evalExp = `${key} = JSON.parse(\`${stringifiedValue}\`)`;
                         } catch (e) {
                             console.warn(`[GameScene] returnParamsでJSONシリアライズできないオブジェクトが検出されました。スキップします: ${key} =`, value, e);
-                            continue; // このパラメータはスキップして次へ
+                            continue;
                         }
                     } else {
-                        // その他の型 (undefined, functionなど) は警告を出してスキップ
                         console.warn(`[GameScene] 未知の型のreturnParams値が検出されました。スキップします: ${key} =`, value);
-                        continue; // このパラメータはスキップして次へ
+                        continue;
                     }
 
-                    // 生成された式を StateManager.eval() で実行
                     this.stateManager.eval(evalExp);
                 }
             }
@@ -382,13 +383,16 @@ clearChoiceButtons() {
                 console.log("ロード完了: 次の行からシナリオを再開します。");
                 this.time.delayedCall(10, () => this.scenarioManager.next());
             }
-                  // ★★★ 追加: SystemSceneにロード完了を通知するカスタムイベントを発行 ★★★
-        this.scene.get('SystemScene').events.emit('gameScene-load-complete');
-        
-    
             
+            // ★★★ 追加: 全ての復帰処理が完了した後にフラグを立てる ★★★
+            this.isSceneFullyReady = true; 
+            // SystemSceneにロード完了を通知するカスタムイベントを発行
+            this.scene.get('SystemScene').events.emit('gameScene-load-complete');
+        
         } catch (e) {
             console.error(`ロード処理でエラーが発生しました。`, e);
+            // ★★★ 追加: ロード失敗時もイベントを発行して SystemScene のフラグを解除する ★★★
+            this.scene.get('SystemScene').events.emit('gameScene-load-complete');
         }
     }}
 
