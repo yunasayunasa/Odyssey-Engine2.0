@@ -175,9 +175,54 @@ this.scenarioManager.registerTag('stopvideo', handleStopVideo);
             this.scenarioManager.loadScenario(this.startScenario, this.startLabel);
             this.time.delayedCall(10, () => this.scenarioManager.next());
         }
+         // ★★★ ゲームループの 'update' イベントで f.coin の値を監視し、HUDを更新 ★★★
+        // イベントリスナーをプロパティに保持し、stop() で解除できるようにする
+        this.updateCoinHudListener = this.events.on('update', this.updateCoinHud, this);
         
+        // ★★★ ゲームループの 'update' イベントで f.player_hp の値を監視し、HUDを更新 ★★★
+        // イベントリスナーをプロパティに保持し、stop() で解除できるようにする
+        this.updatePlayerHpBarListener = this.events.on('update', this.updatePlayerHpBar, this);
         this.input.on('pointerdown', () => this.scenarioManager.onClick());
         console.log("GameScene: create 完了");
+    }
+
+     // ★★★ GameSceneに stop() メソッドを追加 ★★★
+    stop() {
+        super.stop();
+        console.log("GameScene: stop されました。UI要素とイベントリスナーを破棄します。");
+
+        // updateイベントリスナーを解除
+        if (this.updateCoinHudListener) {
+            this.updateCoinHudListener.removeListener('update', this.updateCoinHud, this);
+            this.updateCoinHudListener = null;
+        }
+        if (this.updatePlayerHpBarListener) {
+            this.updatePlayerHpBarListener.removeListener('update', this.updatePlayerHpBar, this);
+            this.updatePlayerHpBarListener = null;
+        }
+
+        // HUDオブジェクトを破棄
+        if (this.coinHud) { this.coinHud.destroy(); this.coinHud = null; }
+        if (this.playerHpBar) { this.playerHpBar.destroy(); this.playerHpBar = null; }
+
+        // メッセージウィンドウ、選択肢ブロッカー、レイヤーなども破棄 (必要であれば)
+        // messageWindowはScenarioManagerが管理している可能性があるので注意
+        if (this.messageWindow) { 
+            // MessageWindow自体をPhaserオブジェクトとして管理しているならdestroy()
+            // または、ScenarioManagerが適切にリセットしているか確認
+            // 今回のエラーとは直接関係ないが、リソースリークを防ぐために考慮
+        }
+        if (this.choiceInputBlocker) { 
+            this.choiceInputBlocker.destroy(); 
+            this.choiceInputBlocker = null; 
+        }
+
+        // シーン内の表示オブジェクトをすべて破棄 (コンテナ内のオブジェクトも含む)
+        // これを呼ぶと、this.layer.background.removeAll(true) などが不要になる場合がある
+        // this.children.each(child => child.destroy()); // 全ての子要素を破棄
+        // ただし、レイヤー管理と衝突する可能性があるので、既存の removeAll(true) が適切
+
+        // rebuildSceneでremoveAll(true)しているので、ここではUI要素のdestroyに焦点を当てる
     }
 
     // ★★★ プレイヤーHPバーを更新するメソッドを追加 ★★★
