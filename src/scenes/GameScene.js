@@ -340,7 +340,7 @@ clearChoiceButtons() {
                   // ★★★ 追加: SystemSceneにロード完了を通知するカスタムイベントを発行 ★★★
         this.scene.get('SystemScene').events.emit('gameScene-load-complete');
         
-    }
+    
             
         } catch (e) {
             console.error(`ロード処理でエラーが発生しました。`, e);
