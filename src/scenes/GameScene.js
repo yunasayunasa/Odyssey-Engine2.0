@@ -3,6 +3,7 @@
 import CoinHud from '../ui/CoinHud.js';
 import StateManager from '../core/StateManager.js';
 import MessageWindow from '../ui/MessageWindow.js';
+import SoundManager from '../core/SoundManager.js'; 
 import { handleCharaShow } from '../handlers/chara_show.js';
 import { handleCharaHide } from '../handlers/chara_hide.js';
 import { handleCharaMod } from '../handlers/chara_mod.js';
