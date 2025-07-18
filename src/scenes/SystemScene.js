@@ -1,8 +1,8 @@
-export default class SystemScene extends Phaser.Scene {
+extends Phaser.Scene {
     constructor() {
         super({ key: 'SystemScene', active: true });
         this.globalCharaDefs = null;
-        this.isProcessingTransition = false; // ★★★ フラグの追加済みを確認 ★★★
+        this.isProcessingTransition = false;
     }
 
     create() {
@@ -37,16 +37,19 @@ export default class SystemScene extends Phaser.Scene {
                 startLabel: null,
             });
 
-            // ★★★ 修正箇所: シーンの起動完了イベントを待つ ★★★
-            // targetSceneが完全に起動し、create()が完了した後にフラグをリセットする
-            this.scene.get(data.to).events.once(Phaser.Scenes.Events.CREATE, () => {
-                // GameSceneの場合はperformLoad完了後のnext()まで考慮する必要がある
-                // しかし、PhaserのCREATEイベントでフラグ解除するのが安全。
-                // GameScene側でperformLoadが完了したことをSystemSceneに通知する仕組みがあればより理想的だが、
-                // 現状はCREATEイベントで一旦解除し、次のクリックまで待つロジックで試す。
-                this.isProcessingTransition = false;
-                console.log(`[SystemScene] シーン[${data.to}]のCREATEイベント受信。遷移処理フラグをリセットしました。`);
-            });
+            // ★★★ 修正箇所: GameSceneへの遷移の場合のみ、GameSceneのロード完了を待つ ★★★
+            // 他のシーンへの遷移の場合は、CREATEイベントでフラグをリセット
+            if (data.to === 'GameScene') {
+                this.scene.get('GameScene').events.once('gameScene-load-complete', () => {
+                    this.isProcessingTransition = false;
+                    console.log("[SystemScene] GameSceneのロード完了イベント受信。遷移処理フラグをリセットしました。");
+                });
+            } else {
+                this.scene.get(data.to).events.once(Phaser.Scenes.Events.CREATE, () => {
+                    this.isProcessingTransition = false;
+                    console.log(`[SystemScene] シーン[${data.to}]のCREATEイベント受信。遷移処理フラグをリセットしました。`);
+                });
+            }
         });
 
         // --- 2. サブシーンからノベルパートへの復帰リクエストを処理 ---
@@ -78,13 +81,12 @@ export default class SystemScene extends Phaser.Scene {
             }
             console.log("SystemScene: GameSceneとUISceneの入力を再有効化しました。");
 
-            // ★★★ 修正箇所: GameSceneの起動完了イベントを待つ ★★★
-            this.scene.get('GameScene').events.once(Phaser.Scenes.Events.CREATE, () => {
+            // ★★★ 修正箇所: GameSceneのロード完了イベントを待つ ★★★
+            this.scene.get('GameScene').events.once('gameScene-load-complete', () => {
                 this.isProcessingTransition = false;
-                console.log("[SystemScene] GameSceneのCREATEイベント受信。遷移処理フラグをリセットしました。");
+                console.log("[SystemScene] GameSceneのロード完了イベント受信。遷移処理フラグをリセットしました。");
             });
         });
-
 
 
               // --- オーバーレイ関連のイベントリスナー ---
