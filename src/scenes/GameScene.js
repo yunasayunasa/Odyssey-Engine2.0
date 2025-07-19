@@ -400,16 +400,15 @@ clearChoiceButtons() {
                 console.log("ロード完了: 次の行からシナリオを再開します。");
                 this.time.delayedCall(10, () => this.scenarioManager.next());
             }
-            // 全ての復帰処理が完了した後にフラグを立てる
+            
+            // ★★★ 追加: 全ての復帰処理が完了した後にフラグを立てる ★★★
             this.isSceneFullyReady = true; 
             // SystemSceneにロード完了を通知するカスタムイベントを発行
             this.scene.get('SystemScene').events.emit('gameScene-load-complete');
         
         } catch (e) {
             console.error(`ロード処理でエラーが発生しました。`, e);
-            // ★★★ 修正箇所: catchブロックにもイベント発行を追加 ★★★
-            this.scene.get('SystemScene').events.emit('gameScene-load-complete');
-        }
+             }
     }}
 // ★★★ rebuildScene ヘルパー関数 (最終版) ★★★
 async function rebuildScene(manager, state) {
