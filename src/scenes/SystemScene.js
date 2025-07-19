@@ -25,26 +25,31 @@ export default class SystemScene extends Phaser.Scene {
             this.globalCharaDefs = this.initialGameData.charaDefs;
 
             // UISceneをlaunchする
-              this.scene.launch('UIScene');
+               this.scene.launch('UIScene');
             const uiScene = this.scene.get('UIScene');
 
             if (uiScene) {
                 uiScene.events.once(Phaser.Scenes.Events.CREATE, () => {
                     console.log("SystemScene: UISceneのCREATEイベント受信。GameSceneを起動します。");
                     
-                    // ★★★ UISceneのCREATE完了後にGameSceneをstartする ★★★
+                    // UISceneのCREATE完了後にGameSceneをstartする
                     this.scene.start('GameScene', { 
                         charaDefs: this.globalCharaDefs,
                         startScenario: this.initialGameData.startScenario,
                         startLabel: null,
                     });
                     console.log("SystemScene: 初期ゲーム起動処理を開始しました。");
+
+                    // ★★★ 修正箇所: データを使った後にnullにする ★★★
+                    this.initialGameData = null; 
                 });
             } else {
                 console.error("SystemScene: UISceneのインスタンスが取得できませんでした。");
+                // エラー時もデータをクリア
+                this.initialGameData = null;
             }
 
-            this.initialGameData = null; 
+            // ★★★ 修正箇所: ここにあった 'this.initialGameData = null;' を削除 ★★★
         }
 
         // --- シーン開始処理とフラグのリセットを管理する共通ヘルパー関数 ---
