@@ -348,14 +348,15 @@ clearChoiceButtons() {
 
 
  // src/scenes/GameScene.js の performLoad メソッド (最終版)
-
-    async performLoad(slot, returnParams = null) {
+  async performLoad(slot, returnParams = null) {
         try {
             const jsonString = localStorage.getItem(`save_data_${slot}`);
             if (!jsonString) {
                 console.error(`スロット[${slot}]のセーブデータが見つかりません。復帰できません。`);
-                // ★★★ 追加: ロード失敗時もイベントを発行して SystemScene のフラグを解除する ★★★
-                this.scene.get('SystemScene').events.emit('gameScene-load-complete');
+                // ロード失敗時もイベントを発行して SystemScene のフラグを解除する
+                // ★SystemSceneが既に修正済みである前提★
+                const systemScene = this.scene.get('SystemScene');
+                if (systemScene) systemScene.events.emit('gameScene-load-complete'); // <- この行が重要
                 return;
             }
             const loadedState = JSON.parse(jsonString);
@@ -369,21 +370,20 @@ clearChoiceButtons() {
                     let evalExp;
 
                     if (typeof value === 'string') {
-                        // 文字列内のバッククォートをエスケープ
-                        evalExp = `${key} = \`${value.replace(/`/g, '\\`')}\``;
+                        evalExp = `${key} = \`${value.replace(/`/g, '\\`')}\``; 
                     } else if (typeof value === 'number' || typeof value === 'boolean') {
                         evalExp = `${key} = ${value}`;
                     } else if (typeof value === 'object' && value !== null) {
                         try {
-                            const stringifiedValue = JSON.stringify(value).replace(/`/g, '\\`');
+                            const stringifiedValue = JSON.stringify(value).replace(/`/g, '\\`'); 
                             evalExp = `${key} = JSON.parse(\`${stringifiedValue}\`)`;
                         } catch (e) {
                             console.warn(`[GameScene] returnParamsでJSONシリアライズできないオブジェクトが検出されました。スキップします: ${key} =`, value, e);
-                            continue;
+                            continue; 
                         }
                     } else {
                         console.warn(`[GameScene] 未知の型のreturnParams値が検出されました。スキップします: ${key} =`, value);
-                        continue;
+                        continue; 
                     }
 
                     this.stateManager.eval(evalExp);
@@ -401,15 +401,21 @@ clearChoiceButtons() {
                 this.time.delayedCall(10, () => this.scenarioManager.next());
             }
             
-            // ★★★ 追加: 全ての復帰処理が完了した後にフラグを立てる ★★★
+            // ★★★ 全ての復帰処理が完了した後にフラグを立てる ★★★
             this.isSceneFullyReady = true; 
             // SystemSceneにロード完了を通知するカスタムイベントを発行
-            this.scene.get('SystemScene').events.emit('gameScene-load-complete');
+            // ★SystemSceneが既に修正済みである前提★
+            const systemScene = this.scene.get('SystemScene');
+            if (systemScene) systemScene.events.emit('gameScene-load-complete');
         
         } catch (e) {
             console.error(`ロード処理でエラーが発生しました。`, e);
-             }
-    }}
+            // ★★★ 修正箇所: ロード失敗時もSystemSceneに通知し、フラグを解除させる ★★★
+            const systemScene = this.scene.get('SystemScene');
+            if (systemScene) systemScene.events.emit('gameScene-load-complete');
+        }
+    }
+}
 // ★★★ rebuildScene ヘルパー関数 (最終版) ★★★
 async function rebuildScene(manager, state) {
     console.log("--- rebuildScene 開始 ---", state);
