@@ -105,10 +105,10 @@ export default class PreloadScene extends Phaser.Scene {
         //this.scene.launch('UIScene'); 
 
             // GameSceneを開始
-            this.scene.start('GameScene', { 
+           /* this.scene.start('GameScene', { 
                 charaDefs: charaDefs,
                 startScenario: 'test.ks'
-            });
+            });*/
 
         // PreloadSceneは役割を終えるので停止する
         this.scene.stop(this.scene.key);
