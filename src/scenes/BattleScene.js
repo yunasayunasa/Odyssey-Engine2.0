@@ -1,7 +1,8 @@
+// src/scenes/BattleScene.js (問題2「多重防止に引っかかる」を解決するための修正 - ステップ1-1)
 
 import HpBar from '../ui/HpBar.js';
 import CoinHud from '../ui/CoinHud.js';
-import { ITEM_DATA } from '../core/ItemData.js';
+import { ITEM_DATA } from '../core/ItemData.js'; // ItemDataのimportを確認
 
 export default class BattleScene extends Phaser.Scene {
     constructor() {
@@ -16,21 +17,33 @@ export default class BattleScene extends Phaser.Scene {
         this.cellSize = 60;
         this.gridX = 0;
         this.gridY = 0;
-        this.backpack = null;
-        this.inventoryItems = [];
-        this.playerStats = { attack: 0, defense: 0, hp: 0 }; // ★★★ プレイヤーの戦闘ステータスを保持 ★★★
-        this.enemyStats = { attack: 0, defense: 0, hp: 0 };  // ★★★ 敵の戦闘ステータスを保持 ★★★
+        this.backpack = null; // アイテム配置の状態 (二次元配列)
+        this.inventoryItems = []; // インベントリのアイテム画像を格納する配列 (Phaser.GameObjects.Image)
+        this.backpackGridObjects = []; // バックパックのグリッド線や背景などのPhaserオブジェクトを格納する配列
 
-        this.initialBattleParams = null;
-        this.battleEnded = false; 
-        this.battleLogText = null;
+        this.playerStats = { attack: 0, defense: 0, hp: 0 }; 
+        this.enemyStats = { attack: 0, defense: 0, hp: 0 };  
 
+        this.initialBattleParams = null; // シーンの初期パラメータ (リトライ用)
+        this.battleEnded = false; // 戦闘終了フラグ (endBattleの二重呼び出し防止)
+        this.battleLogText = null; // 戦闘ログ表示用テキストオブジェクト
+
+        // UIボタンへの参照
         this.winButton = null;
         this.loseButton = null;
         this.retryButton = null;
         this.titleButton = null;
         this.gameOverText = null;
-        this.onFVariableChangedListener = null;
+
+        this.onFVariableChangedListener = null; // StateManagerのイベントリスナー参照
+
+        // ★★★ 追加: BattleSceneからSystemSceneへのイベント発行済みフラグ ★★★
+        this.eventEmitted = false;
+
+        // ★★★ 追加: create()で作成するその他のPhaserオブジェクトの参照を初期化 ★★★
+        this.playerPlaceholderText = null;
+        this.enemyPlaceholderText = null;
+        this.startBattleButton = null;
     }
 
     init(data) {
@@ -46,10 +59,11 @@ export default class BattleScene extends Phaser.Scene {
         };
         console.log("ActionScene (as BattleScene): 初期バトルパラメータ:", this.initialBattleParams);
 
-        this.battleEnded = false; 
+        this.battleEnded = false; // init時にリセット
+        this.eventEmitted = false; // ★★★ init時にイベント発行済みフラグもリセット ★★★
     }
 
-     create() {
+    create() {
         console.log("ActionScene (as BattleScene): create 開始");
         this.cameras.main.setBackgroundColor('#8a2be2');
 
@@ -60,26 +74,23 @@ export default class BattleScene extends Phaser.Scene {
             console.error("ActionScene (as BattleScene): GameSceneのStateManagerが見つかりません。ゲーム変数は更新できません。");
         }
 
-        this.add.text(100, 360, 'PLAYER', { fontSize: '48px', fill: '#fff' }).setOrigin(0.5);
-        this.add.text(this.scale.width - 100, 360, 'ENEMY', { fontSize: '48px', fill: '#fff' }).setOrigin(0.5);
+        // ★★★ 修正箇所: プレースホルダーテキストをプロパティに保持 ★★★
+        this.playerPlaceholderText = this.add.text(100, 360, 'PLAYER', { fontSize: '48px', fill: '#fff' }).setOrigin(0.5);
+        this.enemyPlaceholderText = this.add.text(this.scale.width - 100, 360, 'ENEMY', { fontSize: '48px', fill: '#fff' }).setOrigin(0.5);
 
         this.playerHpBar = new HpBar(this, 20, 20, 250, 30, 'player');
         this.enemyHpBar = new HpBar(this, this.scale.width - 20, 20, 250, 30, 'enemy');
         this.enemyHpBar.x -= this.enemyHpBar.barWidth;
         this.coinHud = new CoinHud(this, 100, 50);
 
-        // ★★★ 修正箇所: f変数を明確に初期化してから、HUDの表示を設定 ★★★
-        // プレイヤーHPの初期化
         this.stateManager.f.player_max_hp = this.initialBattleParams.initialPlayerMaxHp; 
         this.stateManager.f.player_hp = this.initialBattleParams.initialPlayerHp;
         this.playerHpBar.setHp(this.stateManager.f.player_hp, this.stateManager.f.player_max_hp);
 
-        // 敵HPの初期化
-        this.stateManager.f.enemy_max_hp = 500; // この戦闘での敵の最大HP
-        this.stateManager.f.enemy_hp = 500; // この戦闘での敵の現在HP
+        this.stateManager.f.enemy_max_hp = 500; 
+        this.stateManager.f.enemy_hp = 500; 
         this.enemyHpBar.setHp(this.stateManager.f.enemy_hp, this.stateManager.f.enemy_max_hp);
 
-        // コインHUDの初期化
         this.coinHud.setCoin(this.initialBattleParams.initialCoin);
 
         this.onFVariableChangedListener = this.onFVariableChanged.bind(this);
@@ -93,10 +104,11 @@ export default class BattleScene extends Phaser.Scene {
         this.gridX = this.scale.width / 2 - this.gridWidth / 2;
         this.gridY = this.scale.height / 2 - this.gridHeight / 2 + 50;
 
-        this.add.rectangle(this.gridX + this.gridWidth / 2, this.gridY + this.gridHeight / 2, this.gridWidth, this.gridHeight, 0x333333, 0.9).setOrigin(0.5).setDepth(10);
+        // ★★★ 修正箇所: グリッドの背景と線をプロパティの配列に保持 ★★★
+        this.backpackGridObjects.push(this.add.rectangle(this.gridX + this.gridWidth / 2, this.gridY + this.gridHeight / 2, this.gridWidth, this.gridHeight, 0x333333, 0.9).setOrigin(0.5).setDepth(10));
         for (let i = 0; i <= this.backpackGridSize; i++) {
-            this.add.line(0, 0, this.gridX, this.gridY + i * this.cellSize, this.gridX + this.gridWidth, this.gridY + i * this.cellSize, 0x666666, 0.5).setOrigin(0).setDepth(11);
-            this.add.line(0, 0, this.gridX + i * this.cellSize, this.gridY, this.gridX + i * this.cellSize, this.gridY + this.gridHeight, 0x666666, 0.5).setOrigin(0).setDepth(11);
+            this.backpackGridObjects.push(this.add.line(0, 0, this.gridX, this.gridY + i * this.cellSize, this.gridX + this.gridWidth, this.gridY + i * this.cellSize, 0x666666, 0.5).setOrigin(0).setDepth(11));
+            this.backpackGridObjects.push(this.add.line(0, 0, this.gridX + i * this.cellSize, this.gridY, this.gridX + i * this.cellSize, this.gridY + this.gridHeight, 0x666666, 0.5).setOrigin(0).setDepth(11));
         }
 
         this.backpack = Array(this.backpackGridSize).fill(null).map(() => Array(this.backpackGridSize).fill(0));
@@ -106,24 +118,33 @@ export default class BattleScene extends Phaser.Scene {
         const inventoryY = this.gridY;
         const inventoryWidth = 150;
         const inventoryHeight = this.gridHeight;
-        this.add.rectangle(inventoryX + inventoryWidth / 2, inventoryY + inventoryHeight / 2, inventoryWidth, inventoryHeight, 0x555555, 0.8).setOrigin(0.5).setDepth(10);
-        this.add.text(inventoryX + inventoryWidth / 2, inventoryY + 20, 'インベントリ', { fontSize: '24px', fill: '#fff' }).setOrigin(0.5).setDepth(11);
+        // ★★★ 修正箇所: インベントリの背景とテキストもプロパティの配列に保持 ★★★
+        this.backpackGridObjects.push(this.add.rectangle(inventoryX + inventoryWidth / 2, inventoryY + inventoryHeight / 2, inventoryWidth, inventoryHeight, 0x555555, 0.8).setOrigin(0.5).setDepth(10));
+        this.backpackGridObjects.push(this.add.text(inventoryX + inventoryWidth / 2, inventoryY + 20, 'インベントリ', { fontSize: '24px', fill: '#fff' }).setOrigin(0.5).setDepth(11));
 
         const initialInventory = ['sword', 'shield', 'potion'];
         let itemY = inventoryY + 70;
         initialInventory.forEach(itemId => {
-            this.createItem(itemId, inventoryX + inventoryWidth / 2, itemY);
+            const itemImage = this.createItem(itemId, inventoryX + inventoryWidth / 2, itemY);
+            if (itemImage) { 
+                this.inventoryItems.push(itemImage); // インベントリのアイテムを保持
+            }
             itemY += 80;
         });
 
         // 「戦闘開始」ボタン
-        const startBattleButton = this.add.text(this.gridX - 105, this.gridY + this.gridHeight - 30, '戦闘開始', {
+        this.startBattleButton = this.add.text(this.gridX - 105, this.gridY + this.gridHeight - 30, '戦闘開始', {
             fontSize: '28px',
             fill: '#fff',
             backgroundColor: '#008800',
             padding: { x: 10, y: 5 }
         }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(11);
-        startBattleButton.on('pointerdown', () => this.startBattle());
+        this.startBattleButton.on('pointerdown', () => {
+            // ★★★ 追加: クリック時にボタンの入力を即座に無効化 ★★★
+            this.startBattleButton.disableInteractive(); 
+            this.input.enabled = false; // 全体入力も一時無効化 (戦闘中ドラッグさせないため)
+            this.startBattle();
+        });
         
         // 戦闘ログ表示用のテキストオブジェクト
         this.battleLogText = this.add.text(this.scale.width / 2, 150, '', {
@@ -135,34 +156,56 @@ export default class BattleScene extends Phaser.Scene {
             wordWrap: { width: 400 }
         }).setOrigin(0.5).setDepth(200);
 
+        // 戦闘結果ボタンの初期化（初期は非表示）
+        this.winButton = this.add.text(320, 600, '勝利してノベルパートに戻る', { fontSize: '32px', fill: '#0c0', backgroundColor: '#000' })
+            .setOrigin(0.5).setInteractive({ useHandCursor: true }).setVisible(false); // 初期は非表示
+        this.winButton.on('pointerdown', () => {
+            // ★★★ 追加: クリック時にボタンの入力を即座に無効化 ★★★
+            this.winButton.disableInteractive(); 
+            if (this.loseButton) this.loseButton.disableInteractive();
+            this.endBattle('win');
+        });
+
+        this.loseButton = this.add.text(this.scale.width - 320, 600, '敗北してゲームオーバー', { fontSize: '32px', fill: '#c00', backgroundColor: '#000' })
+            .setOrigin(0.5).setInteractive({ useHandCursor: true }).setVisible(false); // 初期は非表示
+        this.loseButton.on('pointerdown', () => {
+            // ★★★ 追加: クリック時にボタンの入力を即座に無効化 ★★★
+            this.loseButton.disableInteractive(); 
+            if (this.winButton) this.winButton.disableInteractive();
+            this.endBattle('lose');
+        });
+
         console.log("ActionScene (as BattleScene): create 完了");
     }
 
-    // src/scenes/ActionScene.js (改造版 - BattleSceneとして機能)
-
     startBattle() {
         console.log("戦闘開始！");
-        this.input.enabled = false;
+        // アイテムのドラッグ入力を無効化 (戦闘中はアイテムを動かせない)
+        // this.input.setDraggable(this.inventoryItems, false); // これは個々のアイテムにリスナーがあるので、全体無効化でOK
 
-        // ★★★ 修正箇所: このメソッド内でステータスを宣言・算出 ★★★
+        // プレースホルダーテキストやグリッド、アイテムを非表示にする（UX向上）
+        if(this.playerPlaceholderText) this.playerPlaceholderText.setVisible(false);
+        if(this.enemyPlaceholderText) this.enemyPlaceholderText.setVisible(false);
+        this.backpackGridObjects.forEach(obj => obj.setVisible(false));
+        this.inventoryItems.forEach(item => item.setVisible(false));
+        if(this.startBattleButton) this.startBattleButton.setVisible(false);
+
         this.playerStats = { attack: 5, defense: 0, hp: this.stateManager.f.player_hp };
         this.enemyStats = { attack: 20, defense: 0, hp: this.stateManager.f.enemy_hp };
 
-        // backpack配列を走査してアイテムの効果を合算
-        const processedItems = new Set();
+        const processedItems = new Set(); 
         for (let r = 0; r < this.backpackGridSize; r++) {
             for (let c = 0; c < this.backpackGridSize; c++) {
                 const itemId = this.backpack[r][c];
                 if (itemId !== 0) {
-                    const uniqueCellId = `${itemId}-${r}-${c}`;
-                    if (!processedItems.has(uniqueCellId)) {
+                    const uniqueCellId = `${itemId}-${r}-${c}`; 
+                    if (!processedItems.has(uniqueCellId)) { 
                         const itemData = ITEM_DATA[itemId];
                         if (itemData && itemData.effects) {
-                            // ★★★ playerStats を正しく参照 ★★★
                             this.playerStats.attack += itemData.effects.attack || 0;
                             this.playerStats.defense += itemData.effects.defense || 0;
-                            processedItems.add(uniqueCellId);
                         }
+                        processedItems.add(uniqueCellId); 
                     }
                 }
             }
@@ -171,12 +214,12 @@ export default class BattleScene extends Phaser.Scene {
         console.log(`プレイヤー最終ステータス: 攻撃=${this.playerStats.attack}, 防御=${this.playerStats.defense}`);
         this.addToBattleLog(`あなたのステータス: 攻撃=${this.playerStats.attack}, 防御=${this.playerStats.defense}`);
         
-        // --- バトルループの開始 ---
         const executeTurn = (turn) => {
             console.log(`--- Turn ${turn} ---`);
 
-            // プレイヤーのターン
             this.time.delayedCall(1000, () => {
+                if (this.battleEnded) return;
+
                 const playerDamage = Math.max(0, this.playerStats.attack - this.enemyStats.defense);
                 this.enemyStats.hp -= playerDamage;
                 this.stateManager.eval(`f.enemy_hp = ${this.enemyStats.hp}`);
@@ -188,8 +231,9 @@ export default class BattleScene extends Phaser.Scene {
                     return;
                 }
 
-                // 敵のターン
                 this.time.delayedCall(1000, () => {
+                    if (this.battleEnded) return;
+
                     const enemyDamage = Math.max(0, this.enemyStats.attack - this.playerStats.defense);
                     this.playerStats.hp -= enemyDamage;
                     this.stateManager.eval(`f.player_hp = ${this.playerStats.hp}`);
@@ -207,16 +251,16 @@ export default class BattleScene extends Phaser.Scene {
         };
         executeTurn(1);
     }
-
     
-
     addToBattleLog(text) {
-        this.battleLogText.setText(text);
+        if (this.battleLogText) { 
+            this.battleLogText.setText(text);
+        }
     }
 
     createItem(itemId, x, y) {
         const itemData = ITEM_DATA[itemId];
-        if (!itemData) return;
+        if (!itemData) return null;
 
         const itemImage = this.add.image(x, y, itemData.storage).setInteractive().setData({itemId, originX: x, originY: y, gridPos: null});
         const shape = itemData.shape;
@@ -224,8 +268,9 @@ export default class BattleScene extends Phaser.Scene {
         const itemWidthInCells = shape[0] ? shape[0].length : 1;
         itemImage.setDisplaySize(itemWidthInCells * this.cellSize, itemHeightInCells * this.cellSize);
 
-        this.input.setDraggable(itemImage);
+        this.input.setDraggable(itemImage); // これで自動的に内部でリスナーが登録される
 
+        // 個々のアイテムのドラッグイベントリスナー
         itemImage.on('dragstart', (pointer, dragX, dragY) => {
             itemImage.setDepth(200);
             if (itemImage.getData('gridPos')) {
@@ -246,6 +291,7 @@ export default class BattleScene extends Phaser.Scene {
                 itemImage.y = itemImage.getData('originY');
             }
         });
+        return itemImage; 
     }
 
     canPlaceItem(itemImage, startCol, startRow) {
@@ -300,26 +346,52 @@ export default class BattleScene extends Phaser.Scene {
         console.log("現在のバックパック:", this.backpack);
     }
 
-
+    // ★★★ 修正箇所: stop() メソッドで全てのPhaserオブジェクトを破棄するロジックを強化 ★★★
     stop() {
         super.stop();
+        console.log("ActionScene (as BattleScene): stop されました。UI要素とイベントリスナーを破棄します。");
+
         // StateManagerのイベントリスナーを解除
         if (this.stateManager && this.onFVariableChangedListener) {
             this.stateManager.events.off('f-variable-changed', this.onFVariableChangedListener);
             this.onFVariableChangedListener = null;
         }
         
-        // ボタンのイベントリスナーも解除し、オブジェクトも破棄
+        // --- HUDオブジェクトを破棄 ---
+        if (this.playerHpBar) { this.playerHpBar.destroy(); this.playerHpBar = null; }
+        if (this.enemyHpBar) { this.enemyHpBar.destroy(); this.enemyHpBar = null; }
+        if (this.coinHud) { this.coinHud.destroy(); this.coinHud = null; }
+
+        // --- プレースホルダーテキストを破棄 ---
+        if (this.playerPlaceholderText) { this.playerPlaceholderText.destroy(); this.playerPlaceholderText = null; }
+        if (this.enemyPlaceholderText) { this.enemyPlaceholderText.destroy(); this.enemyPlaceholderText = null; }
+
+        // --- バックパック関連のUIオブジェクトを破棄 ---
+        if (this.backpackGridObjects.length > 0) {
+            this.backpackGridObjects.forEach(obj => { if (obj) obj.destroy(); });
+            this.backpackGridObjects = [];
+        }
+
+        // --- インベントリアイテムを破棄 (ドラッグリスナーもここで自動解除される) ---
+        if (this.inventoryItems.length > 0) {
+            this.inventoryItems.forEach(item => { if (item) item.destroy(); });
+            this.inventoryItems = [];
+        }
+
+        // --- ボタンと関連するテキストを破棄 ---
+        if (this.startBattleButton) { this.startBattleButton.off('pointerdown'); this.startBattleButton.destroy(); this.startBattleButton = null; }
+        if (this.battleLogText) { this.battleLogText.destroy(); this.battleLogText = null; }
+
         if (this.winButton) { this.winButton.off('pointerdown'); this.winButton.destroy(); this.winButton = null; }
         if (this.loseButton) { this.loseButton.off('pointerdown'); this.loseButton.destroy(); this.loseButton = null; }
         if (this.retryButton) { this.retryButton.off('pointerdown'); this.retryButton.destroy(); this.retryButton = null; }
         if (this.titleButton) { this.titleButton.off('pointerdown'); this.titleButton.destroy(); this.titleButton = null; }
         if (this.gameOverText) { this.gameOverText.destroy(); this.gameOverText = null; } 
 
-        console.log("ActionScene (as BattleScene): stop されました。リスナーを解除。");
+        // 戦闘中の遅延Callがあれば停止（もしstartBattle内でtime.delayedCallをプロパティに保持していれば）
+        // 例: if (this.battleTurnTimer) { this.battleTurnTimer.remove(); }
     }
 
-    // ★★★ onFVariableChanged メソッドを置き換え ★★★
     onFVariableChanged(key, value) {
         if (key === 'coin' && this.coinHud && this.coinHud.coinText.text !== value.toString()) {
             this.coinHud.setCoin(value);
@@ -329,10 +401,10 @@ export default class BattleScene extends Phaser.Scene {
         } else if (key === 'player_max_hp' && this.playerHpBar) {
             const currentHp = this.stateManager.f.player_hp || 0;
             this.playerHpBar.setHp(currentHp, value);
-        } else if (key === 'enemy_hp' && this.enemyHpBar) { // ★★★ 修正箇所: 敵HPバーの更新を追加 ★★★
+        } else if (key === 'enemy_hp' && this.enemyHpBar) { 
             const maxHp = this.stateManager.f.enemy_max_hp || 500;
             this.enemyHpBar.setHp(value, maxHp);
-        } else if (key === 'enemy_max_hp' && this.enemyHpBar) { // ★★★ 修正箇所: 敵最大HPの更新を追加 ★★★
+        } else if (key === 'enemy_max_hp' && this.enemyHpBar) { 
             const currentHp = this.stateManager.f.enemy_hp || 0;
             this.enemyHpBar.setHp(currentHp, value);
         }
@@ -345,47 +417,63 @@ export default class BattleScene extends Phaser.Scene {
 
         console.log(`ActionScene (as BattleScene): バトル終了。結果: ${result}`);
         
-        this.input.enabled = false;
-        if (this.winButton) { this.winButton.destroy(); this.winButton = null; }
-        if (this.loseButton) { this.loseButton.destroy(); this.loseButton = null; }
+        this.input.enabled = false; // シーン全体の入力を無効化
+        // winButton/loseButtonはendBattleの呼び出し元で無効化済み、stop()で破棄される
 
-        // ★★★ 修正箇所: return-to-novelのparamsに、endBattle時点でのステータスを渡す ★★★
-        if (result === 'win') {
-            this.scene.get('SystemScene').events.emit('return-to-novel', {
-                from: this.scene.key,
-                params: { 
-                    'f.battle_result': 'win',
-                    'f.player_hp': this.playerStats.hp, // StateManagerのf変数ではなく、戦闘中のステータスを渡す
-                    'f.coin': this.stateManager.f.coin // コインは戦闘中に変化しないので、StateManagerからでOK
-                }
-            });
-        } else {
-            // ★★★ 敗北時: ゲームオーバー処理 ★★★
-            console.log("ActionScene (as BattleScene): ゲームオーバー処理を開始します。");
-            
-            this.gameOverText = this.add.text(this.scale.width / 2, this.scale.height / 2 - 50, 'GAME OVER', { fontSize: '64px', fill: '#f00', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setDepth(999);
-            this.retryButton = this.add.text(this.scale.width / 2, this.scale.height / 2 + 50, 'もう一度挑戦', { fontSize: '32px', fill: '#fff', backgroundColor: '#880000', padding: { x: 20, y: 10 } }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(999);
-            this.titleButton = this.add.text(this.scale.width / 2, this.scale.height / 2 + 120, 'タイトルに戻る', { fontSize: '32px', fill: '#fff', backgroundColor: '#444444', padding: { x: 20, y: 10 } }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(999);
-            
-            // ★★★ 修正箇所: 新しいボタンを有効化するため、シーンの入力を再度有効化 ★★★
-            this.input.enabled = true;
+        // ★★★ 修正箇所: SystemSceneへのイベント発行を eventEmitted フラグで制御 ★★★
+        if (!this.eventEmitted) {
+            this.eventEmitted = true; // イベント発行フラグを立てる
 
-            this.retryButton.on('pointerdown', () => {
-                this.input.enabled = false;
-                this.scene.get('SystemScene').events.emit('request-scene-transition', {
-                    to: this.scene.key,
-                    from: this.scene.key,
-                    params: this.initialBattleParams
-                });
-            });
-
-            this.titleButton.on('pointerdown', () => {
-                this.input.enabled = false;
+            if (result === 'win') {
                 this.scene.get('SystemScene').events.emit('return-to-novel', {
                     from: this.scene.key,
-                    params: { 'f.battle_result': 'game_over' }
+                    params: { 
+                        'f.battle_result': 'win',
+                        'f.player_hp': this.playerStats.hp, 
+                        'f.coin': this.stateManager.f.coin 
+                    }
                 });
-            });
+            } else {
+                // 敗北時: ゲームオーバー処理
+                console.log("ActionScene (as BattleScene): ゲームオーバー処理を開始します。");
+                
+                // ゲームオーバーUIの生成
+                this.gameOverText = this.add.text(this.scale.width / 2, this.scale.height / 2 - 50, 'GAME OVER', { fontSize: '64px', fill: '#f00', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setDepth(999);
+                this.retryButton = this.add.text(this.scale.width / 2, this.scale.height / 2 + 50, 'もう一度挑戦', { fontSize: '32px', fill: '#fff', backgroundColor: '#880000', padding: { x: 20, y: 10 } }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(999);
+                this.titleButton = this.add.text(this.scale.width / 2, this.scale.height / 2 + 120, 'タイトルに戻る', { fontSize: '32px', fill: '#fff', backgroundColor: '#444444', padding: { x: 20, y: 10 } }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(999);
+                
+                this.input.enabled = true; // 新しいボタンを有効化するため、シーンの入力を再度有効化
+
+                // ★★★ 追加: ゲームオーバーボタンクリック時の入力無効化とイベント発行制御 ★★★
+                this.retryButton.on('pointerdown', () => {
+                    this.retryButton.disableInteractive();
+                    if (this.titleButton) this.titleButton.disableInteractive();
+                    if (!this.eventEmitted) { // 二重発行防止
+                        this.eventEmitted = true;
+                        console.log("ActionScene (as BattleScene): もう一度挑戦します。");
+                        this.scene.get('SystemScene').events.emit('request-scene-transition', {
+                            to: this.scene.key, // BattleScene自身
+                            from: this.scene.key,
+                            params: this.initialBattleParams
+                        });
+                    }
+                });
+
+                this.titleButton.on('pointerdown', () => {
+                    this.titleButton.disableInteractive();
+                    if (this.retryButton) this.retryButton.disableInteractive();
+                    if (!this.eventEmitted) { // 二重発行防止
+                        this.eventEmitted = true;
+                        console.log("ActionScene (as BattleScene): タイトルに戻ります。");
+                        this.scene.get('SystemScene').events.emit('return-to-novel', {
+                            from: this.scene.key,
+                            params: { 'f.battle_result': 'game_over' }
+                        });
+                    }
+                });
+            }
+        } else {
+            console.warn("BattleScene: イベントが既に発行されているか、結果が不明なためイベントは発行されません。");
         }
     }
 
