@@ -2,7 +2,7 @@ export default class UIScene extends Phaser.Scene {
     
     constructor() {
         console.log("PreloadScene: 起動。...");
-        super({ key: 'UIScene'});
+        super({ key: 'UIScene', active:false});
 
         // --- UI要素と状態を、すべてプロパティとして初期化 ---
         this.menuButton = null;
