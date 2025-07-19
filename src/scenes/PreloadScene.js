@@ -71,7 +71,7 @@ export default class PreloadScene extends Phaser.Scene {
                 startScenario: 'test.ks' // ここで開始するシナリオを指定
             });
             this.scene.launch('UIScene');
-            this.scene.launch('SystemScene');
+         //   this.scene.launch('SystemScene');
             console.log("プリロード完了。");
         });
         
