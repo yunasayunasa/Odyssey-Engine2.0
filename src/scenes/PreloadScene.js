@@ -1,10 +1,11 @@
-// src/scenes/PreloadScene.js (修正版 - アセットロードのライフサイクル修正)
+// src/scenes/PreloadScene.js (二重起動問題を解決するための修正 - ステップ1-2)
 
 import ConfigManager from '../core/ConfigManager.js'; // ConfigManagerをここでimport
 
 export default class PreloadScene extends Phaser.Scene {
     constructor() {
-        super('PreloadScene'); // main.jsでactive:trueが設定されるため、ここではactiveは指定しない
+        // ★★★ 修正箇所: constructorからactive:trueを削除 (main.jsで制御するため) ★★★
+        super('PreloadScene'); 
         // UI要素への参照を初期化 (stop()で破棄するため)
         this.progressBar = null;
         this.progressBox = null;
@@ -15,7 +16,7 @@ export default class PreloadScene extends Phaser.Scene {
     preload() {
         console.log("PreloadScene: 起動。全アセットのロードを開始します。");
         
-        // --- 1. ロード画面UIの表示 ---
+        // --- 1. ロード画面UIの表示 (preloadでUIも作るのが一般的) ---
         this.progressBox = this.add.graphics();
         this.progressBox.fillStyle(0x222222, 0.8).fillRect(340, 320, 600, 50);
         this.progressBar = this.add.graphics(); 
@@ -28,14 +29,15 @@ export default class PreloadScene extends Phaser.Scene {
             this.progressBar.clear().fillStyle(0xffffff, 1).fillRect(350, 330, 580 * value, 30);
         });
         
-        // --- 2. 最初にロードする必要のあるアセットをキューに追加 ---
-        // ここで asset_define.json と webfont.js をロードします。
+        // --- 2. 全てのアセットをロードキューに追加 (preloadメソッド内で行う) ---
+        // 最初に asset_define.json と webfont.js をロード
         this.load.json('asset_define', 'assets/asset_define.json');
         this.load.script('webfont', 'https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js');
 
-        // ★★★ 修正箇所: 最初のロード（asset_define.json）が完了した後の処理 ★★★
+        // ★★★ 修正箇所: preload()内でasset_define.jsonのロード完了を待つロジックを追加 ★★★
+        // preload()内で追加されたアセットが全てロードされた後、このコールバックが呼ばれます。
         this.load.once('complete', () => {
-            console.log("PreloadScene: asset_define.json と webfont.js のロード完了。");
+            console.log("PreloadScene: preload段階のアセットロード完了。asset_define.jsonを読み込みます。");
             const assetDefine = this.cache.json.get('asset_define');
 
             // asset_define.json の内容に基づいて、残りの全てのアセットをロードキューに追加
@@ -82,24 +84,28 @@ export default class PreloadScene extends Phaser.Scene {
             }
         }
             
-        // SystemSceneを起動し、そのCREATEイベントを待って初期ゲーム開始を依頼する
+        // ★★★ SystemSceneを起動し、そのCREATEイベントを待って初期ゲーム開始を依頼する ★★★
         // SystemSceneはmain.jsでactive:falseになっているため、launchする必要がある
         this.scene.launch('SystemScene'); 
-        const systemScene = this.scene.get('SystemScene'); 
+        const systemScene = this.scene.get('SystemScene'); // launchしたのでインスタンスが取得できるはず
         
         if (systemScene) {
+            // SystemSceneが完全にcreateされたことを確認してからstartInitialGameを呼び出す
             systemScene.events.once(Phaser.Scenes.Events.CREATE, () => {
                 systemScene.startInitialGame(charaDefs, 'test.ks'); 
                 console.log("PreloadScene: SystemSceneのCREATEイベント受信、初期ゲーム起動を依頼しました。");
             });
         } else {
             console.error("PreloadScene: SystemSceneのインスタンスが取得できませんでした。ゲーム起動に失敗。");
+            // フェールセーフとして、エラー時に何らかの処理を行う
+            // this.game.destroy(true); 
         }
 
         // PreloadSceneは役割を終えるので停止する
         this.scene.stop(this.scene.key);
     }
 
+    // ★★★ stop() メソッドを追加し、ロード画面UIを破棄 ★★★
     stop() {
         super.stop();
         console.log("PreloadScene: stop されました。ロード画面UIを破棄します。");
