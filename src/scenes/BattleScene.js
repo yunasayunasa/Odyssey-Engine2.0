@@ -127,62 +127,77 @@ export default class BattleScene extends Phaser.Scene {
         console.log("ActionScene (as BattleScene): create 完了");
     }
 
+     // ★★★ startBattle メソッドを置き換え ★★★
     startBattle() {
         console.log("戦闘開始！");
         this.input.enabled = false;
 
-        let playerAttack = 5;
-        let playerDefense = 0;
+        // --- 1. ステータス算出 ---
+        let playerStats = { attack: 5, defense: 0, hp: this.stateManager.f.player_hp };
+        let enemyStats = { attack: 20, defense: 0, hp: this.stateManager.f.enemy_hp };
 
-        // backpack配列を走査してアイテムの効果を合算
         const processedItems = new Set();
         for (let r = 0; r < this.backpackGridSize; r++) {
             for (let c = 0; c < this.backpackGridSize; c++) {
                 const itemId = this.backpack[r][c];
-                if (itemId !== 0 && !processedItems.has(itemId)) {
-                    const itemData = ITEM_DATA[itemId];
-                    if (itemData && itemData.effects) {
-                        playerAttack += itemData.effects.attack || 0;
-                        playerDefense += itemData.effects.defense || 0;
-                        processedItems.add(itemId); // 同じアイテムを複数回カウントしない
+                if (itemId !== 0) {
+                    const uniqueCellId = `${itemId}-${r}-${c}`; // アイテムの重複カウントを防ぐため
+                    if (!processedItems.has(uniqueCellId)) {
+                        const itemData = ITEM_DATA[itemId];
+                        if (itemData && itemData.effects) {
+                            playerStats.attack += itemData.effects.attack || 0;
+                            playerStats.defense += itemData.effects.defense || 0;
+                            processedItems.add(uniqueCellId);
+                        }
                     }
                 }
             }
         }
+        console.log(`プレイヤー最終ステータス: 攻撃=${playerStats.attack}, 防御=${playerStats.defense}`);
+        this.addToBattleLog(`あなたのステータス: 攻撃=${playerStats.attack}, 防御=${playerStats.defense}`);
         
-        console.log(`プレイヤー最終ステータス: 攻撃=${playerAttack}, 防御=${playerDefense}`);
-        this.addToBattleLog(`あなたのステータス: 攻撃=${playerAttack}, 防御=${playerDefense}`);
+        // --- 2. バトルループの開始 ---
+        // ★ ターンを管理する再帰関数
+        const executeTurn = (turn) => {
+            console.log(`--- Turn ${turn} ---`);
 
-        let enemyHp = this.stateManager.f.enemy_hp;
-        let enemyAttack = 20;
-
-        // 簡単なオートバトルシミュレーション
-        this.time.delayedCall(1000, () => {
-            const playerDamage = Math.max(0, playerAttack - 0);
-            enemyHp -= playerDamage;
-            this.stateManager.f.enemy_hp = enemyHp;
-            this.addToBattleLog(`あなたの攻撃！敵に ${playerDamage} のダメージ！`);
-
-            if (enemyHp <= 0) {
-                this.addToBattleLog("敵を倒した！");
-                this.time.delayedCall(1000, () => this.endBattle('win'));
-                return;
-            }
-
+            // プレイヤーのターン
             this.time.delayedCall(1000, () => {
-                const enemyDamage = Math.max(0, enemyAttack - playerDefense);
-                this.stateManager.f.player_hp -= enemyDamage;
-                this.addToBattleLog(`敵の攻撃！あなたに ${enemyDamage} のダメージ！`);
-
-                if (this.stateManager.f.player_hp <= 0) {
-                    this.addToBattleLog("あなたは倒れてしまった…");
-                    this.time.delayedCall(1000, () => this.endBattle('lose'));
+                const playerDamage = Math.max(0, playerStats.attack - enemyStats.defense);
+                enemyStats.hp -= playerDamage;
+                this.stateManager.eval(`f.enemy_hp = ${enemyStats.hp}`); // StateManagerの変数を更新
+                this.addToBattleLog(`あなたの攻撃！敵に ${playerDamage} のダメージ！ (敵残りHP: ${enemyStats.hp})`);
+                
+                // 勝利判定
+                if (enemyStats.hp <= 0) {
+                    this.addToBattleLog("敵を倒した！");
+                    this.time.delayedCall(1000, () => this.endBattle('win'));
                     return;
                 }
-            });
-        });
-    }
 
+                // 敵のターン
+                this.time.delayedCall(1000, () => {
+                    const enemyDamage = Math.max(0, enemyStats.attack - playerStats.defense);
+                    playerStats.hp -= enemyDamage;
+                    this.stateManager.eval(`f.player_hp = ${playerStats.hp}`); // StateManagerの変数を更新
+                    this.addToBattleLog(`敵の攻撃！あなたに ${enemyDamage} のダメージ！ (残りHP: ${playerStats.hp})`);
+                    
+                    // 敗北判定
+                    if (playerStats.hp <= 0) {
+                        this.addToBattleLog("あなたは倒れてしまった…");
+                        this.time.delayedCall(1000, () => this.endBattle('lose'));
+                        return;
+                    }
+
+                    // ★★★ 次のターンへ ★★★
+                    executeTurn(turn + 1);
+                });
+            });
+        };
+        
+        // ★ 最初のターンを開始
+        executeTurn(1);
+    }
     addToBattleLog(text) {
         this.battleLogText.setText(text);
     }
@@ -292,20 +307,25 @@ export default class BattleScene extends Phaser.Scene {
         console.log("ActionScene (as BattleScene): stop されました。リスナーを解除。");
     }
 
+    // ★★★ onFVariableChanged メソッドを置き換え ★★★
     onFVariableChanged(key, value) {
         if (key === 'coin' && this.coinHud && this.coinHud.coinText.text !== value.toString()) {
             this.coinHud.setCoin(value);
         } else if (key === 'player_hp' && this.playerHpBar) {
             const maxHp = this.stateManager.f.player_max_hp || 100;
-             this.playerHpBar.setHp(value, maxHp);
+            this.playerHpBar.setHp(value, maxHp);
         } else if (key === 'player_max_hp' && this.playerHpBar) {
-             const currentHp = this.stateManager.f.player_hp || 0;
-             this.playerHpBar.setHp(currentHp, value);
-        } else if (key === 'enemy_hp' && this.enemyHpBar) {
+            const currentHp = this.stateManager.f.player_hp || 0;
+            this.playerHpBar.setHp(currentHp, value);
+        } else if (key === 'enemy_hp' && this.enemyHpBar) { // ★★★ 修正箇所: 敵HPバーの更新を追加 ★★★
             const maxHp = this.stateManager.f.enemy_max_hp || 500;
             this.enemyHpBar.setHp(value, maxHp);
+        } else if (key === 'enemy_max_hp' && this.enemyHpBar) { // ★★★ 修正箇所: 敵最大HPの更新を追加 ★★★
+            const currentHp = this.stateManager.f.enemy_hp || 0;
+            this.enemyHpBar.setHp(currentHp, value);
         }
     }
+
 
     endBattle(result) {
         if (this.battleEnded) return;
