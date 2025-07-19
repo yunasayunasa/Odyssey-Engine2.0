@@ -140,15 +140,25 @@ export default class BattleScene extends Phaser.Scene {
 
     // src/scenes/ActionScene.js (改造版 - BattleSceneとして機能)
 
+    // src/scenes/ActionScene.js の startBattle メソッド (最終修正版)
+
     startBattle() {
         console.log("戦闘開始！");
         this.input.enabled = false;
 
-        // ★★★ 修正箇所: このメソッド内でステータスを宣言・算出 ★★★
-        this.playerStats = { attack: 5, defense: 0, hp: this.stateManager.f.player_hp };
-        this.enemyStats = { attack: 20, defense: 0, hp: this.stateManager.f.enemy_hp };
+        // --- 1. ステータスをクラスプロパティとして初期化 ---
+        this.playerStats = { 
+            attack: 5, 
+            defense: 0, 
+            hp: this.stateManager.f.player_hp 
+        };
+        this.enemyStats = { 
+            attack: 20, 
+            defense: 0, 
+            hp: this.stateManager.f.enemy_hp 
+        };
 
-        // backpack配列を走査してアイテムの効果を合算
+        // バックパックからステータスを算出
         const processedItems = new Set();
         for (let r = 0; r < this.backpackGridSize; r++) {
             for (let c = 0; c < this.backpackGridSize; c++) {
@@ -158,7 +168,6 @@ export default class BattleScene extends Phaser.Scene {
                     if (!processedItems.has(uniqueCellId)) {
                         const itemData = ITEM_DATA[itemId];
                         if (itemData && itemData.effects) {
-                            // ★★★ playerStats を正しく参照 ★★★
                             this.playerStats.attack += itemData.effects.attack || 0;
                             this.playerStats.defense += itemData.effects.defense || 0;
                             processedItems.add(uniqueCellId);
@@ -171,7 +180,7 @@ export default class BattleScene extends Phaser.Scene {
         console.log(`プレイヤー最終ステータス: 攻撃=${this.playerStats.attack}, 防御=${this.playerStats.defense}`);
         this.addToBattleLog(`あなたのステータス: 攻撃=${this.playerStats.attack}, 防御=${this.playerStats.defense}`);
         
-        // --- バトルループの開始 ---
+        // --- 2. バトルループの開始 ---
         const executeTurn = (turn) => {
             console.log(`--- Turn ${turn} ---`);
 
@@ -179,7 +188,11 @@ export default class BattleScene extends Phaser.Scene {
             this.time.delayedCall(1000, () => {
                 const playerDamage = Math.max(0, this.playerStats.attack - this.enemyStats.defense);
                 this.enemyStats.hp -= playerDamage;
-                this.stateManager.eval(`f.enemy_hp = ${this.enemyStats.hp}`);
+                
+                // ★★★ f変数を直接更新し、イベントを手動で発行 ★★★
+                this.stateManager.f.enemy_hp = this.enemyStats.hp;
+                this.stateManager.events.emit('f-variable-changed', 'enemy_hp', this.enemyStats.hp);
+
                 this.addToBattleLog(`あなたの攻撃！敵に ${playerDamage} のダメージ！ (敵残りHP: ${Math.max(0, this.enemyStats.hp)})`);
                 
                 if (this.enemyStats.hp <= 0) {
@@ -192,7 +205,11 @@ export default class BattleScene extends Phaser.Scene {
                 this.time.delayedCall(1000, () => {
                     const enemyDamage = Math.max(0, this.enemyStats.attack - this.playerStats.defense);
                     this.playerStats.hp -= enemyDamage;
-                    this.stateManager.eval(`f.player_hp = ${this.playerStats.hp}`);
+                    
+                    // ★★★ f変数を直接更新し、イベントを手動で発行 ★★★
+                    this.stateManager.f.player_hp = this.playerStats.hp;
+                    this.stateManager.events.emit('f-variable-changed', 'player_hp', this.playerStats.hp);
+
                     this.addToBattleLog(`敵の攻撃！あなたに ${enemyDamage} のダメージ！ (残りHP: ${Math.max(0, this.playerStats.hp)})`);
                     
                     if (this.playerStats.hp <= 0) {
@@ -354,12 +371,13 @@ export default class BattleScene extends Phaser.Scene {
             this.scene.get('SystemScene').events.emit('return-to-novel', {
                 from: this.scene.key,
                 params: { 
-                    'f.battle_result': 'win',
-                    'f.player_hp': this.playerStats.hp, // StateManagerのf変数ではなく、戦闘中のステータスを渡す
-                    'f.coin': this.stateManager.f.coin // コインは戦闘中に変化しないので、StateManagerからでOK
+                     'f.battle_result': 'win',
+                    // ★★★ 修正箇所: StateManagerのf変数を直接参照して渡す ★★★
+                    'f.player_hp': this.stateManager.f.player_hp, 
+                    'f.coin': this.stateManager.f.coin 
                 }
             });
-        } else {
+        }else {
             // ★★★ 敗北時: ゲームオーバー処理 ★★★
             console.log("ActionScene (as BattleScene): ゲームオーバー処理を開始します。");
             
