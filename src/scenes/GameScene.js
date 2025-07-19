@@ -168,14 +168,14 @@ this.scenarioManager.registerTag('stopvideo', handleStopVideo);
             this.coinHud.setCoin(this.stateManager.f.coin || 0);
             this.playerHpBar.setHp(this.stateManager.f.player_hp || 100, this.stateManager.f.player_max_hp || 100);
 
-               // ★★★ 通常起動時も、入力有効化をSystemSceneに依頼 ★★★
-            this.scene.get('SystemScene').events.emit('enable-input', ['GameScene', 'UIScene']);
+            // シーンの準備完了フラグを立てる
+            this.isSceneFullyReady = true; 
             this.time.delayedCall(10, () => this.scenarioManager.next());
         }
+        
         this.input.on('pointerdown', () => this.scenarioManager.onClick());
         console.log("GameScene: create 完了");
     }
-
 
     stop() {
         super.stop();
@@ -345,20 +345,6 @@ clearChoiceButtons() {
     // next() の呼び出しは選択肢ボタンの onPointerDown イベントハンドラ内で行われるべき
 }
 
-  // ★★★ 新しいメソッド: SystemSceneから呼ばれるロード処理の開始点 ★★★
-    startLoading(returnParams) {
-        console.log("GameScene: SystemSceneからロード開始命令を受信。");
-        if (this.isResuming) {
-            // サブシーンからの復帰の場合
-            this.performLoad(0, returnParams); 
-        } else {
-            // 通常の初回起動の場合 (通常起動はSystemSceneを経由しない)
-            this.performSave(0);
-            this.scenarioManager.loadScenario(this.startScenario, this.startLabel);
-            this.isSceneFullyReady = true;
-            this.time.delayedCall(10, () => this.scenarioManager.next());
-        }
-    }
 
 
  // src/scenes/GameScene.js の performLoad メソッド (最終版)
@@ -416,19 +402,15 @@ clearChoiceButtons() {
             }
             // 全ての復帰処理が完了した後にフラグを立てる
             this.isSceneFullyReady = true; 
-            
-            // ★★★ ロード完了後、入力有効化をSystemSceneに依頼 ★★★
-            this.scene.get('SystemScene').events.emit('enable-input', ['GameScene', 'UIScene']);
-            // ★★★ 完了通知イベントを発行 ★★★
+            // SystemSceneにロード完了を通知するカスタムイベントを発行
             this.scene.get('SystemScene').events.emit('gameScene-load-complete');
         
         } catch (e) {
             console.error(`ロード処理でエラーが発生しました。`, e);
-            // ★★★ 失敗時も完了通知イベントを発行 ★★★
+            // ★★★ 修正箇所: catchブロックにもイベント発行を追加 ★★★
             this.scene.get('SystemScene').events.emit('gameScene-load-complete');
         }
-    }
-}
+    }}
 // ★★★ rebuildScene ヘルパー関数 (最終版) ★★★
 async function rebuildScene(manager, state) {
     console.log("--- rebuildScene 開始 ---", state);
