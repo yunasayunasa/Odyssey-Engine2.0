@@ -70,8 +70,8 @@ export default class PreloadScene extends Phaser.Scene {
                 charaDefs: charaDefs,
                 startScenario: 'test.ks' // ここで開始するシナリオを指定
             });
-            this.scene.launch('UIScene');
-            this.scene.launch('SystemScene');
+           // this.scene.launch('UIScene');
+           // this.scene.launch('SystemScene');
         });
         
         // --- ロードを開始 ---
