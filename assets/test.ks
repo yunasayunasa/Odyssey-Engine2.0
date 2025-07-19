@@ -24,7 +24,8 @@
 [playbgm storage="ronpa_bgm" time=1000]
 [bg storage="bg_school" time=1500]
 [wait time=1500]
-
+[jump storage="BattleScene" params="{player_level:f.love_meter, player_name:'&f.player_name;', start_area:'bridge', current_coin:f.coin, player_max_hp:f.player_max_hp, player_hp:f.player_hp}"]
+[fadein time=500]
 [chara_show name="yuna" pos="left" y=800 visible=false] 
 ; y=800 は画面外のはず
 [move name="yuna" y=450 alpha=1 time=1000] 
@@ -54,7 +55,7 @@ kaito:「わっ、びっくりした！」
 
 [chara_jump name="kaito" height=50 time=600]
 [wait time=600]
-yuna:「次は、ジャンプ！」
+
 
 
 [flip name="yuna" time=400]
