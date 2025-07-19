@@ -23,10 +23,10 @@ export default class SystemScene extends Phaser.Scene {
         const startAndMonitorScene = (sceneKey, params, waitForGameSceneLoadComplete) => {
             // (isProcessingTransition フラグのコメントアウトは、一旦そのままにしておきます。
             // これにより、後続のデバッグでこの部分が実際にどう機能するかを確認しやすくなります。)
-            /*if (this.isProcessingTransition || (this.targetSceneKey && this.targetSceneKey === sceneKey)) {
+            if (this.isProcessingTransition || (this.targetSceneKey && this.targetSceneKey === sceneKey)) {
                 console.warn(`[SystemScene] シーン[${sceneKey}]は既に遷移処理中またはアクティブです。新しいリクエストをスキップします。`);
                 return;
-            }*/
+            }
             // ★★★ 追加: シーン遷移開始時に、ゲーム全体の入力を無効化 ★★★
             this.game.input.enabled = false; 
             console.log("SystemScene: ゲーム全体の入力を無効化しました。");
