@@ -1,57 +1,47 @@
-// src/scenes/SystemScene.js (二重起動問題を解決するための修正 - ステップ1-3)
-
 export default class SystemScene extends Phaser.Scene {
     constructor() {
-        // ★★★ 修正箇所: active:true を削除し、active:false に変更 ★★★
-        super(  'SystemScene' ); 
-        this.instanceId = Math.random(); 
+        super({ key: 'SystemScene' });
         this.globalCharaDefs = null;
-        this.isProcessingTransition = false; 
-        this.targetSceneKey = null; 
-         this.initialGameData = null; 
+        this.isProcessingTransition = false;
+        this.targetSceneKey = null;
+        this.initialGameData = null;
     }
- // ★★★ 追加: init() メソッドでPreloadSceneからのデータを受け取る ★★★
+
     init(data) {
         if (data && data.initialGameData) {
             this.initialGameData = data.initialGameData;
         }
     }
-   create() {
+
+    create() {
         console.log("SystemScene: 起動・イベント監視開始");
 
-        // ★★★ 修正箇所: create()内で、渡されたデータを使って初期ゲーム起動を行う ★★★
         if (this.initialGameData) {
             console.log("SystemScene: 初期ゲーム起動データを受信しました。");
             this.globalCharaDefs = this.initialGameData.charaDefs;
 
-            // UISceneをlaunchする
-               this.scene.launch('UIScene');
+            // ★★★ 修正箇所: UISceneをlaunchし、そのCREATEイベントを待つ ★★★
+            this.scene.launch('UIScene');
             const uiScene = this.scene.get('UIScene');
 
             if (uiScene) {
                 uiScene.events.once(Phaser.Scenes.Events.CREATE, () => {
                     console.log("SystemScene: UISceneのCREATEイベント受信。GameSceneを起動します。");
                     
-                    // UISceneのCREATE完了後にGameSceneをstartする
+                    // ★★★ UISceneのCREATE完了後にGameSceneをstartする ★★★
                     this.scene.start('GameScene', { 
                         charaDefs: this.globalCharaDefs,
                         startScenario: this.initialGameData.startScenario,
                         startLabel: null,
                     });
                     console.log("SystemScene: 初期ゲーム起動処理を開始しました。");
-
-                    // ★★★ 修正箇所: データを使った後にnullにする ★★★
-                    this.initialGameData = null; 
                 });
             } else {
                 console.error("SystemScene: UISceneのインスタンスが取得できませんでした。");
-                // エラー時もデータをクリア
-                this.initialGameData = null;
             }
 
-            // ★★★ 修正箇所: ここにあった 'this.initialGameData = null;' を削除 ★★★
+            this.initialGameData = null; 
         }
-
         // --- シーン開始処理とフラグのリセットを管理する共通ヘルパー関数 ---
         const startAndMonitorScene = (sceneKey, params, waitForGameSceneLoadComplete) => {
             // (isProcessingTransition フラグのコメントアウトは、一旦そのままにしておきます。
