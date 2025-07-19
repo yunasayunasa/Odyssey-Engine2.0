@@ -125,18 +125,29 @@ export default class BattleScene extends Phaser.Scene {
         console.log("ActionScene (as BattleScene): create 完了");
     }
 
-       createItem(itemId, x, y) {
+      
+    createItem(itemId, x, y) {
         const itemData = ITEM_DATA[itemId];
         if (!itemData) return;
 
+        // アイテム画像を作成
         const itemImage = this.add.image(x, y, itemData.storage)
             .setInteractive()
             .setData('itemId', itemId)
-            .setData('originX', x) // ★★★ 元の位置を保存 ★★★
-            .setData('originY', y) // ★★★ 元の位置を保存 ★★★
-            .setData('gridPos', null); // ★★★ グリッド上の位置 (nullはインベントリ) ★★★
+            .setData('originX', x)
+            .setData('originY', y)
+            .setData('gridPos', null);
+
+        // ★★★ 修正箇所: アイテムの形状(shape)に合わせて表示サイズを自動設定 ★★★
+        const shape = itemData.shape;
+        const itemHeightInCells = shape.length; // 形状配列の長さ = 縦のマスの数
+        const itemWidthInCells = shape[0] ? shape[0].length : 1; // 形状配列の最初の行の長さ = 横のマスの数
+        
+        // 表示サイズを設定
+        itemImage.setDisplaySize(itemWidthInCells * this.cellSize, itemHeightInCells * this.cellSize);
 
         this.input.setDraggable(itemImage);
+
         
         // ★★★ ドラッグ開始時に、もしグリッド上にあればそこからアイテムを取り除く ★★★
         itemImage.on('dragstart', (pointer, dragX, dragY) => {
