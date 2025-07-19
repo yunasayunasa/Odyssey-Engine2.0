@@ -102,7 +102,7 @@ export default class PreloadScene extends Phaser.Scene {
             console.error("PreloadScene: SystemSceneのインスタンスが取得できませんでした。ゲーム起動に失敗。");
         }
 
-        this.scene.launch('UIScene'); 
+        //this.scene.launch('UIScene'); 
 
             // GameSceneを開始
             this.scene.start('GameScene', { 
