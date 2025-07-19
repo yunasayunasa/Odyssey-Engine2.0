@@ -18,10 +18,10 @@ export default class SystemScene extends Phaser.Scene {
 
         // --- シーン開始処理とフラグのリセットを管理する共通ヘルパー関数 ---
         const startAndMonitorScene = (sceneKey, params, waitForGameSceneLoadComplete) => {
-            if (this.isProcessingTransition || (this.targetSceneKey && this.targetSceneKey === sceneKey)) {
+            /*if (this.isProcessingTransition || (this.targetSceneKey && this.targetSceneKey === sceneKey)) {
                 console.warn(`[SystemScene] シーン[${sceneKey}]は既に遷移処理中またはアクティブです。新しいリクエストをスキップします。`);
                 return;
-            }
+            }*/
 
             this.isProcessingTransition = true; // 遷移処理開始
             this.targetSceneKey = sceneKey;    // ターゲットシーンを設定
