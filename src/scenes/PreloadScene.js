@@ -91,6 +91,7 @@ export default class PreloadScene extends Phaser.Scene {
         // SystemSceneを起動し、そのCREATEイベントを待って初期ゲーム開始を依頼する
         // SystemSceneはmain.jsでactive:falseになっているため、launchする必要がある
         this.scene.launch('SystemScene'); 
+        console.log("初回のシステムシーンランチ")
         const systemScene = this.scene.get('SystemScene'); 
         
         if (systemScene) {
