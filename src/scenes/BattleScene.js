@@ -18,6 +18,8 @@ export default class BattleScene extends Phaser.Scene {
         this.gridY = 0;
         this.backpack = null;
         this.inventoryItems = [];
+        this.playerStats = { attack: 0, defense: 0, hp: 0 }; // ★★★ プレイヤーの戦闘ステータスを保持 ★★★
+        this.enemyStats = { attack: 0, defense: 0, hp: 0 };  // ★★★ 敵の戦闘ステータスを保持 ★★★
 
         this.initialBattleParams = null;
         this.battleEnded = false; 
@@ -137,24 +139,13 @@ export default class BattleScene extends Phaser.Scene {
     }
 
      // ★★★ startBattle メソッドを置き換え ★★★
-    startBattle() {
+     startBattle() {
         console.log("戦闘開始！");
         this.input.enabled = false;
 
-        // --- 1. ステータス算出 ---
-        let playerStats = { 
-            attack: 5, 
-            defense: 0, 
-            // ★ StateManagerのf変数を直接参照
-            hp: this.stateManager.f.player_hp 
-        };
-        let enemyStats = { 
-            attack: 20, 
-            defense: 0, 
-            // ★ StateManagerのf変数を直接参照
-            hp: this.stateManager.f.enemy_hp 
-        };
-
+        // --- ステータス算出 (クラスプロパティに保存) ---
+        this.playerStats = { attack: 5, defense: 0, hp: this.stateManager.f.player_hp };
+        this.enemyStats = { attack: 20, defense: 0, hp: this.stateManager.f.enemy_hp };
 
         // backpack配列を走査してアイテムの効果を合算
         const processedItems = new Set();
@@ -174,30 +165,21 @@ export default class BattleScene extends Phaser.Scene {
                 }
             }
         }
-        console.log(`プレイヤー最終ステータス: 攻撃=${playerStats.attack}, 防御=${playerStats.defense}`);
-        this.addToBattleLog(`あなたのステータス: 攻撃=${playerStats.attack}, 防御=${playerStats.defense}`);
+        console.log(`プレイヤー最終ステータス: 攻撃=${this.playerStats.attack}, 防御=${this.playerStats.defense}`);
+        this.addToBattleLog(`あなたのステータス: 攻撃=${this.playerStats.attack}, 防御=${this.playerStats.defense}`);
         
-          console.log(`プレイヤー最終ステータス: 攻撃=${playerStats.attack}, 防御=${playerStats.defense}`);
-        this.addToBattleLog(`あなたのステータス: 攻撃=${playerStats.attack}, 防御=${playerStats.defense}`);
-        
-        // --- 2. バトルループの開始 ---
+        // バトルループの開始
         const executeTurn = (turn) => {
             console.log(`--- Turn ${turn} ---`);
 
             // プレイヤーのターン
             this.time.delayedCall(1000, () => {
-                const playerDamage = Math.max(0, playerStats.attack - enemyStats.defense);
-                enemyStats.hp -= playerDamage;
-
-                // ★★★ 修正箇所: eval()を使わず、fプロパティを直接更新 ★★★
-                this.stateManager.f.enemy_hp = enemyStats.hp;
-                // ★★★ StateManagerのイベントを手動で発行し、HUDに更新を通知 ★★★
-                this.stateManager.events.emit('f-variable-changed', 'enemy_hp', enemyStats.hp);
-
-                this.addToBattleLog(`あなたの攻撃！敵に ${playerDamage} のダメージ！ (敵残りHP: ${Math.max(0, enemyStats.hp)})`);
+                const playerDamage = Math.max(0, this.playerStats.attack - this.enemyStats.defense);
+                this.enemyStats.hp -= playerDamage;
+                this.stateManager.eval(`f.enemy_hp = ${this.enemyStats.hp}`);
+                this.addToBattleLog(`あなたの攻撃！敵に ${playerDamage} のダメージ！ (敵残りHP: ${Math.max(0, this.enemyStats.hp)})`);
                 
-                // 勝利判定
-                if (enemyStats.hp <= 0) {
+                if (this.enemyStats.hp <= 0) {
                     this.addToBattleLog("敵を倒した！");
                     this.time.delayedCall(1000, () => this.endBattle('win'));
                     return;
@@ -205,32 +187,24 @@ export default class BattleScene extends Phaser.Scene {
 
                 // 敵のターン
                 this.time.delayedCall(1000, () => {
-                    const enemyDamage = Math.max(0, enemyStats.attack - playerStats.defense);
-                    playerStats.hp -= enemyDamage;
-
-                    // ★★★ 修正箇所: eval()を使わず、fプロパティを直接更新 ★★★
-                    this.stateManager.f.player_hp = playerStats.hp;
-                    // ★★★ StateManagerのイベントを手動で発行し、HUDに更新を通知 ★★★
-                    this.stateManager.events.emit('f-variable-changed', 'player_hp', playerStats.hp);
-
-                    this.addToBattleLog(`敵の攻撃！あなたに ${enemyDamage} のダメージ！ (残りHP: ${Math.max(0, playerStats.hp)})`);
+                    const enemyDamage = Math.max(0, this.enemyStats.attack - this.playerStats.defense);
+                    this.playerStats.hp -= enemyDamage;
+                    this.stateManager.eval(`f.player_hp = ${this.playerStats.hp}`);
+                    this.addToBattleLog(`敵の攻撃！あなたに ${enemyDamage} のダメージ！ (残りHP: ${Math.max(0, this.playerStats.hp)})`);
                     
-                    // 敗北判定
-                    if (playerStats.hp <= 0) {
+                    if (this.playerStats.hp <= 0) {
                         this.addToBattleLog("あなたは倒れてしまった…");
                         this.time.delayedCall(1000, () => this.endBattle('lose'));
                         return;
                     }
 
-                    // 次のターンへ
                     executeTurn(turn + 1);
                 });
             });
         };
-        
-        // 最初のターンを開始
         executeTurn(1);
     }
+
     
 
     addToBattleLog(text) {
@@ -368,18 +342,18 @@ export default class BattleScene extends Phaser.Scene {
 
         console.log(`ActionScene (as BattleScene): バトル終了。結果: ${result}`);
         
-        // ★★★ 既存の勝利/敗北ボタンを無効化・破棄 ★★★
         this.input.enabled = false;
         if (this.winButton) { this.winButton.destroy(); this.winButton = null; }
         if (this.loseButton) { this.loseButton.destroy(); this.loseButton = null; }
 
+        // ★★★ 修正箇所: return-to-novelのparamsに、endBattle時点でのステータスを渡す ★★★
         if (result === 'win') {
             this.scene.get('SystemScene').events.emit('return-to-novel', {
                 from: this.scene.key,
                 params: { 
                     'f.battle_result': 'win',
-                    'f.player_hp': this.stateManager.f.player_hp,
-                    'f.coin': this.stateManager.f.coin
+                    'f.player_hp': this.playerStats.hp, // StateManagerのf変数ではなく、戦闘中のステータスを渡す
+                    'f.coin': this.stateManager.f.coin // コインは戦闘中に変化しないので、StateManagerからでOK
                 }
             });
         } else {
