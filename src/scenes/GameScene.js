@@ -408,9 +408,7 @@ clearChoiceButtons() {
         
         } catch (e) {
             console.error(`ロード処理でエラーが発生しました。`, e);
-            // ★★★ 追加: ロード失敗時もイベントを発行して SystemScene のフラグを解除する ★★★
-            this.scene.get('SystemScene').events.emit('gameScene-load-complete');
-        }
+             }
     }}
 // ★★★ rebuildScene ヘルパー関数 (最終版) ★★★
 async function rebuildScene(manager, state) {

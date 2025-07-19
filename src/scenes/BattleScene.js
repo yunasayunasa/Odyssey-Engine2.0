@@ -138,12 +138,13 @@ export default class BattleScene extends Phaser.Scene {
         console.log("ActionScene (as BattleScene): create 完了");
     }
 
-     // ★★★ startBattle メソッドを置き換え ★★★
-     startBattle() {
+    // src/scenes/ActionScene.js (改造版 - BattleSceneとして機能)
+
+    startBattle() {
         console.log("戦闘開始！");
         this.input.enabled = false;
 
-        // --- ステータス算出 (クラスプロパティに保存) ---
+        // ★★★ 修正箇所: このメソッド内でステータスを宣言・算出 ★★★
         this.playerStats = { attack: 5, defense: 0, hp: this.stateManager.f.player_hp };
         this.enemyStats = { attack: 20, defense: 0, hp: this.stateManager.f.enemy_hp };
 
@@ -153,22 +154,24 @@ export default class BattleScene extends Phaser.Scene {
             for (let c = 0; c < this.backpackGridSize; c++) {
                 const itemId = this.backpack[r][c];
                 if (itemId !== 0) {
-                    const uniqueCellId = `${itemId}-${r}-${c}`; // アイテムの重複カウントを防ぐため
+                    const uniqueCellId = `${itemId}-${r}-${c}`;
                     if (!processedItems.has(uniqueCellId)) {
                         const itemData = ITEM_DATA[itemId];
                         if (itemData && itemData.effects) {
-                            playerStats.attack += itemData.effects.attack || 0;
-                            playerStats.defense += itemData.effects.defense || 0;
+                            // ★★★ playerStats を正しく参照 ★★★
+                            this.playerStats.attack += itemData.effects.attack || 0;
+                            this.playerStats.defense += itemData.effects.defense || 0;
                             processedItems.add(uniqueCellId);
                         }
                     }
                 }
             }
         }
+        
         console.log(`プレイヤー最終ステータス: 攻撃=${this.playerStats.attack}, 防御=${this.playerStats.defense}`);
         this.addToBattleLog(`あなたのステータス: 攻撃=${this.playerStats.attack}, 防御=${this.playerStats.defense}`);
         
-        // バトルループの開始
+        // --- バトルループの開始 ---
         const executeTurn = (turn) => {
             console.log(`--- Turn ${turn} ---`);
 
