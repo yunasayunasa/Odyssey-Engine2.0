@@ -4,14 +4,14 @@ export default class SystemScene extends Phaser.Scene {
     constructor() {
         // ★★★ 修正箇所: active:true を削除し、active:false に変更 ★★★
         super(  'SystemScene' ); 
+        this.instanceId = Math.random(); 
         this.globalCharaDefs = null;
         this.isProcessingTransition = false; 
         this.targetSceneKey = null; 
     }
 
     create() {
-        console.log("SystemScene: 起動・イベント監視開始");
-
+        console.log(`[SystemScene ${this.instanceId}] 起動・イベント監視開始`);
         // globalCharaDefsはPreloadSceneからのstartInitialGameで設定されるため、ここでは初期化しない
         // (修正済みであれば変更不要)
         // const gameScene = this.scene.get('GameScene');
@@ -34,14 +34,13 @@ export default class SystemScene extends Phaser.Scene {
 
             this.isProcessingTransition = true; 
             this.targetSceneKey = sceneKey;    
-            console.log(`[SystemScene] シーン[${sceneKey}]の起動を開始します。`);
+             console.log(`[SystemScene ${this.instanceId}] シーン[${sceneKey}]の起動を開始します。`);
 
             this.scene.start(sceneKey, params);
 
             // ★★★ 修正箇所: GameSceneのCREATEイベントを待ってから、カスタムイベントを購読する ★★★
             this.scene.get(sceneKey).events.once(Phaser.Scenes.Events.CREATE, (createdSceneInstance) => {
-                console.log(`[SystemScene] シーン[${sceneKey}]のCREATEイベント受信。`);
-
+                    console.log(`[SystemScene ${this.instanceId}] シーン[${sceneKey}]のCREATEイベント受信。`);
                 if (waitForGameSceneLoadComplete && createdSceneInstance.scene.key === 'GameScene') {
                     createdSceneInstance.events.once('gameScene-load-complete', () => {
                         // GameSceneとUISceneの入力をここで有効化
@@ -127,7 +126,7 @@ export default class SystemScene extends Phaser.Scene {
          */
         this.startInitialGame = (charaDefs, startScenarioKey) => {
             this.globalCharaDefs = charaDefs;
-            console.log("SystemScene: 初期ゲーム起動リクエストを受信しました。");
+             console.log(`[SystemScene ${this.instanceId}] 初期ゲーム起動リクエストを受信しました。`);
 
             // UISceneを先に起動（またはアクティブ化）する
             const uiSceneInstance = this.scene.get('UIScene');
@@ -147,7 +146,7 @@ export default class SystemScene extends Phaser.Scene {
                 startLabel: null,
             }, true); 
             
-            console.log("SystemScene: 初期ゲーム起動処理を開始しました。");
+             console.log(`[SystemScene ${this.instanceId}] 初期ゲーム起動処理を開始しました。`);
         };
 
         // --- オーバーレイ関連のイベントリスナー ---

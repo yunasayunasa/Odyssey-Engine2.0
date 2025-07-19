@@ -113,6 +113,7 @@ export default class PreloadScene extends Phaser.Scene {
 
         // PreloadSceneは役割を終えるので停止する
         this.scene.stop(this.scene.key);
+         this.load.start();
     }
 
     stop() {
