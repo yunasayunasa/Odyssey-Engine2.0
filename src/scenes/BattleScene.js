@@ -133,9 +133,21 @@ export default class BattleScene extends Phaser.Scene {
         this.input.enabled = false;
 
         // --- 1. ステータス算出 ---
-        let playerStats = { attack: 5, defense: 0, hp: this.stateManager.f.player_hp };
-        let enemyStats = { attack: 20, defense: 0, hp: this.stateManager.f.enemy_hp };
+        let playerStats = { 
+            attack: 5, 
+            defense: 0, 
+            // ★ StateManagerのf変数を直接参照
+            hp: this.stateManager.f.player_hp 
+        };
+        let enemyStats = { 
+            attack: 20, 
+            defense: 0, 
+            // ★ StateManagerのf変数を直接参照
+            hp: this.stateManager.f.enemy_hp 
+        };
 
+
+        // backpack配列を走査してアイテムの効果を合算
         const processedItems = new Set();
         for (let r = 0; r < this.backpackGridSize; r++) {
             for (let c = 0; c < this.backpackGridSize; c++) {
@@ -156,8 +168,10 @@ export default class BattleScene extends Phaser.Scene {
         console.log(`プレイヤー最終ステータス: 攻撃=${playerStats.attack}, 防御=${playerStats.defense}`);
         this.addToBattleLog(`あなたのステータス: 攻撃=${playerStats.attack}, 防御=${playerStats.defense}`);
         
+          console.log(`プレイヤー最終ステータス: 攻撃=${playerStats.attack}, 防御=${playerStats.defense}`);
+        this.addToBattleLog(`あなたのステータス: 攻撃=${playerStats.attack}, 防御=${playerStats.defense}`);
+        
         // --- 2. バトルループの開始 ---
-        // ★ ターンを管理する再帰関数
         const executeTurn = (turn) => {
             console.log(`--- Turn ${turn} ---`);
 
@@ -165,8 +179,13 @@ export default class BattleScene extends Phaser.Scene {
             this.time.delayedCall(1000, () => {
                 const playerDamage = Math.max(0, playerStats.attack - enemyStats.defense);
                 enemyStats.hp -= playerDamage;
-                this.stateManager.eval(`f.enemy_hp = ${enemyStats.hp}`); // StateManagerの変数を更新
-                this.addToBattleLog(`あなたの攻撃！敵に ${playerDamage} のダメージ！ (敵残りHP: ${enemyStats.hp})`);
+
+                // ★★★ 修正箇所: eval()を使わず、fプロパティを直接更新 ★★★
+                this.stateManager.f.enemy_hp = enemyStats.hp;
+                // ★★★ StateManagerのイベントを手動で発行し、HUDに更新を通知 ★★★
+                this.stateManager.events.emit('f-variable-changed', 'enemy_hp', enemyStats.hp);
+
+                this.addToBattleLog(`あなたの攻撃！敵に ${playerDamage} のダメージ！ (敵残りHP: ${Math.max(0, enemyStats.hp)})`);
                 
                 // 勝利判定
                 if (enemyStats.hp <= 0) {
@@ -179,8 +198,13 @@ export default class BattleScene extends Phaser.Scene {
                 this.time.delayedCall(1000, () => {
                     const enemyDamage = Math.max(0, enemyStats.attack - playerStats.defense);
                     playerStats.hp -= enemyDamage;
-                    this.stateManager.eval(`f.player_hp = ${playerStats.hp}`); // StateManagerの変数を更新
-                    this.addToBattleLog(`敵の攻撃！あなたに ${enemyDamage} のダメージ！ (残りHP: ${playerStats.hp})`);
+
+                    // ★★★ 修正箇所: eval()を使わず、fプロパティを直接更新 ★★★
+                    this.stateManager.f.player_hp = playerStats.hp;
+                    // ★★★ StateManagerのイベントを手動で発行し、HUDに更新を通知 ★★★
+                    this.stateManager.events.emit('f-variable-changed', 'player_hp', playerStats.hp);
+
+                    this.addToBattleLog(`敵の攻撃！あなたに ${enemyDamage} のダメージ！ (残りHP: ${Math.max(0, playerStats.hp)})`);
                     
                     // 敗北判定
                     if (playerStats.hp <= 0) {
@@ -189,15 +213,17 @@ export default class BattleScene extends Phaser.Scene {
                         return;
                     }
 
-                    // ★★★ 次のターンへ ★★★
+                    // 次のターンへ
                     executeTurn(turn + 1);
                 });
             });
         };
         
-        // ★ 最初のターンを開始
+        // 最初のターンを開始
         executeTurn(1);
     }
+    
+
     addToBattleLog(text) {
         this.battleLogText.setText(text);
     }
