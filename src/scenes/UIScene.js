@@ -78,6 +78,7 @@ export default class UIScene extends Phaser.Scene {
             this.toggleGameMode('skip');
             event.stopPropagation();
         });
+        console.log("UI作成");
     }
 
     // --- 以下、このクラスが持つメソッド群 ---
