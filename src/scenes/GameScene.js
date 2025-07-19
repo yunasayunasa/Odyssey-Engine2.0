@@ -46,7 +46,7 @@ import { handleVoice } from '../handlers/voice.js';
 
 export default class GameScene extends Phaser.Scene {
     constructor() {
-        super('GameScene');
+        super({key:'GameScene', active :false});
         // プロパティの初期化
         this.scenarioManager = null;
         this.soundManager = null;
