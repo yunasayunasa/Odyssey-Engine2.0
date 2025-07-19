@@ -47,7 +47,7 @@ export default class BattleScene extends Phaser.Scene {
         this.battleEnded = false; 
     }
 
-    create() {
+     create() {
         console.log("ActionScene (as BattleScene): create 開始");
         this.cameras.main.setBackgroundColor('#8a2be2');
 
@@ -66,9 +66,18 @@ export default class BattleScene extends Phaser.Scene {
         this.enemyHpBar.x -= this.enemyHpBar.barWidth;
         this.coinHud = new CoinHud(this, 100, 50);
 
-        // HUDの初期値設定
-        this.playerHpBar.setHp(this.initialBattleParams.initialPlayerHp, this.initialBattleParams.initialPlayerMaxHp);
-        this.enemyHpBar.setHp(this.stateManager.f.enemy_hp || 500, this.stateManager.f.enemy_max_hp || 500);
+        // ★★★ 修正箇所: f変数を明確に初期化してから、HUDの表示を設定 ★★★
+        // プレイヤーHPの初期化
+        this.stateManager.f.player_max_hp = this.initialBattleParams.initialPlayerMaxHp; 
+        this.stateManager.f.player_hp = this.initialBattleParams.initialPlayerHp;
+        this.playerHpBar.setHp(this.stateManager.f.player_hp, this.stateManager.f.player_max_hp);
+
+        // 敵HPの初期化
+        this.stateManager.f.enemy_max_hp = 500; // この戦闘での敵の最大HP
+        this.stateManager.f.enemy_hp = 500; // この戦闘での敵の現在HP
+        this.enemyHpBar.setHp(this.stateManager.f.enemy_hp, this.stateManager.f.enemy_max_hp);
+
+        // コインHUDの初期化
         this.coinHud.setCoin(this.initialBattleParams.initialCoin);
 
         this.onFVariableChangedListener = this.onFVariableChanged.bind(this);
