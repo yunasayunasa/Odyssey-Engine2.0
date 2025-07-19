@@ -61,6 +61,7 @@ export default class GameScene extends Phaser.Scene {
         this.uiButtons = [];
         this.coinHud = null;
         this.playerHpBar = null;
+          this.isPerformingLoad = false; // ★★★ 追加: ロード処理中フラグ ★★★
         this.isSceneFullyReady = false; // シーンが完全に準備完了したかのフラグ
     }
 
@@ -68,7 +69,7 @@ export default class GameScene extends Phaser.Scene {
         this.charaDefs = data.charaDefs;
         this.startScenario = data.startScenario || 'test.ks';
         this.startLabel = data.startLabel || null;
-
+  this.isPerformingLoad = false; // ★★★ init時にリセット ★★★
         this.isResuming = data.resumedFrom ? true : false;
         this.returnParams = data.returnParams || null;
         this.isSceneFullyReady = false; // init時にリセット
@@ -349,6 +350,14 @@ clearChoiceButtons() {
 
  // src/scenes/GameScene.js の performLoad メソッド (最終版)
   async performLoad(slot, returnParams = null) {
+     // ★★★ 修正箇所: ロード処理中であれば、二重実行を防止 ★★★
+        if (this.isPerformingLoad) {
+            console.warn("GameScene: performLoadが既に実行中です。二重呼び出しをスキップします。");
+            // 二重呼び出しの場合でも、SystemSceneのフラグを解除するためにイベントを発生させる必要があるかも
+            // ただし、この場合はGameSceneがSystemSceneのisProcessingTransitionをリセットしないよう注意
+            return; 
+        }
+        this.isPerformingLoad = true; // ロード処理を開始
         try {
             const jsonString = localStorage.getItem(`save_data_${slot}`);
             if (!jsonString) {
