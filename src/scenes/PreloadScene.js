@@ -7,11 +7,11 @@ export default class PreloadScene extends Phaser.Scene {
         // main.jsでactive:trueが設定されるため、ここではactiveは指定しない
         super('PreloadScene' ); 
         
-        // UI要素への参照を初期化 (stop()で破棄するため)
-        //this.progressBar = null;
-        //this.progressBox = null;
-        //this.percentText = null;
-        //this.loadingText = null;
+         //UI要素への参照を初期化 (stop()で破棄するため)
+        this.progressBar = null;
+        this.progressBox = null;
+        this.percentText = null;
+        this.loadingText = null;
     }
 
     preload() {
