@@ -22,6 +22,8 @@ export default class SystemScene extends Phaser.Scene {
                 console.warn(`[SystemScene] シーン[${sceneKey}]は既に遷移処理中またはアクティブです。新しいリクエストをスキップします。`);
                 return;
             }*/
+ this.game.input.enabled = false; 
+            console.log("SystemScene: ゲーム全体の入力を無効化しました。");
 
             this.isProcessingTransition = true; 
             this.targetSceneKey = sceneKey;    
@@ -29,31 +31,33 @@ export default class SystemScene extends Phaser.Scene {
 
             this.scene.start(sceneKey, params);
 
-            // ★★★ 修正箇所: GameSceneのCREATEイベントを待ってから、カスタムイベントを購読する ★★★
-            // これにより、GameSceneのインスタンスが完全に作成されたことを確認してからイベント購読を開始できる
             this.scene.get(sceneKey).events.once(Phaser.Scenes.Events.CREATE, (createdSceneInstance) => {
-                // createdSceneInstance は新しく作成されたシーンインスタンスを指す
                 console.log(`[SystemScene] シーン[${sceneKey}]のCREATEイベント受信。`);
 
                 if (waitForGameSceneLoadComplete && createdSceneInstance.scene.key === 'GameScene') {
-                    // GameSceneからのカスタムイベント 'gameScene-load-complete' を待つ
                     createdSceneInstance.events.once('gameScene-load-complete', () => {
-                        // GameSceneとUISceneの入力をここで有効化
-                        createdSceneInstance.input.enabled = true; // GameSceneの入力
-                        const uiScene = this.scene.get('UIScene'); // UISceneはまだisActiveであれば
-                        if (uiScene && uiScene.scene.isActive()) { 
-                            uiScene.input.enabled = true;
-                        }
-                        console.log("SystemScene: GameSceneとUISceneの入力を再有効化しました。");
+                        // ★★★ 修正箇所: GameSceneとUISceneの入力を、ゲーム全体の入力が有効化された後に任せる ★★★
+                        // ここで個別に有効化する代わりに、SystemSceneが最後に全体を有効化する
+                        // createdSceneInstance.input.enabled = true; 
+                        // const uiScene = this.scene.get('UIScene');
+                        // if (uiScene && uiScene.scene.isActive()) { 
+                        //     uiScene.input.enabled = true;
+                        // }
+                        // console.log("SystemScene: GameSceneとUISceneの入力を再有効化しました。");
 
                         this.isProcessingTransition = false;
                         this.targetSceneKey = null; 
+                        // ★★★ 修正箇所: 全ての遷移処理完了後にゲーム全体の入力を再有効化 ★★★
+                        this.game.input.enabled = true;
+                        console.log("SystemScene: ゲーム全体の入力を再有効化しました。");
                         console.log(`[SystemScene] GameSceneのロード完了イベント受信。遷移処理フラグをリセットしました。`);
                     });
                 } else {
-                    // GameScene以外への遷移の場合、CREATEイベント受信でフラグをリセット
                     this.isProcessingTransition = false;
                     this.targetSceneKey = null; 
+                    // ★★★ 修正箇所: 全ての遷移処理完了後にゲーム全体の入力を再有効化 ★★★
+                    this.game.input.enabled = true;
+                    console.log("SystemScene: ゲーム全体の入力を再有効化しました。");
                     console.log(`[SystemScene] シーン[${sceneKey}]のCREATEイベント受信。遷移処理フラグをリセットしました。(GameScene以外)`);
                 }
             });
