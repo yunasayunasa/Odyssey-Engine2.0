@@ -9,6 +9,9 @@
      "next_arrow": "assets/next_arrow.png",
     "roger_normal": "assets/roger_normal.png",
     "umi": "assets/umi.jpg" ,
+ "item_sword": "assets/item/sword.png" ,
+"item_shield": "assets/item/shield.png" ,
+"item_potion": "assets/item/potion.png" ,
      "enzan": "assets/enzan.jpg" ,
      "enzan2": "assets/enzan2.png"
   },

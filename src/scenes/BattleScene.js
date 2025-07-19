@@ -125,51 +125,132 @@ export default class BattleScene extends Phaser.Scene {
         console.log("ActionScene (as BattleScene): create 完了");
     }
 
-       // ★★★ アイテムを生成し、ドラッグ可能にするメソッド ★★★
-    createItem(itemId, x, y) {
+       createItem(itemId, x, y) {
         const itemData = ITEM_DATA[itemId];
         if (!itemData) return;
 
-        // アイテム画像を作成
         const itemImage = this.add.image(x, y, itemData.storage)
-            .setInteractive() // クリック可能にする
-            .setData('itemId', itemId); // データをセット
+            .setInteractive()
+            .setData('itemId', itemId)
+            .setData('originX', x) // ★★★ 元の位置を保存 ★★★
+            .setData('originY', y) // ★★★ 元の位置を保存 ★★★
+            .setData('gridPos', null); // ★★★ グリッド上の位置 (nullはインベントリ) ★★★
 
-        this.input.setDraggable(itemImage); // ドラッグ可能にする
-
-        // ★ ドラッグ開始時のイベント
+        this.input.setDraggable(itemImage);
+        
+        // ★★★ ドラッグ開始時に、もしグリッド上にあればそこからアイテムを取り除く ★★★
         itemImage.on('dragstart', (pointer, dragX, dragY) => {
-            itemImage.setDepth(200); // ドラッグ中は最前面に
+            itemImage.setDepth(200);
+            if (itemImage.getData('gridPos')) {
+                this.removeItemFromBackpack(itemImage);
+            }
         });
 
-        // ★ ドラッグ中のイベント
         itemImage.on('drag', (pointer, dragX, dragY) => {
             itemImage.setPosition(dragX, dragY);
         });
 
-        // ★ ドラッグ終了時のイベント
+        // ★★★ ドラッグ終了時のロジックを強化 ★★★
         itemImage.on('dragend', (pointer, dragX, dragY, dropped) => {
-            itemImage.setDepth(100); // 深度を戻す
+            itemImage.setDepth(100);
 
-            // グリッド座標に変換
             const gridCol = Math.floor((pointer.x - this.gridX) / this.cellSize);
             const gridRow = Math.floor((pointer.y - this.gridY) / this.cellSize);
 
-            // グリッド内にドロップされたかチェック
-            if (gridCol >= 0 && gridCol < this.backpackGridSize && gridRow >= 0 && gridRow < this.backpackGridSize) {
-                // TODO: 配置可能かチェック (重なりなど)
-
-                // マス目にスナップさせる
-                itemImage.x = this.gridX + gridCol * this.cellSize + (itemImage.width * itemImage.scaleX / 2);
-                itemImage.y = this.gridY + gridRow * this.cellSize + (itemImage.height * itemImage.scaleY / 2);
-                console.log(`アイテム[${itemId}]をグリッド(${gridCol}, ${gridRow})に配置`);
+            // ★★★ 配置可能かチェックし、可能なら配置 ★★★
+            if (this.canPlaceItem(itemImage, gridCol, gridRow)) {
+                this.placeItemInBackpack(itemImage, gridCol, gridRow);
             } else {
-                // グリッド外なら元の位置に戻す (インベントリ)
-                // TODO: 元の位置を保存しておき、そこに戻す
-                itemImage.x = x;
-                itemImage.y = y;
+                // 配置できなければ元の位置に戻す
+                itemImage.x = itemImage.getData('originX');
+                itemImage.y = itemImage.getData('originY');
             }
         });
+    }
+
+    /**
+     * ★★★ アイテムを配置可能かチェックするメソッド ★★★
+     * @param {Phaser.GameObjects.Image} itemImage - アイテムオブジェクト
+     * @param {number} startCol - 配置を開始する列
+     * @param {number} startRow - 配置を開始する行
+     * @returns {boolean} 配置可能ならtrue
+     */
+    canPlaceItem(itemImage, startCol, startRow) {
+        const itemData = ITEM_DATA[itemImage.getData('itemId')];
+        const shape = itemData.shape;
+
+        for (let r = 0; r < shape.length; r++) {
+            for (let c = 0; c < shape[r].length; c++) {
+                if (shape[r][c] === 1) { // アイテムのセルがある部分だけチェック
+                    const checkRow = startRow + r;
+                    const checkCol = startCol + c;
+
+                    // グリッドからはみ出していないか？
+                    if (checkRow < 0 || checkRow >= this.backpackGridSize || checkCol < 0 || checkCol >= this.backpackGridSize) {
+                        return false; // はみ出している
+                    }
+                    // 他のアイテムと重なっていないか？ (backpack配列をチェック)
+                    if (this.backpack[checkRow][checkCol] !== 0) {
+                        return false; // 既に何かが置かれている
+                    }
+                }
+            }
+        }
+        return true; // すべてのチェックをクリア
+    }
+
+    /**
+     * ★★★ アイテムをバックパックに配置し、データを更新するメソッド ★★★
+     * @param {Phaser.GameObjects.Image} itemImage
+     * @param {number} startCol
+     * @param {number} startRow
+     */
+    placeItemInBackpack(itemImage, startCol, startRow) {
+        const itemId = itemImage.getData('itemId');
+        const itemData = ITEM_DATA[itemId];
+        const shape = itemData.shape;
+
+        // アイテムの位置をグリッドにスナップ
+        itemImage.x = this.gridX + startCol * this.cellSize + (itemImage.width * itemImage.scaleX / 2);
+        itemImage.y = this.gridY + startRow * this.cellSize + (itemImage.height * itemImage.scaleY / 2);
+        
+        // アイテムのグリッド位置をデータとして保存
+        itemImage.setData('gridPos', { col: startCol, row: startRow });
+        
+        // backpack配列を更新
+        for (let r = 0; r < shape.length; r++) {
+            for (let c = 0; c < shape[r].length; c++) {
+                if (shape[r][c] === 1) {
+                    this.backpack[startRow + r][startCol + c] = itemId; // アイテムIDで埋める
+                }
+            }
+        }
+        console.log(`アイテム[${itemId}]をグリッド(${startCol}, ${startRow})に配置`);
+        console.log("現在のバックパック:", this.backpack);
+    }
+
+    /**
+     * ★★★ バックパックからアイテムを取り除くメソッド ★★★
+     * @param {Phaser.GameObjects.Image} itemImage
+     */
+    removeItemFromBackpack(itemImage) {
+        const itemId = itemImage.getData('itemId');
+        const itemData = ITEM_DATA[itemId];
+        const shape = itemData.shape;
+        const gridPos = itemImage.getData('gridPos');
+
+        if (!gridPos) return;
+
+        for (let r = 0; r < shape.length; r++) {
+            for (let c = 0; c < shape[r].length; c++) {
+                if (shape[r][c] === 1) {
+                    this.backpack[gridPos.row + r][gridPos.col + c] = 0; // 0に戻す
+                }
+            }
+        }
+        itemImage.setData('gridPos', null); // グリッド位置をリセット
+        console.log(`アイテム[${itemId}]をグリッドから削除`);
+        console.log("現在のバックパック:", this.backpack);
     }
 
 
