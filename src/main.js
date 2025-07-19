@@ -22,10 +22,11 @@ const config = {
    // scene: [ PreloadScene ] // オブジェクト形式ではなく、直接クラスを渡す
     // ★★★ 修正箇所: シーン設定をオブジェクトの配列形式に変更し、
     // PreloadSceneのみactive:true、他は全てactive:falseにする ★★★
-    scene: [
-        { key: 'PreloadScene', scene: PreloadScene, active: true }, // PreloadSceneを明示的にactive:true
+    scene: [PreloadScene,
+        SystemScene
+        /*{ key: 'PreloadScene', scene: PreloadScene, active: true }, // PreloadSceneを明示的にactive:true
         { key: 'SystemScene', scene: SystemScene, active: false }, // ここでactive:falseに設定
-       /* { key: 'UIScene', scene: UIScene, active: false },       // ここでactive:falseに設定
+       { key: 'UIScene', scene: UIScene, active: false },       // ここでactive:falseに設定
         { key: 'GameScene', scene: GameScene, active: false },   // ここでactive:falseに設定
         { key: 'SaveLoadScene', scene: SaveLoadScene, active: false }, 
         { key: 'ConfigScene', scene: ConfigScene, active: false }, 

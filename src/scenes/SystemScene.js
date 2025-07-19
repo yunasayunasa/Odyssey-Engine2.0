@@ -3,7 +3,7 @@
 export default class SystemScene extends Phaser.Scene {
     constructor() {
         // ★★★ 修正箇所: active:true を削除し、active:false に変更 ★★★
-        super({ key: 'SystemScene', active: false }); 
+        super({  'SystemScene'); 
         this.globalCharaDefs = null;
         this.isProcessingTransition = false; 
         this.targetSceneKey = null; 
