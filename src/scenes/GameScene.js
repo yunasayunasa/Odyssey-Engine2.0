@@ -82,6 +82,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     create() {
+         console.log("GameScene: クリエイト処理を開始します。");
         this.cameras.main.setBackgroundColor('#000000');
         
         // --- レイヤー生成とdepth設定 ---
