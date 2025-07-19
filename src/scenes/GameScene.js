@@ -168,17 +168,10 @@ this.scenarioManager.registerTag('stopvideo', handleStopVideo);
             this.coinHud.setCoin(this.stateManager.f.coin || 0);
             this.playerHpBar.setHp(this.stateManager.f.player_hp || 100, this.stateManager.f.player_max_hp || 100);
 
-            // シーンの準備完了フラグを立てる
-            this.isSceneFullyReady = true; 
+               // ★★★ 通常起動時も、入力有効化をSystemSceneに依頼 ★★★
+            this.scene.get('SystemScene').events.emit('enable-input', ['GameScene', 'UIScene']);
             this.time.delayedCall(10, () => this.scenarioManager.next());
         }
-        
-         // --- StateManagerからのイベントリスナー登録 ---
-        this.stateManager.events.on('f-variable-changed', this.onFVariableChanged, this);
-
-        // ★★★ 修正箇所: createではシナリオを開始しない ★★★
-        // startLoadingメソッドがSystemSceneから呼ばれるのを待つ
-        
         this.input.on('pointerdown', () => this.scenarioManager.onClick());
         console.log("GameScene: create 完了");
     }
@@ -423,15 +416,16 @@ clearChoiceButtons() {
             }
             // 全ての復帰処理が完了した後にフラグを立てる
             this.isSceneFullyReady = true; 
-            // SystemSceneにロード完了を通知するカスタムイベントを発行
-             
-            // ★★★ 修正箇所: イベント名を変更 ★★★
-            this.scene.get('SystemScene').events.emit('gameScene-ready');
+            
+            // ★★★ ロード完了後、入力有効化をSystemSceneに依頼 ★★★
+            this.scene.get('SystemScene').events.emit('enable-input', ['GameScene', 'UIScene']);
+            // ★★★ 完了通知イベントを発行 ★★★
+            this.scene.get('SystemScene').events.emit('gameScene-load-complete');
         
         } catch (e) {
             console.error(`ロード処理でエラーが発生しました。`, e);
-            // ★★★ 修正箇所: イベント名を変更 ★★★
-            this.scene.get('SystemScene').events.emit('gameScene-ready');
+            // ★★★ 失敗時も完了通知イベントを発行 ★★★
+            this.scene.get('SystemScene').events.emit('gameScene-load-complete');
         }
     }
 }
