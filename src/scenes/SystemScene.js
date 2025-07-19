@@ -25,17 +25,25 @@ export default class SystemScene extends Phaser.Scene {
             this.globalCharaDefs = this.initialGameData.charaDefs;
 
             // UISceneをlaunchする
-            this.scene.launch('UIScene');
+              this.scene.launch('UIScene');
+            const uiScene = this.scene.get('UIScene');
 
-            // GameSceneをstartする
-            this.scene.start('GameScene', { 
-                charaDefs: this.globalCharaDefs,
-                startScenario: this.initialGameData.startScenario,
-                startLabel: null,
-            });
-            console.log("SystemScene: 初期ゲーム起動処理を開始しました。");
+            if (uiScene) {
+                uiScene.events.once(Phaser.Scenes.Events.CREATE, () => {
+                    console.log("SystemScene: UISceneのCREATEイベント受信。GameSceneを起動します。");
+                    
+                    // ★★★ UISceneのCREATE完了後にGameSceneをstartする ★★★
+                    this.scene.start('GameScene', { 
+                        charaDefs: this.globalCharaDefs,
+                        startScenario: this.initialGameData.startScenario,
+                        startLabel: null,
+                    });
+                    console.log("SystemScene: 初期ゲーム起動処理を開始しました。");
+                });
+            } else {
+                console.error("SystemScene: UISceneのインスタンスが取得できませんでした。");
+            }
 
-            // 初期化処理は一度だけなので、データをクリア
             this.initialGameData = null; 
         }
 
