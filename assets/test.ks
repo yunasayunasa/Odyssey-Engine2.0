@@ -24,8 +24,6 @@
 [playbgm storage="ronpa_bgm" time=1000]
 [bg storage="bg_school" time=1500]
 [wait time=1500]
-[jump storage="BattleScene" params="{player_level:f.love_meter, player_name:'&f.player_name;', start_area:'bridge', current_coin:f.coin, player_max_hp:f.player_max_hp, player_hp:f.player_hp}"]
-[fadein time=500]
 [chara_show name="yuna" pos="left" y=800 visible=false] 
 ; y=800 は画面外のはず
 [move name="yuna" y=450 alpha=1 time=1000] 
@@ -35,6 +33,8 @@
 [delay speed=80]
 yuna:「ようこそ！これは、あなたと一緒に作ったゲームエンジンのチュートリアルです。」
 
+[jump storage="BattleScene" params="{player_level:f.love_meter, player_name:'&f.player_name;', start_area:'bridge', current_coin:f.coin, player_max_hp:f.player_max_hp, player_hp:f.player_hp}"]
+[fadein time=500]
 yuna:「このゲームを起動するのは、&sf.boot_count 回目ですね。」
  ; ★ sf.boot_countのテスト
 
