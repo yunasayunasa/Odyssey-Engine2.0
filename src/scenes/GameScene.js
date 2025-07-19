@@ -403,11 +403,12 @@ clearChoiceButtons() {
             
             // ★★★ 全ての復帰処理が完了した後にフラグを立てる ★★★
             this.isSceneFullyReady = true; 
+             console.log("---ロードフラグ  ---");
             // SystemSceneにロード完了を通知するカスタムイベントを発行
             // ★SystemSceneが既に修正済みである前提★
             const systemScene = this.scene.get('SystemScene');
             if (systemScene) systemScene.events.emit('gameScene-load-complete');
-        
+        console.log("---ロードコンプリート、イベント発行---");
         } catch (e) {
             console.error(`ロード処理でエラーが発生しました。`, e);
             // ★★★ 修正箇所: ロード失敗時もSystemSceneに通知し、フラグを解除させる ★★★
