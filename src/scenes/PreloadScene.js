@@ -5,7 +5,7 @@ import ConfigManager from '../core/ConfigManager.js';
 export default class PreloadScene extends Phaser.Scene {
     constructor() {
         // main.jsでactive:trueが設定されるため、ここではactiveは指定しない
-        super('PreloadScene' ); 
+        super({ key: 'PreloadScene', active: true }); 
         
          //UI要素への参照を初期化 (stop()で破棄するため)
         this.progressBar = null;
@@ -101,6 +101,14 @@ export default class PreloadScene extends Phaser.Scene {
         } else {
             console.error("PreloadScene: SystemSceneのインスタンスが取得できませんでした。ゲーム起動に失敗。");
         }
+
+        this.scene.launch('UIScene'); 
+
+            // GameSceneを開始
+            this.scene.start('GameScene', { 
+                charaDefs: charaDefs,
+                startScenario: 'test.ks'
+            });
 
         // PreloadSceneは役割を終えるので停止する
         this.scene.stop(this.scene.key);
