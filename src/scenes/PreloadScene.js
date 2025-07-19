@@ -5,7 +5,8 @@ import ConfigManager from '../core/ConfigManager.js'; // ConfigManagerをここ�
 export default class PreloadScene extends Phaser.Scene {
     constructor() {
         // ★★★ 修正箇所: constructorからactive:trueを削除 (main.jsで制御するため) ★★★
-        super('PreloadScene'); 
+        super({ key: 'PreloadScene' }); 
+         
         // UI要素への参照を初期化 (stop()で破棄するため)
         this.progressBar = null;
         this.progressBox = null;
