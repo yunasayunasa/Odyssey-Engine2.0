@@ -72,6 +72,7 @@ export default class PreloadScene extends Phaser.Scene {
             });
            // this.scene.launch('UIScene');
            // this.scene.launch('SystemScene');
+            console.log("プリロード完了。");
         });
         
         // --- ロードを開始 ---
