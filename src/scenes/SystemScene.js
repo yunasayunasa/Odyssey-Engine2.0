@@ -23,34 +23,42 @@ export default class SystemScene extends Phaser.Scene {
                 return;
             }*/
 
-            this.isProcessingTransition = true; // 遷移処理開始
-            this.targetSceneKey = sceneKey;    // ターゲットシーンを設定
+            this.isProcessingTransition = true; 
+            this.targetSceneKey = sceneKey;    
+            console.log(`[SystemScene] シーン[${sceneKey}]の起動を開始します。`);
 
             this.scene.start(sceneKey, params);
 
-            if (waitForGameSceneLoadComplete) {
-                // GameSceneへの遷移の場合、GameSceneからのカスタムイベントを待つ
-                this.scene.get('GameScene').events.once('gameScene-load-complete', () => {
-                    // ★★★ 修正箇所: GameSceneとUISceneの入力をここで有効化 ★★★
-                    this.scene.get('GameScene').input.enabled = true;
-                    if (this.scene.isActive('UIScene')) { 
-                        this.scene.get('UIScene').input.enabled = true;
-                    }
-                    console.log("SystemScene: GameSceneとUISceneの入力を再有効化しました。");
+            // ★★★ 修正箇所: GameSceneのCREATEイベントを待ってから、カスタムイベントを購読する ★★★
+            // これにより、GameSceneのインスタンスが完全に作成されたことを確認してからイベント購読を開始できる
+            this.scene.get(sceneKey).events.once(Phaser.Scenes.Events.CREATE, (createdSceneInstance) => {
+                // createdSceneInstance は新しく作成されたシーンインスタンスを指す
+                console.log(`[SystemScene] シーン[${sceneKey}]のCREATEイベント受信。`);
 
+                if (waitForGameSceneLoadComplete && createdSceneInstance.scene.key === 'GameScene') {
+                    // GameSceneからのカスタムイベント 'gameScene-load-complete' を待つ
+                    createdSceneInstance.events.once('gameScene-load-complete', () => {
+                        // GameSceneとUISceneの入力をここで有効化
+                        createdSceneInstance.input.enabled = true; // GameSceneの入力
+                        const uiScene = this.scene.get('UIScene'); // UISceneはまだisActiveであれば
+                        if (uiScene && uiScene.scene.isActive()) { 
+                            uiScene.input.enabled = true;
+                        }
+                        console.log("SystemScene: GameSceneとUISceneの入力を再有効化しました。");
+
+                        this.isProcessingTransition = false;
+                        this.targetSceneKey = null; 
+                        console.log(`[SystemScene] GameSceneのロード完了イベント受信。遷移処理フラグをリセットしました。`);
+                    });
+                } else {
+                    // GameScene以外への遷移の場合、CREATEイベント受信でフラグをリセット
                     this.isProcessingTransition = false;
-                    this.targetSceneKey = null; // ターゲットシーンをクリア
-                    console.log("[SystemScene] GameSceneのロード完了イベント受信。遷移処理フラグをリセットしました。");
-                });
-            } else {
-                // その他のシーンへの遷移の場合、PhaserのCREATEイベントを待つ
-                this.scene.get(sceneKey).events.once(Phaser.Scenes.Events.CREATE, () => {
-                    this.isProcessingTransition = false;
-                    this.targetSceneKey = null; // ターゲットシーンをクリア
-                    console.log(`[SystemScene] シーン[${sceneKey}]のCREATEイベント受信。遷移処理フラグをリセットしました。`);
-                });
-            }
+                    this.targetSceneKey = null; 
+                    console.log(`[SystemScene] シーン[${sceneKey}]のCREATEイベント受信。遷移処理フラグをリセットしました。(GameScene以外)`);
+                }
+            });
         };
+
 
 
         // --- 1. [jump] や [call] によるシーン遷移リクエストを処理 ---
