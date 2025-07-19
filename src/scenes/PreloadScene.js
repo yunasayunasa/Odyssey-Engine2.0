@@ -5,13 +5,13 @@ import ConfigManager from '../core/ConfigManager.js';
 export default class PreloadScene extends Phaser.Scene {
     constructor() {
         // main.jsでactive:trueが設定されるため、ここではactiveは指定しない
-        super({ key: 'PreloadScene' }); 
+        super('PreloadScene' ); 
         
         // UI要素への参照を初期化 (stop()で破棄するため)
-        this.progressBar = null;
-        this.progressBox = null;
-        this.percentText = null;
-        this.loadingText = null;
+        //this.progressBar = null;
+        //this.progressBox = null;
+        //this.percentText = null;
+        //this.loadingText = null;
     }
 
     preload() {
