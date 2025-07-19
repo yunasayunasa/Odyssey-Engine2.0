@@ -367,17 +367,18 @@ export default class BattleScene extends Phaser.Scene {
         if (this.loseButton) { this.loseButton.destroy(); this.loseButton = null; }
 
         // ★★★ 修正箇所: return-to-novelのparamsに、endBattle時点でのステータスを渡す ★★★
-        if (result === 'win') {
-            this.scene.get('SystemScene').events.emit('return-to-novel', {
+           if (result === 'win') {
+            // ★★★ 修正箇所: return-to-novel ではなく request-scene-transition を使う ★★★
+            this.scene.get('SystemScene').events.emit('request-scene-transition', {
+                to: 'GameScene',
                 from: this.scene.key,
                 params: { 
-                     'f.battle_result': 'win',
-                    // ★★★ 修正箇所: StateManagerのf変数を直接参照して渡す ★★★
-                    'f.player_hp': this.stateManager.f.player_hp, 
-                    'f.coin': this.stateManager.f.coin 
+                    'f.battle_result': 'win',
+                    'f.player_hp': this.stateManager.f.player_hp,
+                    'f.coin': this.stateManager.f.coin
                 }
             });
-        }else {
+        } else {
             // ★★★ 敗北時: ゲームオーバー処理 ★★★
             console.log("ActionScene (as BattleScene): ゲームオーバー処理を開始します。");
             
@@ -388,8 +389,8 @@ export default class BattleScene extends Phaser.Scene {
             // ★★★ 修正箇所: 新しいボタンを有効化するため、シーンの入力を再度有効化 ★★★
             this.input.enabled = true;
 
-            this.retryButton.on('pointerdown', () => {
-                this.input.enabled = false;
+              this.retryButton.on('pointerdown', () => {
+                this.input.enabled = false; 
                 this.scene.get('SystemScene').events.emit('request-scene-transition', {
                     to: this.scene.key,
                     from: this.scene.key,
@@ -399,14 +400,15 @@ export default class BattleScene extends Phaser.Scene {
 
             this.titleButton.on('pointerdown', () => {
                 this.input.enabled = false;
-                this.scene.get('SystemScene').events.emit('return-to-novel', {
+                // ★★★ 修正箇所: return-to-novel ではなく request-scene-transition を使う ★★★
+                this.scene.get('SystemScene').events.emit('request-scene-transition', {
+                    to: 'GameScene',
                     from: this.scene.key,
                     params: { 'f.battle_result': 'game_over' }
                 });
             });
         }
     }
-
     resume() {
         console.log("ActionScene (as BattleScene): resume されました。入力を再有効化します。");
         this.input.enabled = true;
