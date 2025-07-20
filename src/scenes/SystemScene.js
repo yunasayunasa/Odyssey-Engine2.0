@@ -31,7 +31,7 @@ export default class SystemScene extends Phaser.Scene {
                 return;
             }
 
-            this.game.input.enabled = false; 
+          //  this.game.input.enabled = false; 
             console.log("SystemScene: ゲーム全体の入力を無効化しました。");
 
             this.isProcessingTransition = true; 
