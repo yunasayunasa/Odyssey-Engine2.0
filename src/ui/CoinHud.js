@@ -43,7 +43,7 @@ export default class CoinHud extends Phaser.GameObjects.Container {
         this.setCoin(this.stateManager.f.coin || 0); // 初期値を設定
 
         // ★★★ ここが重要: StateManagerの変更イベントを直接購読 ★★★
-        this.stateManager.events.on('f-variable-changed', this.onFVariableChanged, this);
+          this.stateManager.on('f-variable-changed', this.onFVariableChanged, this);
 
         scene.add.existing(this);
 

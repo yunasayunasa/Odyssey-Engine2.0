@@ -94,8 +94,7 @@ export default class BattleScene extends Phaser.Scene {
         this.coinHud.setCoin(this.initialBattleParams.initialCoin);
 
         this.onFVariableChangedListener = this.onFVariableChanged.bind(this);
-        this.stateManager.events.on('f-variable-changed', this.onFVariableChangedListener);
-
+         this.stateManager.on('f-variable-changed', this.onFVariableChangedListener);
         // バックパックのグリッド表示
         this.backpackGridSize = 6;
         this.cellSize = 60;
