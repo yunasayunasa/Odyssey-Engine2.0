@@ -14,6 +14,7 @@ export default class ScenarioManager {
         this.isWaitingClick = false;
         this.isWaitingTag = false;
         this.isEnd = false;
+        this.isStopped = false; // ★★★ 停止フラグ ★★★
 
            // ★★★ 進行モードを管理するプロパティを追加 ★★★
         this.mode = 'normal'; // 'normal', 'skip', 'auto'
@@ -48,7 +49,8 @@ export default class ScenarioManager {
         // 待機フラグを解除して、ゲームループを開始する
         this.isWaitingClick = false;
         this.isWaitingChoice = false;
-        
+        this.isStopped = false;
+        this.isEnd = false;
         // ループが既に動いている場合は、重複して実行しないようにする
         if (this.isLoopRunning) return;
         

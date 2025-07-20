@@ -25,6 +25,9 @@ export function handleJump(manager, params) {
         console.log(`[jump] 別シーン[${storage}]へジャンプします。`, transitionParams);
         
         manager.scene.performSave(0); 
+// ★★★ 修正箇所: SystemSceneにリクエストを送る前に、GameScene自身をpauseする ★★★
+        console.log("[jump] GameSceneをpauseします。");
+        manager.scene.scene.pause(); // これでGameSceneが一時停止する
 
         manager.scene.scene.get('SystemScene').events.emit('request-scene-transition', {
             to: storage,

@@ -222,6 +222,31 @@ export default class GameScene extends Phaser.Scene {
             this.soundManager.stopBgm(0); // フェードなしで即時停止
         }
     }
+      // ★★★ 追加: シーンがpauseされるときに呼ばれるメソッド ★★★
+    pause() {
+        super.pause(); // 親のpauseを呼び出す
+        console.log("GameScene: pauseされました。シナリオの進行を停止します。");
+        
+        // ScenarioManagerのループを停止
+        if (this.scenarioManager) {
+            // ★ScenarioManagerにstop()メソッドが実装されていることを前提とします★
+            this.scenarioManager.stop(); 
+        }
+        
+        // BGMを一時停止したい場合は、ここでSoundManagerのメソッドを呼ぶ
+         if (this.soundManager) {
+             this.soundManager.pauseBgm(); 
+         }
+    }
+
+    // resume()メソッドも念のため追加しておくと、将来的な拡張で役立ちます
+    resume() {
+        super.resume();
+        console.log("GameScene: resumeされました。");
+        // このエンジンでは、resume後にstop()->start()で再起動するため、
+        // ここで何かを再開する必要は通常ありません。
+    }
+
     // ★★★ 追加: onFVariableChangedメソッド (HUD更新ロジックを一元化) ★★★
     onFVariableChanged(key, value) {
         if (!this.isSceneFullyReady) return;
