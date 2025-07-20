@@ -76,35 +76,26 @@ export default class StateManager extends Phaser.Events.EventEmitter {
         this.f = loadedState.variables.f || {};
     }
 
-     /**
+       /**
      * 文字列のJavaScript式を安全に評価・実行する。
      * @param {string} exp - 実行する式 (例: "f.hoge = 10")
      * @returns {*} 評価結果
      */
     eval(exp) {
-        // ★★★ 修正箇所: try-catchブロックをevalの直前に移動し、スコープを保護 ★★★
         try {
             // this.f や this.sf が null や undefined でないことを保証する
             const f = this.f || {};
             const sf = this.sf || {};
-            let result;
+            
+            // ★★★ 修正箇所: new Functionを使って、より安全なスコープで実行 ★★★
+            // これにより、グローバル変数へのアクセスを防ぎ、fとsfのみがスコープ内に存在する
+            // 式を()で囲むことで、{...}がオブジェクトリテラルとして正しく評価される
+            return new Function('f', 'sf', `'use strict'; return (${exp});`)(f, sf);
 
-            // new Functionを使って、より安全なスコープで実行
-            // これにより、グローバル変数へのアクセスを防ぐ
-            result = new Function('f', 'sf', `'use strict'; return (${exp});`)(f, sf);
-
-            // eval実行後に、ローカルのfをthis.fに再代入する
-            // (eval内でfが直接変更された場合に備える)
-            this.f = f;
-
-            // f変数が変更された可能性があることを通知する
-            this.emit('eval-executed');
-
-            this.saveSystemVariables(); 
-            return result;
         } catch (e) {
             // ★★★ 修正箇所: エラーが発生してもゲームを止めず、警告を出す ★★★
             console.warn(`[StateManager.eval] 式の評価中にエラーが発生しました: "${exp}"`, e);
+            // 失敗した場合はundefinedを返すことで、後続の処理がエラーにならないようにする
             return undefined; 
         }
     }

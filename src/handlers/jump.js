@@ -1,43 +1,38 @@
-// src/handlers/jump.js
+// src/handlers/jump.js (evalを使う形に戻す)
 
-/**
- * [jump] タグの処理
- * シナリオ内の別ラベル、または別のPhaserシーンへジャンプする。
- * params属性で変数を渡すことができる。
- * @param {ScenarioManager} manager
- * @param {Object} params - { storage, target, params } // ★ params属性をJSDocに追加
- * @returns {Promise<void>}
- */
 export function handleJump(manager, params) {
     const { storage, target } = params;
     
-    // ★★★ 渡すパラメータを準備 ★★★
     let transitionParams = {};
     if (params.params) {
         try {
-           const evaluatedParamsString = manager.embedVariables(params.params.replace(/'/g, '"'));
-            transitionParams = JSON.parse(evaluatedParamsString);
+            // ★★★ 修正箇所: embedVariablesやJSON.parseを使わず、文字列全体をStateManager.eval()に渡す ★★★
+            // StateManager.eval() が f.love_meter などを解決してくれる
+            transitionParams = manager.stateManager.eval(params.params);
+            
+            // evalが失敗した場合(undefined)に備え、空のオブジェクトをデフォルト値とする
+            if (transitionParams === undefined) {
+                transitionParams = {};
+            }
         } catch (e) {
+            // StateManager.eval()内でエラーが捕捉されるはずだが、念のため
             console.error(`[jump] params属性の評価に失敗しました: "${params.params}"`, e);
+            transitionParams = {}; // エラー時は空のオブジェクト
         }
     }
 
     if (storage) {
-        // --- 別シーンへのジャンプ (例: ActionScene) ---
-        console.log(`[jump] 別シーン[${storage}]へジャンプします。`);
+        console.log(`[jump] 別シーン[${storage}]へジャンプします。`, transitionParams);
         
-        // シーン遷移前にオートセーブを実行 (復帰時に前の状態に戻るため)
         manager.scene.performSave(0); 
 
-        // SystemSceneにシーン遷移をリクエスト
         manager.scene.scene.get('SystemScene').events.emit('request-scene-transition', {
             to: storage,
-            from: manager.scene.key, // どのシーンからのリクエストか伝える (例: 'GameScene')
-            params: transitionParams // ★★★ 評価したパラメータを渡す ★★★
+            from: manager.scene.key,
+            params: transitionParams
         });
 
     } else if (target && target.startsWith('*')) {
-        // --- シナリオ内の別ラベルへのジャンプ ---
         console.log(`[jump] ラベル[${target}]へジャンプします。`);
         manager.jumpTo(target);
         
@@ -45,6 +40,5 @@ export function handleJump(manager, params) {
         console.warn('[jump] 有効なstorage属性またはtarget属性が指定されていません。');
     }
     
-    // 同期ハンドラなので、必ずPromiseを返す
     return Promise.resolve();
 }
