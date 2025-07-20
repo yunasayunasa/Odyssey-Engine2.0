@@ -49,7 +49,7 @@ export default class SystemScene extends Phaser.Scene {
 
                 newSceneInstance.events.once(Phaser.Scenes.Events.CREATE, (createdSceneInstance) => {
                     console.log(`[SystemScene] シーン[${sceneKey}]のCREATEイベント受信。`);
-
+createdSceneInstance.input.enabled = true;
                     if (createdSceneInstance.scene.key === 'GameScene') {
                         createdSceneInstance.events.once('gameScene-load-complete', () => {
                             createdSceneInstance.input.enabled = true;
@@ -90,10 +90,7 @@ export default class SystemScene extends Phaser.Scene {
                 gameSceneInstance.input.enabled = false;
                 gameSceneInstance.scene.stop('GameScene');
             }
-            const uiSceneInstance = this.scene.get('UIScene');
-            if (uiSceneInstance && uiSceneInstance.scene.isActive()) { 
-                uiSceneInstance.input.enabled = false;
-            }
+           
                // ★★★ 修正箇所: UISceneがisActiveであれば、入力だけでなく表示も無効化する ★★★
         const uiSceneInstance = this.scene.get('UIScene');
         if (uiSceneInstance && uiSceneInstance.scene.isActive()) { 
