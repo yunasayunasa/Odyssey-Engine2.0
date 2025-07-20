@@ -78,8 +78,22 @@ export default class BattleScene extends Phaser.Scene {
         this.playerPlaceholderText = this.add.text(100, 360, 'PLAYER', { fontSize: '48px', fill: '#fff' }).setOrigin(0.5);
         this.enemyPlaceholderText = this.add.text(this.scale.width - 100, 360, 'ENEMY', { fontSize: '48px', fill: '#fff' }).setOrigin(0.5);
 
-        this.playerHpBar = new HpBar(this, 20, 20, 250, 30, 'player');
-        this.enemyHpBar = new HpBar(this, this.scale.width - 20, 20, 250, 30, 'enemy');
+        this.playerHpBar = new HpBar(this, {
+            x: 20,
+            y: 20,
+            width: 250,
+            height: 30,
+            type: 'player',
+            stateManager: this.stateManager
+        });
+        this.enemyHpBar = new HpBar(this, {
+            x: this.scale.width - 20,
+            y: 20,
+            width: 250,
+            height: 30,
+            type: 'enemy',
+            stateManager: this.stateManager
+        });
         this.enemyHpBar.x -= this.enemyHpBar.barWidth;
         this.coinHud = new CoinHud(this, 100, 50);
 

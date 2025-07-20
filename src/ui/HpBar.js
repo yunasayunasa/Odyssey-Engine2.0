@@ -1,29 +1,30 @@
-// src/ui/HpBar.js
+// src/ui/HpBar.js (引数をオブジェクト形式に変更)
 
-/**
- * HPバーを表示するHUDコンポーネント
- * Phaser.GameObjects.Containerを継承し、背景、バー本体、テキストで構成される。
- */
 export default class HpBar extends Phaser.GameObjects.Container {
-    /**
-     * @param {Phaser.Scene} scene - このHUDが追加されるPhaserシーン
-     * @param {number} x - HUDのX座標
-     * @param {number} y - HUDのY座標
-     * @param {number} width - バーの幅
-     * @param {number} height - バーの高さ
-     * @param {string} type - 'player' or 'enemy' (表示色や位置調整用)
-     */
-     constructor(scene, x, y, width, height, type, stateManager) {
-        super(scene, x, y);
-  this.stateManager = stateManager;
+    // ★★★ 修正箇所: constructorの引数を設定オブジェクトに変更 ★★★
+    constructor(scene, config) {
+        // configオブジェクトから値を取り出す
+        const x = config.x || 0;
+        const y = config.y || 0;
+        const width = config.width || 200;
+        const height = config.height || 25;
+        const type = config.type || 'player';
+        const stateManager = config.stateManager; // stateManagerをconfigから取得
 
-        // ★★★ stateManagerのイベントを購読 ★★★
-        this.stateManager.on('f-variable-changed', this.onFVariableChanged, this);
+        super(scene, x, y); // 親クラスのコンストラクタを呼び出す
+        
+        // ★★★ stateManagerが渡されているか、ここで再度確認 ★★★
+        if (!stateManager) {
+            console.error("HpBar: constructorにstateManagerが渡されていません！");
+            return; // stateManagerがない場合は処理を中断
+        }
+        this.stateManager = stateManager;
+
         this.barWidth = width;
         this.barHeight = height;
         this.type = type;
-        this.maxHp = 100; // 初期最大HP (後でsetMaxHpで設定可能にする)
-        this.currentHp = 100; // 初期現在HP
+        this.maxHp = 100;
+        this.currentHp = 100;
 
         // ★★★ HPバーの背景 (黒) ★★★
         this.background = scene.add.rectangle(0, 0, width, height, 0x000000, 0.8)
@@ -44,7 +45,9 @@ export default class HpBar extends Phaser.GameObjects.Container {
             strokeThickness: 2
         }).setOrigin(0.5); // 中央基準
         this.add(this.hpText);
-
+   // ★★★ stateManagerのイベントを購読 ★★★
+        this.stateManager.on('f-variable-changed', this.onFVariableChanged, this);
+        
         // コンテナ全体をシーンに追加
         scene.add.existing(this);
 
