@@ -48,7 +48,7 @@ export default class SystemScene extends Phaser.Scene {
             this.scene.get(sceneKey).events.once(Phaser.Scenes.Events.CREATE, (createdSceneInstance) => {
                 console.log(`[SystemScene] シーン[${sceneKey}]のCREATEイベント受信。`);
 
-                if ( createdSceneInstance.scene.key === 'GameScene') {
+                if (waitForGameSceneLoadComplete  || createdSceneInstance.scene.key === 'GameScene') {
                     // ★★★ ここが重要: 新しく作成されたcreatedSceneInstanceのイベントを購読 ★★★
                     createdSceneInstance.events.once('gameScene-load-complete', () => {
                         // GameSceneとUISceneの入力をここで有効化
