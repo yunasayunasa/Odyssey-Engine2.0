@@ -16,7 +16,7 @@ export default class SystemScene extends Phaser.Scene {
         }
     }
 
-    create() {
+   create() {
         console.log("SystemScene: 起動・イベント監視開始");
 
         const gameScene = this.scene.get('GameScene');
@@ -24,7 +24,7 @@ export default class SystemScene extends Phaser.Scene {
             this.globalCharaDefs = gameScene.charaDefs;
         }
 
-        const startAndMonitorScene = (sceneKey, params) => { // waitForGameSceneLoadComplete引数を削除
+        const startAndMonitorScene = (sceneKey, params) => { 
             // isProcessingTransitionフラグは、再ジャンプの問題を解決するために必要です。
             if (this.isProcessingTransition || (this.targetSceneKey && this.targetSceneKey === sceneKey)) {
                 console.warn(`[SystemScene] シーン[${sceneKey}]は既に遷移処理中またはアクティブです。新しいリクエストをスキップします。`);
@@ -38,16 +38,12 @@ export default class SystemScene extends Phaser.Scene {
             this.targetSceneKey = sceneKey;    
             console.log(`[SystemScene] シーン[${sceneKey}]の起動を開始します。`);
 
-            // シーンをstartする
             this.scene.start(sceneKey, params);
 
-            // ★★★ 修正箇所: delayedCallを使い、次のフレームでイベントリスナーを登録する ★★★
-            // これにより、Phaserが新しいシーンのインスタンスを準備する時間を確保できる
             this.time.delayedCall(0, () => {
                 const newSceneInstance = this.scene.get(sceneKey);
                 if (!newSceneInstance) {
                     console.error(`[SystemScene] シーン[${sceneKey}]のインスタンスが取得できませんでした。`);
-                    // エラー時にはフラグと入力をリセットしてフリーズを防ぐ
                     this.isProcessingTransition = false;
                     this.targetSceneKey = null;
                     this.game.input.enabled = true;
@@ -73,16 +69,17 @@ export default class SystemScene extends Phaser.Scene {
                             console.log(`[SystemScene] GameSceneのロード完了イベント受信。遷移処理フラグをリセットしました。`);
                         });
                     } else {
-                        // GameScene以外への遷移の場合、CREATEイベント受信でフラグをリセット
+                        // ★★★ 修正箇所: GameScene以外でも、遷移完了後に入力を再有効化する ★★★
                         this.isProcessingTransition = false;
                         this.targetSceneKey = null; 
-                        this.game.input.enabled = true;
+                        this.game.input.enabled = true; // ★★★ この行を追加 ★★★
                         console.log("SystemScene: ゲーム全体の入力を再有効化しました。");
                         console.log(`[SystemScene] シーン[${sceneKey}]のCREATEイベント受信。遷移処理フラグをリセットしました。(GameScene以外)`);
                     }
                 });
             });
         };
+
 
 
 
