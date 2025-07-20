@@ -112,9 +112,9 @@ export default class GameScene extends Phaser.Scene {
         this.playerHpBar = new HpBar(this, 100, 100, 200, 25, 'player'); 
         this.playerHpBar.setVisible(false);
 
-        // ★★★ 修正箇所: StateManagerからのイベントでHUDを更新するリスナーを登録 ★★★
-        // (updateループではなく、イベント駆動にする)
+       // ★★★ 修正箇所: StateManagerからのイベントでHUDを更新するリスナーをここで登録 ★★★
         this.stateManager.events.on('f-variable-changed', this.onFVariableChanged, this);
+        console.log("GameScene: StateManagerのイベントリスナーを登録しました。"); // ★デバッグ用にログを追加
 
 
         // --- タグハンドラの登録 ---
@@ -167,6 +167,9 @@ this.scenarioManager.registerTag('stopvideo', handleStopVideo);
         } else {
             console.log("GameScene: 通常起動します。");
             this.performSave(0);
+              // ★★★ 追加: 初回起動時もHUDの初期値を設定 ★★★
+            this.coinHud.setCoin(this.stateManager.f.coin || 0);
+            this.playerHpBar.setHp(this.stateManager.f.player_hp || 100, this.stateManager.f.player_max_hp || 100);
             this.scenarioManager.loadScenario(this.startScenario, this.startLabel);
 
             this.coinHud.setCoin(this.stateManager.f.coin || 0);
@@ -181,24 +184,27 @@ this.scenarioManager.registerTag('stopvideo', handleStopVideo);
         console.log("GameScene: create 完了");
     }
 
-     stop() {
+      // ★★★ 修正箇所: stop()メソッドでイベントリスナーを解除 ★★★
+    stop() {
         super.stop();
-        console.log("GameScene: stop されました。イベントリスナーを解除します。");
+        console.log("GameScene: stop されました。UI要素とイベントリスナーを破棄します。");
         
         // StateManagerのイベントリスナーを解除
         if (this.stateManager) {
             this.stateManager.events.off('f-variable-changed', this.onFVariableChanged, this);
+            console.log("GameScene: StateManagerのイベントリスナーを解除しました。"); // ★デバッグ用にログを追加
         }
-
-        // ... (HUDなどのPhaserオブジェクトの破棄は、rebuildSceneで行われるため、
-        //      stop()で明示的にdestroyする必要はないが、もし問題が再発する場合はここに追加)
-        // if (this.coinHud) { this.coinHud.destroy(); this.coinHud = null; }
-        // if (this.playerHpBar) { this.playerHpBar.destroy(); this.playerHpBar = null; }
+        
+        // HUDオブジェクトを破棄
+        if (this.coinHud) { this.coinHud.destroy(); this.coinHud = null; }
+        if (this.playerHpBar) { this.playerHpBar.destroy(); this.playerHpBar = null; }
     }
 
        // ★★★ 追加: onFVariableChangedメソッド (HUD更新ロジックを一元化) ★★★
     onFVariableChanged(key, value) {
-        if (!this.isSceneFullyReady) return; // シーンが準備完了するまで更新しない
+        if (!this.isSceneFullyReady) return;
+
+        console.log(`GameScene: f変数[${key}]が[${value}]に変更されたことを検知しました。`); // ★デバッグ用にログを追加
 
         if (key === 'coin' && this.coinHud && this.coinHud.coinText.text !== value.toString()) {
             this.coinHud.setCoin(value);
