@@ -15,17 +15,10 @@ export function handleJump(manager, params) {
     let transitionParams = {};
     if (params.params) {
         try {
-            // 変数展開を適用: "&f.player_name;" -> "マスター"
-            const evaluatedParamsString = manager.embedVariables(params.params);
-            
-            // eval()を使ってJavaScriptオブジェクトとして評価する
-            // 例: "{player_level:100, player_name:'マスター'}" のような文字列をオブジェクトに変換
-            // NOTE: JSON.parseでは 'key':value の形式はエラーになるため、JavaScriptのリテラルとして評価
-            transitionParams = manager.stateManager.eval(`(${evaluatedParamsString})`);
-            console.log(`[jump] 渡すパラメータを評価しました:`, transitionParams);
+           const evaluatedParamsString = manager.embedVariables(params.params.replace(/'/g, '"'));
+            transitionParams = JSON.parse(evaluatedParamsString);
         } catch (e) {
             console.error(`[jump] params属性の評価に失敗しました: "${params.params}"`, e);
-            // 失敗してもゲームは続行し、空のオブジェクトが渡される
         }
     }
 

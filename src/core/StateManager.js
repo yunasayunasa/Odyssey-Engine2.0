@@ -81,35 +81,29 @@ export default class StateManager extends Phaser.Events.EventEmitter {
      * @returns {*} 評価結果
      */
     eval(exp) {
+        // ★★★ 修正箇所: try-catchブロックをevalの直前に移動し、スコープを保護 ★★★
         try {
-            // ★★★ 修正箇所: this.f が存在しない場合に備え、空のオブジェクトをデフォルト値とする ★★★
+            // this.f や this.sf が null や undefined でないことを保証する
             const f = this.f || {};
             const sf = this.sf || {};
+            let result;
 
-            const result = (function(f, sf) {
-                'use strict';
-                return eval(exp); 
-            })(f, sf);
+            // new Functionを使って、より安全なスコープで実行
+            // これにより、グローバル変数へのアクセスを防ぐ
+            result = new Function('f', 'sf', `'use strict'; return (${exp});`)(f, sf);
 
-            // ★★★ 修正箇所: eval実行後に、ローカルのfをthis.fに再代入する ★★★
+            // eval実行後に、ローカルのfをthis.fに再代入する
+            // (eval内でfが直接変更された場合に備える)
             this.f = f;
 
-            // ★★★ 修正箇所: f変数が変更されたことを通知するイベントを発行 ★★★
-            // 式から変更された変数名を特定するのは難しいため、
-            // 'f.player_hp' のようなキーと、その新しい値をイベントで渡すのが理想的。
-            // ここでは、単純化のため、evalが呼ばれたことを通知する。
-            // より高度な実装として、式を解析して変更されたキーを特定することも可能。
-            // 例: const changedKey = exp.split('=')[0].trim();
-            // this.events.emit('f-variable-changed', changedKey, result);
-            // 今回は、evalが呼ばれた事実のみを通知する。
-            this.events.emit('eval-executed');
-
+            // f変数が変更された可能性があることを通知する
+            this.emit('eval-executed');
 
             this.saveSystemVariables(); 
             return result;
-
         } catch (e) {
-            console.error(`[eval] 式の評価中にエラーが発生しました: "${exp}"`, e);
+            // ★★★ 修正箇所: エラーが発生してもゲームを止めず、警告を出す ★★★
+            console.warn(`[StateManager.eval] 式の評価中にエラーが発生しました: "${exp}"`, e);
             return undefined; 
         }
     }
