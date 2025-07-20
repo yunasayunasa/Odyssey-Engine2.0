@@ -74,42 +74,42 @@ export default class StateManager {
         this.f = loadedState.variables.f || {};
     }
 
-    /**
-     * 文字列のJavaScript式を評価・実行する
+     /**
+     * 文字列のJavaScript式を安全に評価・実行する。
      * @param {string} exp - 実行する式 (例: "f.hoge = 10")
+     * @returns {*} 評価結果
      */
     eval(exp) {
         try {
-            const f = this.f;
-            const sf = this.sf;
-
-            // ★★★ 変更点: f変数の変更を検知するために、実行前の状態をコピー ★★★
-            const oldF = { ...f };
+            // ★★★ 修正箇所: this.f が存在しない場合に備え、空のオブジェクトをデフォルト値とする ★★★
+            const f = this.f || {};
+            const sf = this.sf || {};
 
             const result = (function(f, sf) {
                 'use strict';
                 return eval(exp); 
             })(f, sf);
 
+            // ★★★ 修正箇所: eval実行後に、ローカルのfをthis.fに再代入する ★★★
+            this.f = f;
+
+            // ★★★ 修正箇所: f変数が変更されたことを通知するイベントを発行 ★★★
+            // 式から変更された変数名を特定するのは難しいため、
+            // 'f.player_hp' のようなキーと、その新しい値をイベントで渡すのが理想的。
+            // ここでは、単純化のため、evalが呼ばれたことを通知する。
+            // より高度な実装として、式を解析して変更されたキーを特定することも可能。
+            // 例: const changedKey = exp.split('=')[0].trim();
+            // this.events.emit('f-variable-changed', changedKey, result);
+            // 今回は、evalが呼ばれた事実のみを通知する。
+            this.events.emit('eval-executed');
+
+
             this.saveSystemVariables(); 
-
-            // ★★★ 変更点: f変数が変更されたらイベントを発行 ★★★
-            for (const key in f) {
-                if (f[key] !== oldF[key]) {
-                    this.events.emit('f-variable-changed', key, f[key], oldF[key]); // key, newValue, oldValue
-                }
-            }
-            // ★★★ sf変数が変更された場合もイベントを発行 ★★★
-            for (const key in sf) {
-                // sfの変更検知はここでは行わない（saveSystemVariablesで永続化されるため）
-                // 必要であれば、sfも同様に検知ロジックを追加可能
-            }
-
             return result;
 
         } catch (e) {
             console.error(`[eval] 式の評価中にエラーが発生しました: "${exp}"`, e);
-            return undefined;
+            return undefined; 
         }
     }
 

@@ -122,6 +122,12 @@ createdSceneInstance.input.enabled = true;
             // setVisibleメソッドがあればそれを使うのが良い
             if (typeof uiSceneInstance.setVisible === 'function') {
                 uiSceneInstance.setVisible(true); 
+                 const uiScene = this.scene.get('UIScene'); 
+                            if (uiScene && uiScene.scene.isActive()) { 
+                                uiScene.input.enabled = true;
+                            }
+                            console.log("SystemScene: GameSceneとUISceneの入力を再有効化しました。");
+
             } else {
                 // setVisibleがなければ、シーンのcameras.main.visibleで代用
                 uiSceneInstance.cameras.main.visible = true;
