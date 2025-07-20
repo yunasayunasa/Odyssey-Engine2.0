@@ -113,7 +113,11 @@ export default class GameScene extends Phaser.Scene {
         // ★★★ 修正箇所: CoinHudとHpBarにstateManagerを渡してインスタンス化 ★★★
         // これにより、各HUDが自分自身でStateManagerの変更を監視するようになります。
            console.log("HpBarを生成する直前のthis.stateManager:", this.stateManager);
-         this.coinHud = new CoinHud(this, 100, 50, this.stateManager); 
+          this.coinHud = new CoinHud(this, {
+            x: 100,
+            y: 50,
+            stateManager: this.stateManager // ★★★ ここでstateManagerを確実に渡す ★★★
+        }); 
        // ★★★ 修正箇所: HpBarをオブジェクト形式の引数でインスタンス化 ★★★
         this.playerHpBar = new HpBar(this, {
             x: 100,

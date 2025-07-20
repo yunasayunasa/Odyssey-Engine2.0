@@ -95,7 +95,11 @@ export default class BattleScene extends Phaser.Scene {
             stateManager: this.stateManager
         });
         this.enemyHpBar.x -= this.enemyHpBar.barWidth;
-        this.coinHud = new CoinHud(this, 100, 50);
+            this.coinHud = new CoinHud(this, {
+            x: 100,
+            y: 50,
+            stateManager: this.stateManager
+        });
 
         this.stateManager.f.player_max_hp = this.initialBattleParams.initialPlayerMaxHp; 
         this.stateManager.f.player_hp = this.initialBattleParams.initialPlayerHp;
