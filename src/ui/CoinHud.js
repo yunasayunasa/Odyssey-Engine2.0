@@ -10,9 +10,11 @@ export default class CoinHud extends Phaser.GameObjects.Container {
      * @param {number} x - HUDのX座標
      * @param {number} y - HUDのY座標
      */
-    constructor(scene, x, y) {
+     // ★★★ 修正箇所: constructorの引数にstateManagerを追加 ★★★
+    constructor(scene, x, y, stateManager) {
         super(scene, x, y);
 
+        this.stateManager = stateManager; // StateManagerへの参照を保持
         // ★★★ HUDの背景画像 (例: 'coin_panel'のような画像を別途用意) ★★★
         // 一旦シンプルな四角形にするか、既存のアセットを使う
         // 例として、シンプルな四角形を使用
@@ -36,7 +38,13 @@ export default class CoinHud extends Phaser.GameObjects.Container {
         }).setOrigin(0.5);
         this.add(this.coinText);
 
-        // HUD全体をシーンに追加
+          // ... (省略: アイコンやテキストの作成) ...
+
+        this.setCoin(this.stateManager.f.coin || 0); // 初期値を設定
+
+        // ★★★ ここが重要: StateManagerの変更イベントを直接購読 ★★★
+        this.stateManager.events.on('f-variable-changed', this.onFVariableChanged, this);
+
         scene.add.existing(this);
 
         // ★★★ UIなので、メッセージウィンドウより手前に表示 ★★★
@@ -49,5 +57,21 @@ export default class CoinHud extends Phaser.GameObjects.Container {
      */
     setCoin(amount) {
         this.coinText.setText(amount.toString());
+    }
+     // ★★★ 追加: f変数が変更されたときに呼ばれるコールバック ★★★
+    onFVariableChanged(key, value) {
+        if (key === 'coin' && this.coinText.text !== value.toString()) {
+            this.setCoin(value);
+        }
+    }
+// ★★★ 追加: 破棄される際にイベントリスナーを解除する ★★★
+    destroy(fromScene) {
+        console.log("CoinHud: destroyされました。イベントリスナーを解除します。");
+        // StateManagerのイベントリスナーを解除
+        if (this.stateManager) {
+            this.stateManager.events.off('f-variable-changed', this.onFVariableChanged, this);
+        }
+        // 親のdestroyを呼び出す
+        super.destroy(fromScene);
     }
 }

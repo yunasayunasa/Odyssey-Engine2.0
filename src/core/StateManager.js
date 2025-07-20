@@ -1,16 +1,17 @@
 // src/core/StateManager.js (最終版)
 
-export default class StateManager {
+export default class StateManager extends Phaser.Events.EventEmitter { // ★★★ EventEmitterを継承 ★★
     constructor() {
-        // ゲーム内変数 (f) とシステム変数 (sf) を分離
+        super(); // 親クラスのコンストラクタを呼び出す
         this.f = {};
         this.sf = this.loadSystemVariables(); 
-        
-        // ★★★ 変更点: イベントエミッターを追加 ★★★
-        this.events = new Phaser.Events.EventEmitter();
-
-        if (!this.sf.history) {
-            this.sf.history = [];
+        if (!this.sf.history) this.sf.history = [];
+    }
+     // ★★★ 追加: f変数を設定し、イベントを発行するメソッド ★★★
+    setF(key, value) {
+        if (this.f[key] !== value) {
+            this.f[key] = value;
+            this.emit('f-variable-changed', key, value);
         }
     }
 
