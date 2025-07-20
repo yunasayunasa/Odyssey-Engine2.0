@@ -1,7 +1,7 @@
 // src/scenes/PreloadScene.js (アセットロード完了後にシーンを起動する最終修正)
 
 import ConfigManager from '../core/ConfigManager.js';
-
+import StateManager from '../core/StateManager.js';
 export default class PreloadScene extends Phaser.Scene {
     constructor() {
         super({ key: 'PreloadScene' });
@@ -32,7 +32,13 @@ export default class PreloadScene extends Phaser.Scene {
         const assetDefine = this.cache.json.get('asset_define');
         const configManager = new ConfigManager();
         this.registry.set('configManager', configManager);
+            const assetDefine = this.cache.json.get('asset_define');
         
+        // ★★★ 修正箇所: ConfigManagerとStateManagerをここで生成し、Registryに登録 ★★★
+        const configManager = new ConfigManager();
+        this.registry.set('configManager', configManager);
+        const stateManager = new StateManager();
+        this.registry.set('stateManager', stateManager);
         // --- アセットをロードキューに追加 ---
         for (const key in assetDefine.images) { this.load.image(key, assetDefine.images[key]); }
         for (const key in assetDefine.sounds) { this.load.audio(key, assetDefine.sounds[key]); }
@@ -59,20 +65,22 @@ export default class PreloadScene extends Phaser.Scene {
             }
             
             // ★★★ 修正箇所: 全てのアセットロード完了後に、他のシーンを起動する ★★★
-            this.scene.launch('SystemScene');
-            this.scene.launch('UIScene');
-            this.scene.start('GameScene', { 
-                charaDefs: charaDefs,
-                startScenario: 'test.ks'
-            });
+              this.scene.launch('SystemScene'); 
+            const systemScene = this.scene.get('SystemScene');
+            
+            if (systemScene) {
+                systemScene.events.once(Phaser.Scenes.Events.CREATE, () => {
+                    // ★★★ 修正箇所: startInitialGameにcharaDefsを渡す ★★★
+                    systemScene.startInitialGame(charaDefs, 'test.ks'); 
+                    console.log("PreloadScene: SystemSceneのCREATEイベント受信、初期ゲーム起動を依頼しました。");
+                });
+            } else {
+                console.error("PreloadScene: SystemSceneのインスタンスが取得できませんでした。");
+            }
 
-            // PreloadSceneは役割を終えるので、次のフレームで自身を停止する
-            this.time.delayedCall(1, () => {
-                this.scene.stop(this.scene.key);
-            });
+            this.scene.stop(this.scene.key);
         });
         
-        // --- ロードを開始 ---
         this.load.start();
     }
 }

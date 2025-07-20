@@ -347,9 +347,10 @@ export default class BattleScene extends Phaser.Scene {
     }
 
     // ★★★ 修正箇所: stop() メソッドで全てのPhaserオブジェクトを破棄するロジックを強化 ★★★
+      // ★★★ 修正箇所: stop() メソッドで全てのPhaserオブジェクトを破棄する ★★★
     stop() {
         super.stop();
-        console.log("ActionScene (as BattleScene): stop されました。UI要素とイベントリスナーを破棄します。");
+        console.log("BattleScene: stop されました。UI要素とイベントリスナーを破棄します。");
 
         // StateManagerのイベントリスナーを解除
         if (this.stateManager && this.onFVariableChangedListener) {
@@ -357,39 +358,8 @@ export default class BattleScene extends Phaser.Scene {
             this.onFVariableChangedListener = null;
         }
         
-        // --- HUDオブジェクトを破棄 ---
-        if (this.playerHpBar) { this.playerHpBar.destroy(); this.playerHpBar = null; }
-        if (this.enemyHpBar) { this.enemyHpBar.destroy(); this.enemyHpBar = null; }
-        if (this.coinHud) { this.coinHud.destroy(); this.coinHud = null; }
-
-        // --- プレースホルダーテキストを破棄 ---
-        if (this.playerPlaceholderText) { this.playerPlaceholderText.destroy(); this.playerPlaceholderText = null; }
-        if (this.enemyPlaceholderText) { this.enemyPlaceholderText.destroy(); this.enemyPlaceholderText = null; }
-
-        // --- バックパック関連のUIオブジェクトを破棄 ---
-        if (this.backpackGridObjects.length > 0) {
-            this.backpackGridObjects.forEach(obj => { if (obj) obj.destroy(); });
-            this.backpackGridObjects = [];
-        }
-
-        // --- インベントリアイテムを破棄 (ドラッグリスナーもここで自動解除される) ---
-        if (this.inventoryItems.length > 0) {
-            this.inventoryItems.forEach(item => { if (item) item.destroy(); });
-            this.inventoryItems = [];
-        }
-
-        // --- ボタンと関連するテキストを破棄 ---
-        if (this.startBattleButton) { this.startBattleButton.off('pointerdown'); this.startBattleButton.destroy(); this.startBattleButton = null; }
-        if (this.battleLogText) { this.battleLogText.destroy(); this.battleLogText = null; }
-
-        if (this.winButton) { this.winButton.off('pointerdown'); this.winButton.destroy(); this.winButton = null; }
-        if (this.loseButton) { this.loseButton.off('pointerdown'); this.loseButton.destroy(); this.loseButton = null; }
-        if (this.retryButton) { this.retryButton.off('pointerdown'); this.retryButton.destroy(); this.retryButton = null; }
-        if (this.titleButton) { this.titleButton.off('pointerdown'); this.titleButton.destroy(); this.titleButton = null; }
-        if (this.gameOverText) { this.gameOverText.destroy(); this.gameOverText = null; } 
-
-        // 戦闘中の遅延Callがあれば停止（もしstartBattle内でtime.delayedCallをプロパティに保持していれば）
-        // 例: if (this.battleTurnTimer) { this.battleTurnTimer.remove(); }
+        // ★★★ 追加: このシーンが作成した全ての表示オブジェクトを破棄 ★★★
+        this.children.removeAll(true);
     }
 
     onFVariableChanged(key, value) {
@@ -411,15 +381,14 @@ export default class BattleScene extends Phaser.Scene {
     }
 
 
-    endBattle(result) {
+       endBattle(result) {
         if (this.battleEnded) return;
         this.battleEnded = true;
 
-        console.log(`ActionScene (as BattleScene): バトル終了。結果: ${result}`);
+        console.log(`BattleScene: バトル終了。結果: ${result}`);
         
-        this.input.enabled = false; // シーン全体の入力を無効化
-        // winButton/loseButtonはendBattleの呼び出し元で無効化済み、stop()で破棄される
-
+        this.input.enabled = false;
+        
         // ★★★ 修正箇所: SystemSceneへのイベント発行を eventEmitted フラグで制御 ★★★
         if (!this.eventEmitted) {
             this.eventEmitted = true; // イベント発行フラグを立てる
