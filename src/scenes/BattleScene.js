@@ -366,9 +366,12 @@ export default class BattleScene extends Phaser.Scene {
     // ★★★ 修正箇所: stop() メソッドで全てのPhaserオブジェクトを破棄するロジックを強化 ★★★
       // ★★★ 修正箇所: stop() メソッドで全てのPhaserオブジェクトを破棄する ★★★
     
-    stop() {
-        super.stop();
-        console.log("BattleScene: stop されました。UI要素とイベントリスナーを破棄します。");
+   
+    // ★★★ 修正箇所: stop() -> shutdown() に変更 ★★★
+    // shutdown()は、シーンが完全に停止・破棄される際に呼ばれるライフサイクルメソッドです。
+    shutdown() {
+        super.shutdown(); // 親のshutdownを呼び出す
+        console.log("BattleScene: shutdown されました。UI要素とイベントリスナーを破棄します。");
 
         // ★★★ ここが重要: StateManagerのイベントリスナーを確実に解除 ★★★
         if (this.stateManager && this.onFVariableChangedListener) {
@@ -377,11 +380,11 @@ export default class BattleScene extends Phaser.Scene {
             console.log("BattleScene: StateManagerのイベントリスナーを解除しました。");
         }
         
-        // ★★★ このシーンが作成した全ての表示オブジェクトを破棄 ★★★
-        // これにより、HpBarやCoinHudなどのインスタンスも破棄される
+        // ★★★ stop()の時と同様に、このシーンが作成した全ての表示オブジェクトを破棄 ★★★
+        // children.removeAll(true) は、このシーンの表示リストからオブジェクトを削除し、破棄します。
+        // これにより、HpBarやCoinHudなどのdestroy()も自動的に呼ばれます。
         this.children.removeAll(true);
     }
-
 
    
     onFVariableChanged(key, value) {
