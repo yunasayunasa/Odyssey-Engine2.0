@@ -365,19 +365,23 @@ export default class BattleScene extends Phaser.Scene {
 
     // ★★★ 修正箇所: stop() メソッドで全てのPhaserオブジェクトを破棄するロジックを強化 ★★★
       // ★★★ 修正箇所: stop() メソッドで全てのPhaserオブジェクトを破棄する ★★★
+    
     stop() {
         super.stop();
         console.log("BattleScene: stop されました。UI要素とイベントリスナーを破棄します。");
 
-        // ★★★ 修正箇所: StateManagerのイベントリスナーを確実に解除 ★★★
+        // ★★★ ここが重要: StateManagerのイベントリスナーを確実に解除 ★★★
         if (this.stateManager && this.onFVariableChangedListener) {
             this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);
             this.onFVariableChangedListener = null; // 参照をクリア
+            console.log("BattleScene: StateManagerのイベントリスナーを解除しました。");
         }
         
         // ★★★ このシーンが作成した全ての表示オブジェクトを破棄 ★★★
+        // これにより、HpBarやCoinHudなどのインスタンスも破棄される
         this.children.removeAll(true);
     }
+
 
    
     onFVariableChanged(key, value) {
