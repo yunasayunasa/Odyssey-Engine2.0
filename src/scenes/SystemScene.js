@@ -1,10 +1,13 @@
+// src/scenes/SystemScene.js (矛盾を解消し、堅牢性を高める最終修正)
+
 export default class SystemScene extends Phaser.Scene {
     constructor() {
-        super({ key: 'SystemScene' });
+        super({ key: 'SystemScene' }); // main.jsでactive:falseに統一済み
         this.globalCharaDefs = null;
-        this.isProcessingTransition = false;
-        this.targetSceneKey = null;
+        this.isProcessingTransition = false; 
+        this.targetSceneKey = null; 
         this.initialGameData = null;
+        this.instanceId = Math.random(); // ★★★ 追加: デバッグ用のインスタンスID ★★★
     }
 
     init(data) {
@@ -14,84 +17,54 @@ export default class SystemScene extends Phaser.Scene {
     }
 
     create() {
-        console.log("SystemScene: 起動・イベント監視開始");
+        console.log(`[SystemScene ${this.instanceId}] 起動・イベント監視開始`);
 
-        if (this.initialGameData) {
-            console.log("SystemScene: 初期ゲーム起動データを受信しました。");
-            this.globalCharaDefs = this.initialGameData.charaDefs;
+        // ★★★ 修正箇所: create()冒頭の重複した起動ロジックを完全に削除 ★★★
+        // if (this.initialGameData) { ... } のブロックを削除
 
-            // ★★★ 修正箇所: UISceneをlaunchし、そのCREATEイベントを待つ ★★★
-            this.scene.launch('UIScene');
-            const uiScene = this.scene.get('UIScene');
-
-            if (uiScene) {
-                uiScene.events.once(Phaser.Scenes.Events.CREATE, () => {
-                    console.log("SystemScene: UISceneのCREATEイベント受信。GameSceneを起動します。");
-                    
-                    // ★★★ UISceneのCREATE完了後にGameSceneをstartする ★★★
-                    this.scene.start('GameScene', { 
-                        charaDefs: this.globalCharaDefs,
-                        startScenario: this.initialGameData.startScenario,
-                        startLabel: null,
-                    });
-                    console.log("SystemScene: 初期ゲーム起動処理を開始しました。");
-                });
-            } else {
-                console.error("SystemScene: UISceneのインスタンスが取得できませんでした。");
-            }
-
-            this.initialGameData = null; 
-        }
         // --- シーン開始処理とフラグのリセットを管理する共通ヘルパー関数 ---
         const startAndMonitorScene = (sceneKey, params, waitForGameSceneLoadComplete) => {
-            // (isProcessingTransition フラグのコメントアウトは、一旦そのままにしておきます。
-            // これにより、後続のデバッグでこの部分が実際にどう機能するかを確認しやすくなります。)
+            // ★★★ 修正箇所: isProcessingTransition フラグのコメントアウトを解除 ★★★
             if (this.isProcessingTransition || (this.targetSceneKey && this.targetSceneKey === sceneKey)) {
-                console.warn(`[SystemScene] シーン[${sceneKey}]は既に遷移処理中またはアクティブです。新しいリクエストをスキップします。`);
+                console.warn(`[SystemScene ${this.instanceId}] シーン[${sceneKey}]は既に遷移処理中またはアクティブです。新しいリクエストをスキップします。`);
                 return;
             }
-            // ★★★ 追加: シーン遷移開始時に、ゲーム全体の入力を無効化 ★★★
+            
             this.game.input.enabled = false; 
-            console.log("SystemScene: ゲーム全体の入力を無効化しました。");
-
+            console.log(`[SystemScene ${this.instanceId}] ゲーム全体の入力を無効化しました。`);
 
             this.isProcessingTransition = true; 
             this.targetSceneKey = sceneKey;    
-             console.log(`[SystemScene ${this.instanceId}] シーン[${sceneKey}]の起動を開始します。`);
+            console.log(`[SystemScene ${this.instanceId}] シーン[${sceneKey}]の起動を開始します。`);
 
             this.scene.start(sceneKey, params);
 
-            // ★★★ 修正箇所: GameSceneのCREATEイベントを待ってから、カスタムイベントを購読する ★★★
             this.scene.get(sceneKey).events.once(Phaser.Scenes.Events.CREATE, (createdSceneInstance) => {
-                    console.log(`[SystemScene ${this.instanceId}] シーン[${sceneKey}]のCREATEイベント受信。`);
+                console.log(`[SystemScene ${this.instanceId}] シーン[${sceneKey}]のCREATEイベント受信。`);
+
                 if (waitForGameSceneLoadComplete && createdSceneInstance.scene.key === 'GameScene') {
                     createdSceneInstance.events.once('gameScene-load-complete', () => {
-                        // GameSceneとUISceneの入力をここで有効化
-                        createdSceneInstance.input.enabled = true; // GameSceneの入力
+                        createdSceneInstance.input.enabled = true; 
                         const uiScene = this.scene.get('UIScene'); 
                         if (uiScene && uiScene.scene.isActive()) { 
                             uiScene.input.enabled = true;
                         } else {
-                            // UIシーンがアクティブでない場合は警告を出すが、ゲームの進行は妨げない
-                            console.warn("SystemScene: GameSceneロード完了時、UISceneがアクティブではありませんでした。");
+                            console.warn(`[SystemScene ${this.instanceId}] GameSceneロード完了時、UISceneがアクティブではありませんでした。`);
                         }
-                        console.log("SystemScene: GameSceneとUISceneの入力を再有効化しました。");
+                        console.log(`[SystemScene ${this.instanceId}] GameSceneとUISceneの入力を再有効化しました。`);
 
                         this.isProcessingTransition = false;
                         this.targetSceneKey = null; 
-                        // ★★★ 追加: 全ての遷移処理完了後にゲーム全体の入力を再有効化 ★★★
                         this.game.input.enabled = true;
-                        console.log("SystemScene: ゲーム全体の入力を再有効化しました。");
-                        console.log(`[SystemScene] GameSceneのロード完了イベント受信。遷移処理フラグをリセットしました。`);
+                        console.log(`[SystemScene ${this.instanceId}] ゲーム全体の入力を再有効化しました。`);
+                        console.log(`[SystemScene ${this.instanceId}] GameSceneのロード完了イベント受信。遷移処理フラグをリセットしました。`);
                     });
                 } else {
-                    // GameScene以外への遷移の場合、CREATEイベント受信でフラグをリセット
                     this.isProcessingTransition = false;
                     this.targetSceneKey = null; 
-                    // ★★★ 追加: 全ての遷移処理完了後にゲーム全体の入力を再有効化 ★★★
                     this.game.input.enabled = true;
-                    console.log("SystemScene: ゲーム全体の入力を再有効化しました。");
-                    console.log(`[SystemScene] シーン[${sceneKey}]のCREATEイベント受信。遷移処理フラグをリセットしました。(GameScene以外)`);
+                    console.log(`[SystemScene ${this.instanceId}] ゲーム全体の入力を再有効化しました。`);
+                    console.log(`[SystemScene ${this.instanceId}] シーン[${sceneKey}]のCREATEイベント受信。遷移処理フラグをリセットしました。(GameScene以外)`);
                 }
             });
         };
@@ -99,15 +72,13 @@ export default class SystemScene extends Phaser.Scene {
 
         // --- 1. [jump] や [call] によるシーン遷移リクエストを処理 ---
         this.events.on('request-scene-transition', (data) => {
-            console.log(`[SystemScene] シーン遷移リクエスト: ${data.from} -> ${data.to}`, data.params);
+            console.log(`[SystemScene ${this.instanceId}] シーン遷移リクエスト: ${data.from} -> ${data.to}`, data.params);
 
-            // 現在のノベルパートのシーンの入力を完全に無効化し、停止
             const gameSceneInstance = this.scene.get('GameScene');
             if (gameSceneInstance && gameSceneInstance.scene.isActive()) { 
                 gameSceneInstance.input.enabled = false;
                 gameSceneInstance.scene.stop('GameScene');
             }
-            // UISceneは停止しない。入力だけ無効化。
             const uiSceneInstance = this.scene.get('UIScene');
             if (uiSceneInstance && uiSceneInstance.scene.isActive()) { 
                 uiSceneInstance.input.enabled = false;
@@ -123,9 +94,8 @@ export default class SystemScene extends Phaser.Scene {
 
         // --- 2. サブシーンからノベルパートへの復帰リクエストを処理 ---
         this.events.on('return-to-novel', (data) => {
-            console.log(`[SystemScene] ノベル復帰リクエスト: from ${data.from}`, data.params);
+            console.log(`[SystemScene ${this.instanceId}] ノベル復帰リクエスト: from ${data.from}`, data.params);
 
-            // 戻り元のシーンの入力を無効化し、停止
             const fromScene = this.scene.get(data.from);
             if (fromScene) { 
                 fromScene.input.enabled = false;
@@ -141,15 +111,10 @@ export default class SystemScene extends Phaser.Scene {
             }, true); 
         });
 
-        /**
-         * ゲーム初期起動時のGameSceneとUISceneの起動を処理する
-         * PreloadSceneから一度だけ呼び出されることを想定
-         * @param {Object} charaDefs - ロード済みのcharaDefsオブジェクト
-         * @param {string} startScenarioKey - GameSceneで最初にロードするシナリオキー
-         */
+        // ★★★ 修正箇所: startInitialGameメソッドを、PreloadSceneから渡されたデータで起動するように修正 ★★★
         this.startInitialGame = (charaDefs, startScenarioKey) => {
             this.globalCharaDefs = charaDefs;
-             console.log(`[SystemScene ${this.instanceId}] 初期ゲーム起動リクエストを受信しました。`);
+            console.log(`[SystemScene ${this.instanceId}] 初期ゲーム起動リクエストを受信しました。`);
 
             // UISceneを先に起動（またはアクティブ化）する
             const uiSceneInstance = this.scene.get('UIScene');
@@ -157,19 +122,13 @@ export default class SystemScene extends Phaser.Scene {
                 this.scene.launch('UIScene'); 
             }
             
-            // ★★★ 追加: 初期起動時はSystemSceneのstartInitialGameが呼ばれるため、
-            // その中で全体入力を有効化する前に、一度無効化して安定させる。
-            this.game.input.enabled = false; 
-            console.log("SystemScene: 初期ゲーム起動時、ゲーム全体の入力を一時無効化しました。");
-
-
             startAndMonitorScene('GameScene', { 
                 charaDefs: this.globalCharaDefs,
                 startScenario: startScenarioKey,
                 startLabel: null,
             }, true); 
             
-             console.log(`[SystemScene ${this.instanceId}] 初期ゲーム起動処理を開始しました。`);
+            console.log(`[SystemScene ${this.instanceId}] 初期ゲーム起動処理を開始しました。`);
         };
 
         // --- オーバーレイ関連のイベントリスナー ---
