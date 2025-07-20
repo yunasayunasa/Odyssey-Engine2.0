@@ -500,4 +500,7 @@ async function rebuildScene(manager, state) {
     }
     
     console.log("--- rebuildScene 正常終了 ---");
+    const systemScene = this.scene.get('SystemScene');
+            if (systemScene) systemScene.events.emit('gameScene-load-complete');
+        console.log("---ロードコンプリート、イベント発行---");
 }
