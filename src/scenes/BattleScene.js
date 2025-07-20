@@ -469,8 +469,7 @@ export default class BattleScene extends Phaser.Scene {
                         from: this.scene.key,
                         params: this.initialBattleParams
                     });
-                    // 自分自身を停止する (SystemSceneが再起動するため)
-                    this.scene.stop(this.scene.key);
+                   
                 }
             });
 
@@ -492,8 +491,7 @@ export default class BattleScene extends Phaser.Scene {
                         from: this.scene.key,
                         params: { 'f.battle_result': 'game_over' }
                     });
-                    // 自分自身を停止する
-                    this.scene.stop(this.scene.key);
+                 
                 }
             });
         }

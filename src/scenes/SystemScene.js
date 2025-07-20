@@ -82,28 +82,31 @@ createdSceneInstance.input.enabled = true;
 
 
         // --- 1. [jump] や [call] によるシーン遷移リクエストを処理 ---
-        this.events.on('request-scene-transition', (data) => {
-            console.log(`[SystemScene ${this.instanceId}] シーン遷移リクエスト: ${data.from} -> ${data.to}`, data.params);
+         this.events.on('request-scene-transition', (data) => {
+            console.log(`[SystemScene] シーン遷移リクエスト: ${data.from} -> ${data.to}`, data.params);
 
-            const gameSceneInstance = this.scene.get('GameScene');
-            if (gameSceneInstance && gameSceneInstance.scene.isActive()) { 
-                gameSceneInstance.input.enabled = false;
-                gameSceneInstance.scene.stop('GameScene');
+            // ★★★ 修正箇所: 遷移元のシーンを汎用的に停止する ★★★
+            // GameSceneだけでなく、BattleSceneなど、どのシーンからでも遷移できるようにする
+            const fromScene = this.scene.get(data.from);
+            if (fromScene && fromScene.scene.isActive()) {
+                fromScene.input.enabled = false;
+                fromScene.scene.stop(data.from);
+                console.log(`[SystemScene] シーン[${data.from}]を停止しました。`);
             }
-           
-               // ★★★ 修正箇所: UISceneがisActiveであれば、入力だけでなく表示も無効化する ★★★
-        const uiSceneInstance = this.scene.get('UIScene');
-        if (uiSceneInstance && uiSceneInstance.scene.isActive()) { 
-            uiSceneInstance.input.enabled = false;
-            uiSceneInstance.setVisible(false); // ★★★ UISceneの表示も無効化する ★★★
-        }
+            
+            // UISceneは停止しない。入力だけ無効化。
+            if (this.scene.isActive('UIScene')) {
+              this.scene.get('UIScene').input.enabled = false;
+            }
+            
             startAndMonitorScene(data.to, {
-                charaDefs: this.globalCharaDefs, 
+                charaDefs: this.globalCharaDefs,
                 transitionParams: data.params, 
                 startScenario: data.to === 'GameScene' ? 'test_main.ks' : null,
                 startLabel: null,
-            }, data.to === 'GameScene'); 
+            }, data.to === 'GameScene');
         });
+
 
         // --- 2. サブシーンからノベルパートへの復帰リクエストを処理 ---
         this.events.on('return-to-novel', (data) => {
