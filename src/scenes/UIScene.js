@@ -12,6 +12,7 @@ export default class UIScene extends Phaser.Scene {
 
     create() {
         console.log("UIScene: 作成・初期化");
+        this.scene.bringToTop();
         const gameWidth = 1280;
         const gameHeight = 720;
 
