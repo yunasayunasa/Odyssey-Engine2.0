@@ -172,7 +172,7 @@ this.scenarioManager.registerTag('stopvideo', handleStopVideo);
             this.isSceneFullyReady = true; 
             this.time.delayedCall(10, () => this.scenarioManager.next());
         }
-        
+          this.stateManager.on('f-variable-changed', this.onFVariableChanged, this);
         this.input.on('pointerdown', () => this.scenarioManager.onClick());
         console.log("GameScene: create 完了");
     }
@@ -181,9 +181,11 @@ this.scenarioManager.registerTag('stopvideo', handleStopVideo);
       // ★★★ 削除: stop()メソッド内のイベントリスナー解除ロジックも不要 ★★★
     stop() {
         super.stop();
-        console.log("GameScene: stop されました。");
-        // if (this.stateManager) { ... } // 削除
-        
+         if (this.stateManager) {
+            // ★★★ 修正箇所: this.stateManager.events.off -> this.stateManager.off ★★★
+            this.stateManager.off('f-variable-changed', this.onFVariableChanged, this);
+        }
+    
         // ★★★ coinHudの破棄は残す ★★★
         if (this.coinHud) { this.coinHud.destroy(); this.coinHud = null; }
     }

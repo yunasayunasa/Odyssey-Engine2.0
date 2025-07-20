@@ -1,8 +1,8 @@
 // src/core/StateManager.js (最終版)
 
-export default class StateManager extends Phaser.Events.EventEmitter { // ★★★ EventEmitterを継承 ★★
+export default class StateManager extends Phaser.Events.EventEmitter {
     constructor() {
-        super(); // 親クラスのコンストラクタを呼び出す
+        super(); // ★★★ 追加: 親クラスのコンストラクタを呼び出す ★★★
         this.f = {};
         this.sf = this.loadSystemVariables(); 
         if (!this.sf.history) this.sf.history = [];
