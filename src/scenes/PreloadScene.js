@@ -34,7 +34,7 @@ export default class PreloadScene extends Phaser.Scene {
         this.registry.set('configManager', configManager);
            
         // ★★★ 修正箇所: ConfigManagerとStateManagerをここで生成し、Registryに登録 ★★★
-        const configManager = new ConfigManager();
+        
         this.registry.set('configManager', configManager);
         const stateManager = new StateManager();
         this.registry.set('stateManager', stateManager);
