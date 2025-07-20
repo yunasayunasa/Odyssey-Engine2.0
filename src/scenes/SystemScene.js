@@ -24,7 +24,7 @@ export default class SystemScene extends Phaser.Scene {
             this.globalCharaDefs = gameScene.charaDefs;
         }
 
-        const startAndMonitorScene = (sceneKey, params) => { // ★★★ 修正箇所: waitForGameSceneLoadComplete引数を削除 ★★★
+        const startAndMonitorScene = (sceneKey, params) => { // waitForGameSceneLoadComplete引数を削除
             // isProcessingTransitionフラグは、再ジャンプの問題を解決するために必要です。
             if (this.isProcessingTransition || (this.targetSceneKey && this.targetSceneKey === sceneKey)) {
                 console.warn(`[SystemScene] シーン[${sceneKey}]は既に遷移処理中またはアクティブです。新しいリクエストをスキップします。`);
@@ -38,14 +38,18 @@ export default class SystemScene extends Phaser.Scene {
             this.targetSceneKey = sceneKey;    
             console.log(`[SystemScene] シーン[${sceneKey}]の起動を開始します。`);
 
-            this.scene.start(sceneKey, params);
+            // ★★★ 修正箇所: シーンをstartする前に、グローバルなシーンマネージャーでイベントを購読する ★★★
+            // これにより、これから作成される新しいインスタンスのCREATEイベントを確実にキャッチできる
+            this.scene.manager.events.once(Phaser.Scenes.Events.CREATE, (createdSceneInstance) => {
+                // このイベントは「どのシーンでも」CREATEされたら発火するので、
+                // 目的のシーンかどうかをキーで確認する
+                if (createdSceneInstance.scene.key !== sceneKey) {
+                    return; // 目的のシーンでなければ何もしない
+                }
 
-            // ★★★ 修正箇所: GameSceneのCREATEイベントを待ってから、カスタムイベントを購読する ★★★
-            this.scene.get(sceneKey).events.once(Phaser.Scenes.Events.CREATE, (createdSceneInstance) => {
                 console.log(`[SystemScene] シーン[${sceneKey}]のCREATEイベント受信。`);
 
-                // ★★★ 修正箇所: 条件を sceneKey === 'GameScene' のみに変更 ★★★
-                if (createdSceneInstance.scene.key === 'GameScene') {
+                if (sceneKey === 'GameScene') {
                     // ★★★ ここが重要: 新しく作成されたcreatedSceneInstanceのイベントを購読 ★★★
                     createdSceneInstance.events.once('gameScene-load-complete', () => {
                         createdSceneInstance.input.enabled = true; // GameSceneの入力
@@ -70,6 +74,9 @@ export default class SystemScene extends Phaser.Scene {
                     console.log(`[SystemScene] シーン[${sceneKey}]のCREATEイベント受信。遷移処理フラグをリセットしました。(GameScene以外)`);
                 }
             });
+
+            // イベント購読を設定した後に、シーンをstartする
+            this.scene.start(sceneKey, params);
         };
 
 
