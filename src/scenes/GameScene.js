@@ -184,7 +184,8 @@ export default class GameScene extends Phaser.Scene {
         super.stop();
          if (this.stateManager) {
             // ★★★ 修正箇所: this.stateManager.events.off -> this.stateManager.off ★★★
-            this.stateManager.off('f-variable-changed', this.onFVariableChanged, this);
+             this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);
+            this.onFVariableChangedListener = null;
         }
     
         // ★★★ coinHudの破棄は残す ★★★

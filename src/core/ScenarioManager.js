@@ -259,7 +259,10 @@ export default class ScenarioManager {
 
         return line.replace(/&((f|sf)\.[a-zA-Z0-9_.-]+)/g, (match, exp) => {
              console.log(`.............. embedVariables: 変数展開を試みます -> ${exp}`);
-            const value = this.stateManager.eval(exp);
+             
+            // ★★★ 修正箇所: stateManager.eval -> stateManager.getValue ★★★
+            const value = this.stateManager.getValue(exp); 
+
             if (value === undefined || value === null) {
                 return `(undef: ${exp})`;
             }

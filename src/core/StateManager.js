@@ -131,4 +131,18 @@ export default class StateManager extends Phaser.Events.EventEmitter {
         if (this.sf.history.length > 100) this.sf.history.shift();
         this.saveSystemVariables();
     }
+      // ★★★ 追加: f/sf変数の値を安全に取得するメソッド ★★★
+    getValue(exp) {
+        try {
+            const f = this.f;
+            const sf = this.sf;
+            // new Functionを使って、より安全に値を取得
+            return new Function('f', 'sf', `return ${exp}`)(f, sf);
+        } catch (e) {
+            // 式が不正な場合や、存在しないプロパティにアクセスしようとした場合はundefinedを返す
+            console.warn(`[StateManager.getValue] 式の評価に失敗しました: "${exp}"`, e);
+            return undefined;
+        }
+    }
+
 }

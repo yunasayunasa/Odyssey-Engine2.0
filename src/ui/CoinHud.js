@@ -67,11 +67,10 @@ export default class CoinHud extends Phaser.GameObjects.Container {
 // ★★★ 追加: 破棄される際にイベントリスナーを解除する ★★★
     destroy(fromScene) {
         console.log("CoinHud: destroyされました。イベントリスナーを解除します。");
-        // StateManagerのイベントリスナーを解除
         if (this.stateManager) {
-            this.stateManager.events.off('f-variable-changed', this.onFVariableChanged, this);
+            // ★★★ 修正箇所: this.stateManager.events.off -> this.stateManager.off ★★★
+            this.stateManager.off('f-variable-changed', this.onFVariableChanged, this);
         }
-        // 親のdestroyを呼び出す
         super.destroy(fromScene);
     }
 }
