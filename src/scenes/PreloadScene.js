@@ -32,8 +32,7 @@ export default class PreloadScene extends Phaser.Scene {
         const assetDefine = this.cache.json.get('asset_define');
         const configManager = new ConfigManager();
         this.registry.set('configManager', configManager);
-            const assetDefine = this.cache.json.get('asset_define');
-        
+           
         // ★★★ 修正箇所: ConfigManagerとStateManagerをここで生成し、Registryに登録 ★★★
         const configManager = new ConfigManager();
         this.registry.set('configManager', configManager);
