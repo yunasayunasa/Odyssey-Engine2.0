@@ -97,7 +97,7 @@ export default class GameScene extends Phaser.Scene {
         this.choiceInputBlocker = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x000000, 0.001)
             .setInteractive()
             .setVisible(false)
-            .setDepth(25);
+            .setDepth(0);
         this.choiceInputBlocker.on('pointerdown', () => console.log("選択肢を選んでください"));
         // this.choiceInputBlocker.input.enabled = false; // setVisible(false)で十分なので、この行は不要
 
