@@ -30,11 +30,7 @@ export default class PreloadScene extends Phaser.Scene {
     create() {
         console.log("PreloadScene: ロード完了。ゲームの初期設定を行います。");
         const assetDefine = this.cache.json.get('asset_define');
-        const configManager = new ConfigManager();
-        this.registry.set('configManager', configManager);
-           
-        // ★★★ 修正箇所: ConfigManagerとStateManagerをここで生成し、Registryに登録 ★★★
-        
+          const configManager = new ConfigManager();
         this.registry.set('configManager', configManager);
         const stateManager = new StateManager();
         this.registry.set('stateManager', stateManager);

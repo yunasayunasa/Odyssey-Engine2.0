@@ -101,7 +101,7 @@ export default class GameScene extends Phaser.Scene {
 
         // --- マネージャー/UIクラスの生成 ---
         this.configManager = this.sys.registry.get('configManager');
-         this.stateManager = this.sys.registry.get('stateManager');  
+           this.stateManager = this.sys.registry.get('stateManager'); 
         this.soundManager = new SoundManager(this, this.configManager);
         this.messageWindow = new MessageWindow(this, this.soundManager, this.configManager);
         this.layer.message.add(this.messageWindow); 

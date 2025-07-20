@@ -112,4 +112,17 @@ export default class UIScene extends Phaser.Scene {
             gameScene.scenarioManager.setMode(newMode);
         }
     }
+  setVisible(isVisible) {
+        console.log(`UIScene: setVisible(${isVisible}) が呼ばれました。`);
+        // UIScene内の全ての表示オブジェクトの可視性を切り替える
+        if (this.menuButton) this.menuButton.setVisible(isVisible);
+        if (this.panel) this.panel.setVisible(isVisible); 
+        
+        // パネルが開いている状態でも、パネルを非表示にする
+        if (!isVisible && this.isPanelOpen) {
+            this.isPanelOpen = false; // 状態をリセット
+            // Tweenなしで即座に隠す
+            if (this.panel) this.panel.y = this.scale.height + 120; 
+        }
+    }
 }

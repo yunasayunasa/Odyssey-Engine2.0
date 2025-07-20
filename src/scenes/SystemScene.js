@@ -94,7 +94,12 @@ export default class SystemScene extends Phaser.Scene {
             if (uiSceneInstance && uiSceneInstance.scene.isActive()) { 
                 uiSceneInstance.input.enabled = false;
             }
-            
+               // ★★★ 修正箇所: UISceneがisActiveであれば、入力だけでなく表示も無効化する ★★★
+        const uiSceneInstance = this.scene.get('UIScene');
+        if (uiSceneInstance && uiSceneInstance.scene.isActive()) { 
+            uiSceneInstance.input.enabled = false;
+            uiSceneInstance.setVisible(false); // ★★★ UISceneの表示も無効化する ★★★
+        }
             startAndMonitorScene(data.to, {
                 charaDefs: this.globalCharaDefs, 
                 transitionParams: data.params, 
