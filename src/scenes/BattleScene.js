@@ -404,7 +404,7 @@ export default class BattleScene extends Phaser.Scene {
 
         console.log(`BattleScene: バトル終了。結果: ${result}`);
         
-        this.input.enabled = false;
+        //:this.input.enabled = false;
         
         // ★★★ 修正箇所: SystemSceneへのイベント発行を eventEmitted フラグで制御 ★★★
         if (!this.eventEmitted) {

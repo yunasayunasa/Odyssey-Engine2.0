@@ -75,38 +75,35 @@ export default class StateManager extends Phaser.Events.EventEmitter {
         this.f = loadedState.variables.f || {};
     }
 
-       /**
-     * 文字列のJavaScript式を安全に評価・実行する。
+         /**
+     * 文字列のJavaScript式を安全に評価・実行し、変更を通知する。
      * @param {string} exp - 実行する式 (例: "f.hoge = 10")
      * @returns {*} 評価結果
      */
-      eval(exp) {
+    eval(exp) {
         try {
             const f = this.f || {};
             const sf = this.sf || {};
             
-            // ★★★ 修正箇所: 変更前のf変数の状態をディープコピーして保持 ★★★
-            const f_before = JSON.parse(JSON.stringify(f));
+            // ★★★ 修正箇所: 変更前のf変数の状態をコピーして保持 ★★★
+            // JSON.parse(JSON.stringify(f)) は確実だが、パフォーマンスが懸念される場合はシャローコピーで試す
+            const f_before = { ...f };
 
             const result = new Function('f', 'sf', `'use strict'; return (${exp});`)(f, sf);
             
-            this.f = f; // 変更後のfをthis.fに再代入
+            // 変更後のfの参照をthis.fに再代入
+            this.f = f;
 
             // ★★★ 修正箇所: 変更前と変更後のf変数を比較し、変更があればイベントを発行 ★★★
-            for (const key in this.f) {
-                if (this.f[key] !== f_before[key]) {
+            // 新旧両方のキーのセットを作成し、変更がないかチェックする
+            const allKeys = new Set([...Object.keys(f_before), ...Object.keys(this.f)]);
+            allKeys.forEach(key => {
+                // 値が変更された、またはキーが新しく追加/削除された場合
+                if (f_before[key] !== this.f[key]) {
                     console.log(`[StateManager.eval] f.${key} が変更されました: ${f_before[key]} -> ${this.f[key]}`);
                     this.emit('f-variable-changed', key, this.f[key]);
                 }
-            }
-            // 新しく追加されたキーもチェック
-            for (const key in f_before) {
-                if (!this.f.hasOwnProperty(key)) {
-                     console.log(`[StateManager.eval] f.${key} が削除されました。`);
-                     this.emit('f-variable-changed', key, undefined);
-                }
-            }
-
+            });
 
             this.saveSystemVariables(); 
             return result;

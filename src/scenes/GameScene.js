@@ -287,12 +287,7 @@ clearChoiceButtons() {
  // src/scenes/GameScene.js の performLoad メソッド (最終版)
   async performLoad(slot, returnParams = null) {
      // ★★★ 修正箇所: ロード処理中であれば、二重実行を防止 ★★★
-        if (this.isPerformingLoad) {
-            console.warn("GameScene: performLoadが既に実行中です。二重呼び出しをスキップします。");
-            // 二重呼び出しの場合でも、SystemSceneのフラグを解除するためにイベントを発生させる必要があるかも
-            // ただし、この場合はGameSceneがSystemSceneのisProcessingTransitionをリセットしないよう注意
-            return; 
-        }
+        
         this.isPerformingLoad = true; // ロード処理を開始
         try {
             const jsonString = localStorage.getItem(`save_data_${slot}`);
