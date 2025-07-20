@@ -363,26 +363,19 @@ export default class BattleScene extends Phaser.Scene {
         console.log("現在のバックパック:", this.backpack);
     }
 
-    // ★★★ 修正箇所: stop() メソッドで全てのPhaserオブジェクトを破棄するロジックを強化 ★★★
-      // ★★★ 修正箇所: stop() メソッドで全てのPhaserオブジェクトを破棄する ★★★
-    
-   
-    // ★★★ 修正箇所: stop() -> shutdown() に変更 ★★★
-    // shutdown()は、シーンが完全に停止・破棄される際に呼ばれるライフサイクルメソッドです。
-    shutdown() {
-        super.shutdown(); // 親のshutdownを呼び出す
-        console.log("BattleScene: shutdown されました。UI要素とイベントリスナーを破棄します。");
+   // ★★★ stop()メソッドは、Phaserのライフサイクルで呼ばれることを期待して残す ★★★
+    stop() {
+        super.stop();
+        console.log("BattleScene: stop されました。UI要素とイベントリスナーを破棄します。");
 
-        // ★★★ ここが重要: StateManagerのイベントリスナーを確実に解除 ★★★
+        // stop()が呼ばれる前にendBattleでリスナーは解除されているはずだが、念のためここでも解除
         if (this.stateManager && this.onFVariableChangedListener) {
             this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);
-            this.onFVariableChangedListener = null; // 参照をクリア
-            console.log("BattleScene: StateManagerのイベントリスナーを解除しました。");
+            this.onFVariableChangedListener = null;
+            console.log("BattleScene: stop()内でStateManagerのイベントリスナーを解除しました。");
         }
         
-        // ★★★ stop()の時と同様に、このシーンが作成した全ての表示オブジェクトを破棄 ★★★
-        // children.removeAll(true) は、このシーンの表示リストからオブジェクトを削除し、破棄します。
-        // これにより、HpBarやCoinHudなどのdestroy()も自動的に呼ばれます。
+        // このシーンが作成した全ての表示オブジェクトを破棄
         this.children.removeAll(true);
     }
 
@@ -406,17 +399,25 @@ export default class BattleScene extends Phaser.Scene {
     }
 
 
-       endBattle(result) {
+         endBattle(result) {
         if (this.battleEnded) return;
         this.battleEnded = true;
 
         console.log(`BattleScene: バトル終了。結果: ${result}`);
         
-        //:this.input.enabled = false;
+        this.input.enabled = false;
+        if (this.winButton) this.winButton.disableInteractive();
+        if (this.loseButton) this.loseButton.disableInteractive();
         
-        // ★★★ 修正箇所: SystemSceneへのイベント発行を eventEmitted フラグで制御 ★★★
         if (!this.eventEmitted) {
-            this.eventEmitted = true; // イベント発行フラグを立てる
+            this.eventEmitted = true;
+
+            // ★★★ 修正箇所: SystemSceneにイベントを発行する「前」に、リスナーを解除 ★★★
+            if (this.stateManager && this.onFVariableChangedListener) {
+                this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);
+                this.onFVariableChangedListener = null;
+                console.log("BattleScene: endBattle内でStateManagerのイベントリスナーを解除しました。");
+            }
 
             if (result === 'win') {
                 this.scene.get('SystemScene').events.emit('return-to-novel', {
@@ -470,7 +471,11 @@ export default class BattleScene extends Phaser.Scene {
                 });
             }
         } else {
-            console.warn("BattleScene: イベントが既に発行されているか、結果が不明なためイベントは発行されません。");
+              // ★★★ 追加: イベント発行後、このシーン自身を停止する ★★★
+            // SystemSceneのstop()呼び出しに頼らず、自分で停止する
+            this.scene.stop(this.scene.key);
+            console.log("BattleScene: 自身でstop()を呼び出しました。");
+
         }
     }
 

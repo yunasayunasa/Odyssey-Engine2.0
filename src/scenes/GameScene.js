@@ -193,10 +193,9 @@ export default class GameScene extends Phaser.Scene {
 
       // ★★★ 修正箇所: stop()メソッドでイベントリスナーを解除 ★★★
       // ★★★ 削除: stop()メソッド内のイベントリスナー解除ロジックも不要 ★★★
-   // ★★★ 推奨: stop() -> shutdown() に変更 ★★★
-    shutdown() {
-        super.shutdown();
-        console.log("GameScene: shutdown されました。UI要素とイベントリスナーを破棄します。");
+     stop() {
+        super.stop();
+        console.log("GameScene: stop されました。UI要素とイベントリスナーを破棄します。");
         
         // StateManagerのイベントリスナーを解除
         if (this.stateManager) {
@@ -204,11 +203,12 @@ export default class GameScene extends Phaser.Scene {
             console.log("GameScene: StateManagerのイベントリスナーを解除しました。");
         }
         
-        // ★★★ HUDオブジェクトは new されているため、明示的に破棄するのが安全 ★★★
+        // HUDオブジェクトを破棄
         if (this.coinHud) { this.coinHud.destroy(); this.coinHud = null; }
         if (this.playerHpBar) { this.playerHpBar.destroy(); this.playerHpBar = null; }
-
-        // children.removeAll(true); // rebuildSceneでremoveAllが呼ばれるため、ここでは不要
+    
+        // ★★★ coinHudの破棄は残す ★★★
+        if (this.coinHud) { this.coinHud.destroy(); this.coinHud = null; }
     }
     // ★★★ 追加: onFVariableChangedメソッド (HUD更新ロジックを一元化) ★★★
     onFVariableChanged(key, value) {
