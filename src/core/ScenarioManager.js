@@ -54,13 +54,23 @@ export default class ScenarioManager {
         
         this.gameLoop();
     }
-
+  // ★★★ 追加: ScenarioManagerを停止させるメソッド ★★★
+    stop() {
+        this.isStopped = true;
+        this.isEnd = true; // gameLoopを抜けるようにする
+        console.log("ScenarioManager: 停止しました。");
+        // もしタイマー（オートモードなど）があれば、ここでクリアする
+        if (this.autoTimer) {
+            this.autoTimer.remove();
+            this.autoTimer = null;
+        }
+    }
     // --- 新しいメインループ ---
     async gameLoop() {
         this.isLoopRunning = true;
 
         // isEndになるか、待機状態になるまでループし続ける
-        while (!this.isEnd && !this.isWaitingClick && !this.isWaitingChoice) {
+       while (!this.isEnd && !this.isWaitingClick && !this.isWaitingChoice && !this.isStopped) {
             
             if (this.currentLine >= this.scenario.length) {
                 this.isEnd = true;

@@ -193,22 +193,34 @@ export default class GameScene extends Phaser.Scene {
 
       // ★★★ 修正箇所: stop()メソッドでイベントリスナーを解除 ★★★
       // ★★★ 削除: stop()メソッド内のイベントリスナー解除ロジックも不要 ★★★
-     stop() {
+       // ★★★ 修正箇所: stop()メソッドを完全な「キルスイッチ」として実装 ★★★
+    // Phaserのシーンライフサイクルでは、stop()またはshutdown()が呼ばれます。
+    // どちらでも対応できるよう、ロジックを共通化するのが理想ですが、
+    // SystemSceneがstop()を呼んでいるので、stop()に実装します。
+    stop() {
         super.stop();
-        console.log("GameScene: stop されました。UI要素とイベントリスナーを破棄します。");
-        
-        // StateManagerのイベントリスナーを解除
+        console.log("GameScene: stop されました。全てのマネージャーとリソースを停止・破棄します。");
+
+        // 1. ScenarioManagerのループを完全に停止させる (最も重要)
+        if (this.scenarioManager) {
+            this.scenarioManager.stop(); // ScenarioManagerにstop()メソッドを追加する必要がある
+        }
+
+        // 2. StateManagerのイベントリスナーを解除
         if (this.stateManager) {
             this.stateManager.off('f-variable-changed', this.onFVariableChanged, this);
-            console.log("GameScene: StateManagerのイベントリスナーを解除しました。");
         }
-        
-        // HUDオブジェクトを破棄
+
+        // 3. 全てのPhaserオブジェクト（HUD、MessageWindowなど）を破棄
+        //    (これは既に実装済みのはずですが、再確認)
         if (this.coinHud) { this.coinHud.destroy(); this.coinHud = null; }
         if (this.playerHpBar) { this.playerHpBar.destroy(); this.playerHpBar = null; }
-    
-        // ★★★ coinHudの破棄は残す ★★★
-        if (this.coinHud) { this.coinHud.destroy(); this.coinHud = null; }
+        if (this.messageWindow) { this.messageWindow.destroy(); this.messageWindow = null; }
+        
+        // 4. BGMを停止する
+        if (this.soundManager) {
+            this.soundManager.stopBgm(0); // フェードなしで即時停止
+        }
     }
     // ★★★ 追加: onFVariableChangedメソッド (HUD更新ロジックを一元化) ★★★
     onFVariableChanged(key, value) {
@@ -392,7 +404,7 @@ async function rebuildScene(manager, state) {
     manager.layers.background.removeAll(true);
     manager.layers.character.removeAll(true);
     scene.characters = {};
-    manager.soundManager.stopBgm(); // フェードなしで即時停止
+    manager.soundManager.stopBgm(0); // フェードなしで即時停止
     manager.messageWindow.reset();
     scene.cameras.main.resetFX(); // カメラエフェクトもリセット
 
@@ -429,9 +441,11 @@ async function rebuildScene(manager, state) {
     }
 
     // 5. BGMを復元
-    if (state.sound && state.sound.bgm) {
-        // ★ BGMはフェードインなしで再生するのが一般的
-        manager.soundManager.playBgm(state.sound.bgm, 0); 
+      if (state.sound && state.sound.bgm) {
+        // 現在のBGMキーと比較し、同じでなければ再生する（より丁寧な方法）
+        if (manager.soundManager.getCurrentBgmKey() !== state.sound.bgm) {
+            manager.soundManager.playBgm(state.sound.bgm, 0); 
+        }
     }
     
     // 6. メッセージウィンドウを復元 (クリック待ちだった場合)
