@@ -189,5 +189,13 @@ createdSceneInstance.input.enabled = true;
                 console.log(`SystemScene: シーン[${data.returnTo}]の入力を再有効化しました。`);
             }
         });
+          this.events.on('game-over-ui-ready', () => {
+            console.log("[SystemScene] ゲームオーバーUIの準備完了通知を受信。ゲーム全体の入力を有効化します。");
+            this.game.input.enabled = true;
+            // 遷移中フラグは立てたままでも良いが、リトライ/タイトル選択は新しい遷移なのでリセットする
+            this.isProcessingTransition = false;
+            this.targetSceneKey = null;
+        });
     }
 }
+    

@@ -428,8 +428,11 @@ export default class BattleScene extends Phaser.Scene {
                 this.retryButton = this.add.text(this.scale.width / 2, this.scale.height / 2 + 50, 'もう一度挑戦', { fontSize: '32px', fill: '#fff', backgroundColor: '#880000', padding: { x: 20, y: 10 } }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(999);
                 this.titleButton = this.add.text(this.scale.width / 2, this.scale.height / 2 + 120, 'タイトルに戻る', { fontSize: '32px', fill: '#fff', backgroundColor: '#444444', padding: { x: 20, y: 10 } }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(999);
                 
-                this.input.enabled = true; // 新しいボタンを有効化するため、シーンの入力を再度有効化
+              // ★★★ 修正箇所: this.input.enabled = true; を削除 ★★★
+            // this.input.enabled = true; 
 
+            // ★★★ 追加: SystemSceneにUIの準備ができたことを通知 ★★★
+            this.scene.get('SystemScene').events.emit('game-over-ui-ready');
                 // ★★★ 追加: ゲームオーバーボタンクリック時の入力無効化とイベント発行制御 ★★★
                 this.retryButton.on('pointerdown', () => {
                     this.retryButton.disableInteractive();

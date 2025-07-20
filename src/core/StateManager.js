@@ -80,24 +80,42 @@ export default class StateManager extends Phaser.Events.EventEmitter {
      * @param {string} exp - 実行する式 (例: "f.hoge = 10")
      * @returns {*} 評価結果
      */
-    eval(exp) {
+      eval(exp) {
         try {
-            // this.f や this.sf が null や undefined でないことを保証する
             const f = this.f || {};
             const sf = this.sf || {};
             
-            // ★★★ 修正箇所: new Functionを使って、より安全なスコープで実行 ★★★
-            // これにより、グローバル変数へのアクセスを防ぎ、fとsfのみがスコープ内に存在する
-            // 式を()で囲むことで、{...}がオブジェクトリテラルとして正しく評価される
-            return new Function('f', 'sf', `'use strict'; return (${exp});`)(f, sf);
+            // ★★★ 修正箇所: 変更前のf変数の状態をディープコピーして保持 ★★★
+            const f_before = JSON.parse(JSON.stringify(f));
 
+            const result = new Function('f', 'sf', `'use strict'; return (${exp});`)(f, sf);
+            
+            this.f = f; // 変更後のfをthis.fに再代入
+
+            // ★★★ 修正箇所: 変更前と変更後のf変数を比較し、変更があればイベントを発行 ★★★
+            for (const key in this.f) {
+                if (this.f[key] !== f_before[key]) {
+                    console.log(`[StateManager.eval] f.${key} が変更されました: ${f_before[key]} -> ${this.f[key]}`);
+                    this.emit('f-variable-changed', key, this.f[key]);
+                }
+            }
+            // 新しく追加されたキーもチェック
+            for (const key in f_before) {
+                if (!this.f.hasOwnProperty(key)) {
+                     console.log(`[StateManager.eval] f.${key} が削除されました。`);
+                     this.emit('f-variable-changed', key, undefined);
+                }
+            }
+
+
+            this.saveSystemVariables(); 
+            return result;
         } catch (e) {
-            // ★★★ 修正箇所: エラーが発生してもゲームを止めず、警告を出す ★★★
             console.warn(`[StateManager.eval] 式の評価中にエラーが発生しました: "${exp}"`, e);
-            // 失敗した場合はundefinedを返すことで、後続の処理がエラーにならないようにする
             return undefined; 
         }
     }
+
 
     // システム変数のセーブ/ロード、履歴の追加 (変更なし)
     saveSystemVariables() {
