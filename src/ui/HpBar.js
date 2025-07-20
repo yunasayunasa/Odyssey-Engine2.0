@@ -15,7 +15,10 @@ export default class HpBar extends Phaser.GameObjects.Container {
      */
     constructor(scene, x, y, width = 200, height = 20, type = 'player') {
         super(scene, x, y);
+  this.stateManager = stateManager;
 
+        // ★★★ stateManagerのイベントを購読 ★★★
+        this.stateManager.on('f-variable-changed', this.onFVariableChanged, this);
         this.barWidth = width;
         this.barHeight = height;
         this.type = type;
@@ -60,7 +63,24 @@ export default class HpBar extends Phaser.GameObjects.Container {
         this.maxHp = maxHp;
         this.setHp(this.currentHp, maxHp); // 表示も更新
     }
+ // ★★★ f変数が変更されたときに呼ばれるコールバック ★★★
+    onFVariableChanged(key, value) {
+        if ((key === 'player_hp' && this.type === 'player') || (key === 'enemy_hp' && this.type === 'enemy')) {
+            const maxHp = this.stateManager.f[`${this.type}_max_hp`] || 100;
+            this.setHp(value, maxHp);
+        } else if ((key === 'player_max_hp' && this.type === 'player') || (key === 'enemy_max_hp' && this.type === 'enemy')) {
+            const currentHp = this.stateManager.f[`${this.type}_hp`] || 0;
+            this.setHp(currentHp, value);
+        }
+    }
 
+    // ★★★ destroyメソッドでイベントリスナーを解除 ★★★
+    destroy(fromScene) {
+        if (this.stateManager) {
+            this.stateManager.off('f-variable-changed', this.onFVariableChanged, this);
+        }
+        super.destroy(fromScene);
+    }
     /**
      * HPバーの現在HPと最大HPを更新する
      * @param {number} currentHp - 新しい現在HP

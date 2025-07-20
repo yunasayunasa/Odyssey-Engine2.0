@@ -81,8 +81,10 @@ export default class GameScene extends Phaser.Scene {
         this.load.text('overlay_test.ks', 'assets/overlay_test.ks');
     }
 
+   // src/scenes/GameScene.js の create() メソッドの正しい形
+
     create() {
-         console.log("GameScene: クリエイト処理を開始します。");
+        console.log("GameScene: クリエイト処理を開始します。");
         this.cameras.main.setBackgroundColor('#000000');
         
         // --- レイヤー生成とdepth設定 ---
@@ -97,25 +99,26 @@ export default class GameScene extends Phaser.Scene {
             .setVisible(false)
             .setDepth(25);
         this.choiceInputBlocker.on('pointerdown', () => console.log("選択肢を選んでください"));
-        this.choiceInputBlocker.input.enabled = false;
+        // this.choiceInputBlocker.input.enabled = false; // setVisible(false)で十分なので、この行は不要
 
         // --- マネージャー/UIクラスの生成 ---
         this.configManager = this.sys.registry.get('configManager');
-           this.stateManager = this.sys.registry.get('stateManager'); 
+        this.stateManager = this.sys.registry.get('stateManager'); 
         this.soundManager = new SoundManager(this, this.configManager);
         this.messageWindow = new MessageWindow(this, this.soundManager, this.configManager);
         this.layer.message.add(this.messageWindow); 
         this.scenarioManager = new ScenarioManager(this, this.layer, this.charaDefs, this.messageWindow, this.soundManager, this.stateManager, this.configManager);
 
         // --- HUDのインスタンス化 ---
-           // ★★★ 修正箇所: CoinHudにstateManagerを渡してインスタンス化 ★★★
+        // ★★★ 修正箇所: CoinHudとHpBarにstateManagerを渡してインスタンス化 ★★★
+        // これにより、各HUDが自分自身でStateManagerの変更を監視するようになります。
         this.coinHud = new CoinHud(this, 100, 50, this.stateManager); 
-        this.playerHpBar = new HpBar(this, 100, 100, 200, 25, 'player'); 
+        this.playerHpBar = new HpBar(this, 100, 100, 200, 25, 'player', this.stateManager); // HpBarにも同様に渡す
         this.playerHpBar.setVisible(false);
 
-      
+        // ★★★ 削除: GameSceneがStateManagerのイベントを購読するロジックは不要になる ★★★
+        // this.stateManager.on('f-variable-changed', this.onFVariableChanged, this); // この行を削除
 
-        // --- タグハンドラの登録 ---
         // --- タグハンドラの登録 ---
         this.scenarioManager.registerTag('chara_show', handleCharaShow);
         this.scenarioManager.registerTag('chara_hide', handleCharaHide);
@@ -141,8 +144,8 @@ export default class GameScene extends Phaser.Scene {
         this.scenarioManager.registerTag('else', handleElse);
         this.scenarioManager.registerTag('endif', handleEndif);
         this.scenarioManager.registerTag('s', handleStop);
-　　　　　this.scenarioManager.registerTag('cm', handleClearMessage);
-　　　　　this.scenarioManager.registerTag('er', handleErase);
+        this.scenarioManager.registerTag('cm', handleClearMessage);
+        this.scenarioManager.registerTag('er', handleErase);
         this.scenarioManager.registerTag('delay', handleDelay);
         this.scenarioManager.registerTag('image', handleImage);
         this.scenarioManager.registerTag('freeimage', handleFreeImage);
@@ -151,13 +154,11 @@ export default class GameScene extends Phaser.Scene {
         this.scenarioManager.registerTag('return', handleReturn);
         this.scenarioManager.registerTag('stop_anim', handleStopAnim);
         this.scenarioManager.registerTag('fadeout', handleFadeout);
-this.scenarioManager.registerTag('fadein', handleFadein);
-this.scenarioManager.registerTag('video', handleVideo);
-this.scenarioManager.registerTag('stopvideo', handleStopVideo);
-      this.scenarioManager.registerTag('voice', handleVoice);
+        this.scenarioManager.registerTag('fadein', handleFadein);
+        this.scenarioManager.registerTag('video', handleVideo);
+        this.scenarioManager.registerTag('stopvideo', handleStopVideo);
+        this.scenarioManager.registerTag('voice', handleVoice);
      
-     
-        
         // --- ゲーム開始ロジック ---
         if (this.isResuming) {
             console.log("GameScene: 復帰処理を開始します。");
@@ -172,7 +173,7 @@ this.scenarioManager.registerTag('stopvideo', handleStopVideo);
             this.isSceneFullyReady = true; 
             this.time.delayedCall(10, () => this.scenarioManager.next());
         }
-          this.stateManager.on('f-variable-changed', this.onFVariableChanged, this);
+        
         this.input.on('pointerdown', () => this.scenarioManager.onClick());
         console.log("GameScene: create 完了");
     }
