@@ -369,16 +369,17 @@ export default class BattleScene extends Phaser.Scene {
         super.stop();
         console.log("BattleScene: stop されました。UI要素とイベントリスナーを破棄します。");
 
-        // StateManagerのイベントリスナーを解除
+        // ★★★ 修正箇所: StateManagerのイベントリスナーを確実に解除 ★★★
         if (this.stateManager && this.onFVariableChangedListener) {
-              this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);
-            this.onFVariableChangedListener = null;
+            this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);
+            this.onFVariableChangedListener = null; // 参照をクリア
         }
         
-        // ★★★ 追加: このシーンが作成した全ての表示オブジェクトを破棄 ★★★
+        // ★★★ このシーンが作成した全ての表示オブジェクトを破棄 ★★★
         this.children.removeAll(true);
     }
 
+   
     onFVariableChanged(key, value) {
         if (key === 'coin' && this.coinHud && this.coinHud.coinText.text !== value.toString()) {
             this.coinHud.setCoin(value);

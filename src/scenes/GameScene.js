@@ -193,18 +193,43 @@ export default class GameScene extends Phaser.Scene {
 
       // ★★★ 修正箇所: stop()メソッドでイベントリスナーを解除 ★★★
       // ★★★ 削除: stop()メソッド内のイベントリスナー解除ロジックも不要 ★★★
-    stop() {
+     stop() {
         super.stop();
-         if (this.stateManager) {
-            // ★★★ 修正箇所: this.stateManager.events.off -> this.stateManager.off ★★★
-             this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);
-            this.onFVariableChangedListener = null;
+        console.log("GameScene: stop されました。UI要素とイベントリスナーを破棄します。");
+        
+        // StateManagerのイベントリスナーを解除
+        if (this.stateManager) {
+            this.stateManager.off('f-variable-changed', this.onFVariableChanged, this);
+            console.log("GameScene: StateManagerのイベントリスナーを解除しました。");
         }
+        
+        // HUDオブジェクトを破棄
+        if (this.coinHud) { this.coinHud.destroy(); this.coinHud = null; }
+        if (this.playerHpBar) { this.playerHpBar.destroy(); this.playerHpBar = null; }
     
         // ★★★ coinHudの破棄は残す ★★★
         if (this.coinHud) { this.coinHud.destroy(); this.coinHud = null; }
     }
+    // ★★★ 追加: onFVariableChangedメソッド (HUD更新ロジックを一元化) ★★★
+    onFVariableChanged(key, value) {
+        if (!this.isSceneFullyReady) return;
 
+        console.log(`GameScene: f変数[${key}]が[${value}]に変更されたことを検知しました。`);
+
+        if (key === 'coin' && this.coinHud && this.coinHud.coinText.text !== value.toString()) {
+            this.coinHud.setCoin(value);
+        } else if (key === 'player_hp' && this.playerHpBar) {
+            const maxHp = this.stateManager.f.player_max_hp || 100;
+            if (this.playerHpBar.currentHp !== value || this.playerHpBar.maxHp !== maxHp) {
+                 this.playerHpBar.setHp(value, maxHp);
+            }
+        } else if (key === 'player_max_hp' && this.playerHpBar) {
+             const currentHp = this.stateManager.f.player_hp || 0;
+             if (this.playerHpBar.currentHp !== currentHp || this.playerHpBar.maxHp !== value) {
+                 this.playerHpBar.setHp(currentHp, value);
+             }
+        }
+    }
  // ★★★ セーブ処理 ★★★
      // ★★★ セーブ処理 (スロット0をオートセーブスロットとして使う) ★★★
     performSave(slot) {
