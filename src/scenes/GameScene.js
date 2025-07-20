@@ -112,8 +112,10 @@ export default class GameScene extends Phaser.Scene {
         this.playerHpBar = new HpBar(this, 100, 100, 200, 25, 'player'); 
         this.playerHpBar.setVisible(false);
 
-        // --- StateManagerからのイベントでHUDを更新するリスナーを登録 ---
+        // ★★★ 修正箇所: StateManagerからのイベントでHUDを更新するリスナーを登録 ★★★
+        // (updateループではなく、イベント駆動にする)
         this.stateManager.events.on('f-variable-changed', this.onFVariableChanged, this);
+
 
         // --- タグハンドラの登録 ---
         // --- タグハンドラの登録 ---
@@ -179,19 +181,22 @@ this.scenarioManager.registerTag('stopvideo', handleStopVideo);
         console.log("GameScene: create 完了");
     }
 
-    stop() {
+     stop() {
         super.stop();
-        console.log("GameScene: stop されました。UI要素とイベントリスナーを破棄します。");
+        console.log("GameScene: stop されました。イベントリスナーを解除します。");
         
         // StateManagerのイベントリスナーを解除
         if (this.stateManager) {
             this.stateManager.events.off('f-variable-changed', this.onFVariableChanged, this);
         }
-        // HUDオブジェクトを破棄
-        if (this.coinHud) { this.coinHud.destroy(); this.coinHud = null; }
-        if (this.playerHpBar) { this.playerHpBar.destroy(); this.playerHpBar = null; }
+
+        // ... (HUDなどのPhaserオブジェクトの破棄は、rebuildSceneで行われるため、
+        //      stop()で明示的にdestroyする必要はないが、もし問題が再発する場合はここに追加)
+        // if (this.coinHud) { this.coinHud.destroy(); this.coinHud = null; }
+        // if (this.playerHpBar) { this.playerHpBar.destroy(); this.playerHpBar = null; }
     }
 
+       // ★★★ 追加: onFVariableChangedメソッド (HUD更新ロジックを一元化) ★★★
     onFVariableChanged(key, value) {
         if (!this.isSceneFullyReady) return; // シーンが準備完了するまで更新しない
 

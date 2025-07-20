@@ -116,14 +116,27 @@ createdSceneInstance.input.enabled = true;
             if (data.from && this.scene.isActive(data.from)) { 
                 this.scene.stop(data.from);
             }
-            
-            startAndMonitorScene('GameScene', {
-                charaDefs: this.globalCharaDefs,
-                resumedFrom: data.from,
-                returnParams: data.params,
-            }, true); 
-        });
-
+             // ★★★ 追加: UISceneがisActiveであれば、表示を有効化する ★★★
+        const uiSceneInstance = this.scene.get('UIScene');
+        if (uiSceneInstance && uiSceneInstance.scene.isActive()) { 
+            // setVisibleメソッドがあればそれを使うのが良い
+            if (typeof uiSceneInstance.setVisible === 'function') {
+                uiSceneInstance.setVisible(true); 
+            } else {
+                // setVisibleがなければ、シーンのcameras.main.visibleで代用
+                uiSceneInstance.cameras.main.visible = true;
+            }
+            console.log("SystemScene: UISceneの表示を有効化しました。");
+        }
+        
+        // GameSceneへの復帰なので、必ずGameSceneのロード完了を待つ
+        startAndMonitorScene('GameScene', {
+            charaDefs: this.globalCharaDefs,
+            resumedFrom: data.from,
+            returnParams: data.params,
+        }, true); 
+    });
+           
         // ★★★ 修正箇所: startInitialGameメソッドを、PreloadSceneから渡されたデータで起動するように修正 ★★★
         this.startInitialGame = (charaDefs, startScenarioKey) => {
             this.globalCharaDefs = charaDefs;
