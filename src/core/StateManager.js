@@ -1,6 +1,5 @@
 // src/core/StateManager.js (最終版)
 
-import Phaser from 'phaser'; // PhaserのEventEmitterを正しく継承するためにimport
 export default class StateManager extends Phaser.Events.EventEmitter {
     constructor() {
         super(); // ★★★ 追加: 親クラスのコンストラクタを呼び出す ★★★
