@@ -353,7 +353,7 @@ export default class BattleScene extends Phaser.Scene {
 
         // StateManagerのイベントリスナーを解除
         if (this.stateManager && this.onFVariableChangedListener) {
-            this.stateManager.events.off('f-variable-changed', this.onFVariableChangedListener);
+              this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);
             this.onFVariableChangedListener = null;
         }
         
