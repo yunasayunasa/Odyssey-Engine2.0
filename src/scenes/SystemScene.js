@@ -26,10 +26,7 @@ export default class SystemScene extends Phaser.Scene {
 
         const startAndMonitorScene = (sceneKey, params) => { 
             // isProcessingTransitionフラグは、再ジャンプの問題を解決するために必要です。
-            if (this.isProcessingTransition || (this.targetSceneKey && this.targetSceneKey === sceneKey)) {
-                console.warn(`[SystemScene] シーン[${sceneKey}]は既に遷移処理中またはアクティブです。新しいリクエストをスキップします。`);
-                return;
-            }
+          
 
           //  this.game.input.enabled = false; 
             console.log("SystemScene: ゲーム全体の入力を無効化しました。");
