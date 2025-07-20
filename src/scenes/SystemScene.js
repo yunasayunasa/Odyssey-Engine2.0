@@ -87,12 +87,12 @@ createdSceneInstance.input.enabled = true;
 
             // ★★★ 修正箇所: 遷移元のシーンを汎用的に停止する ★★★
             // GameSceneだけでなく、BattleSceneなど、どのシーンからでも遷移できるようにする
-        /*    const fromScene = this.scene.get(data.from);
+            const fromScene = this.scene.get(data.from);
             if (fromScene && fromScene.scene.isActive()) {
                 fromScene.input.enabled = false;
                 fromScene.scene.stop(data.from);
                 console.log(`[SystemScene] シーン[${data.from}]を停止しました。`);
-            }*/
+            }
             
             // UISceneは停止しない。入力だけ無効化。
             if (this.scene.isActive('UIScene')) {
@@ -119,17 +119,6 @@ createdSceneInstance.input.enabled = true;
             if (data.from && this.scene.isActive(data.from)) { 
                 this.scene.stop(data.from);
             }
-            if (this.scene.isPaused('GameScene')) {
-                this.scene.stop('GameScene');
-                console.log("[SystemScene] pauseされていたGameSceneをstopしました。");
-            }
-
-            startAndMonitorScene('GameScene', {
-                charaDefs: this.globalCharaDefs,
-                resumedFrom: data.from,
-                returnParams: data.params,
-            }, true); 
-        
              // ★★★ 追加: UISceneがisActiveであれば、表示を有効化する ★★★
         const uiSceneInstance = this.scene.get('UIScene');
         if (uiSceneInstance && uiSceneInstance.scene.isActive()) { 
