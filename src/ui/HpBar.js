@@ -13,7 +13,7 @@ export default class HpBar extends Phaser.GameObjects.Container {
      * @param {number} height - バーの高さ
      * @param {string} type - 'player' or 'enemy' (表示色や位置調整用)
      */
-    constructor(scene, x, y, width = 200, height = 20, type = 'player') {
+     constructor(scene, x, y, width, height, type, stateManager) {
         super(scene, x, y);
   this.stateManager = stateManager;
 
