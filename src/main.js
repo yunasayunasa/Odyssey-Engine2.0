@@ -8,6 +8,7 @@ import SaveLoadScene from './scenes/SaveLoadScene.js';
 import ConfigScene from './scenes/ConfigScene.js';
 import BacklogScene from './scenes/BacklogScene.js';
 import ActionScene from './scenes/ActionScene.js';
+import BattleScene from './scenes/BattleScene.js';
 import NovelOverlayScene from './scenes/NovelOverlayScene.js';
 
 const config = {
@@ -28,7 +29,8 @@ const config = {
         SaveLoadScene, 
         ConfigScene, 
         BacklogScene, 
-        ActionScene, 
+        ActionScene,
+         BattleScene,
         NovelOverlayScene
     ]
 };
