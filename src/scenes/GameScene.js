@@ -130,10 +130,15 @@ export default class GameScene extends Phaser.Scene {
             stateManager: this.stateManager // ★★★ ここでstateManagerを確実に渡す ★★★
         });
         this.playerHpBar.setVisible(false);
+     // ★★★ 修正箇所: StateManagerのイベントリスナーをここで登録 ★★★
+        this.stateManager.on('f-variable-changed', this.onFVariableChanged, this);
 
-        // ★★★ 削除: GameSceneがStateManagerのイベントを購読するロジックは不要になる ★★★
-        // this.stateManager.on('f-variable-changed', this.onFVariableChanged, this); // この行を削除
-
+        // ★★★ 追加: 最初のクリックで一度だけAudioContextを有効化する ★★★
+        this.input.once('pointerdown', () => {
+            if (this.soundManager) {
+                this.soundManager.resumeContext();
+            }
+        }, this);
         // --- タグハンドラの登録 ---
         this.scenarioManager.registerTag('chara_show', handleCharaShow);
         this.scenarioManager.registerTag('chara_hide', handleCharaHide);
@@ -194,19 +199,14 @@ export default class GameScene extends Phaser.Scene {
         console.log("GameScene: create 完了");
     }
 
-      // ★★★ 修正箇所: stop()メソッドでイベントリスナーを解除 ★★★
-      // ★★★ 削除: stop()メソッド内のイベントリスナー解除ロジックも不要 ★★★
-       // ★★★ 修正箇所: stop()メソッドを完全な「キルスイッチ」として実装 ★★★
-    // Phaserのシーンライフサイクルでは、stop()またはshutdown()が呼ばれます。
-    // どちらでも対応できるよう、ロジックを共通化するのが理想ですが、
-    // SystemSceneがstop()を呼んでいるので、stop()に実装します。
+    // ★★★ 修正箇所: stop()メソッドを一つに統一し、全てのクリーンアップを行う ★★★
     stop() {
         super.stop();
         console.log("GameScene: stop されました。全てのマネージャーとリソースを停止・破棄します。");
 
-        // 1. ScenarioManagerのループを完全に停止させる (最も重要)
+        // 1. ScenarioManagerのループを完全に停止させる
         if (this.scenarioManager) {
-            this.scenarioManager.stop(); // ScenarioManagerにstop()メソッドを追加する必要がある
+            this.scenarioManager.stop();
         }
 
         // 2. StateManagerのイベントリスナーを解除
@@ -215,59 +215,27 @@ export default class GameScene extends Phaser.Scene {
         }
 
         // 3. 全てのPhaserオブジェクト（HUD、MessageWindowなど）を破棄
-        //    (これは既に実装済みのはずですが、再確認)
         if (this.coinHud) { this.coinHud.destroy(); this.coinHud = null; }
         if (this.playerHpBar) { this.playerHpBar.destroy(); this.playerHpBar = null; }
         if (this.messageWindow) { this.messageWindow.destroy(); this.messageWindow = null; }
         
         // 4. BGMを停止する
         if (this.soundManager) {
-            this.soundManager.stopBgm(0); // フェードなしで即時停止
+            this.soundManager.stopBgm(0);
         }
     }
-      // ★★★ 追加: シーンがpauseされるときに呼ばれるメソッド ★★★
-    pause() {
-        super.pause(); // 親のpauseを呼び出す
-        console.log("GameScene: pauseされました。シナリオの進行を停止します。");
-        
-        // ScenarioManagerのループを停止
-        if (this.scenarioManager) {
-            // ★ScenarioManagerにstop()メソッドが実装されていることを前提とします★
-            this.scenarioManager.stop(); 
-        }
-        
-        // BGMを一時停止したい場合は、ここでSoundManagerのメソッドを呼ぶ
-         if (this.soundManager) {
-             this.soundManager.pauseBgm(); 
-         }
-    }
-
-    // resume()メソッドも念のため追加しておくと、将来的な拡張で役立ちます
-    resume() {
-        super.resume();
-        console.log("GameScene: resumeされました。");
-        // このエンジンでは、resume後にstop()->start()で再起動するため、
-        // ここで何かを再開する必要は通常ありません。
-    }
-
-    // ★★★ 追加: onFVariableChangedメソッド (HUD更新ロジックを一元化) ★★★
+      // ★★★ 修正箇所: onFVariableChanged, updatePlayerHpBar, updateCoinHudを削除し、onFVariableChangedに一本化 ★★★
     onFVariableChanged(key, value) {
         if (!this.isSceneFullyReady) return;
 
-        console.log(`GameScene: f変数[${key}]が[${value}]に変更されたことを検知しました。`);
-
-        if (key === 'coin' && this.coinHud && this.coinHud.coinText.text !== value.toString()) {
+        if (key === 'coin' && this.coinHud) {
             this.coinHud.setCoin(value);
         } else if (key === 'player_hp' && this.playerHpBar) {
             const maxHp = this.stateManager.f.player_max_hp || 100;
-            if (this.playerHpBar.currentHp !== value || this.playerHpBar.maxHp !== maxHp) {
-                 this.playerHpBar.setHp(value, maxHp);
-            }
+            this.playerHpBar.setHp(value, maxHp);
         } else if (key === 'player_max_hp' && this.playerHpBar) {
-             const currentHp = this.stateManager.f.player_hp || 0;
-             if (this.playerHpBar.currentHp !== currentHp || this.playerHpBar.maxHp !== value) {
-                 this.playerHpBar.setHp(currentHp, value);
-             }
+            const currentHp = this.stateManager.f.player_hp || 0;
+            this.playerHpBar.setHp(currentHp, value);
         }
     }
  // ★★★ セーブ処理 ★★★
