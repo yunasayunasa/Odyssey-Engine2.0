@@ -80,9 +80,9 @@ this.soundManager = null; // ★★★ 追加:
             // 現在のBGMをフェードアウト
             this.soundManager.stopBgm(500); // 500msかけてフェードアウト
             // 新しいバトルBGMをフェードイン
-            // 'bgm_battle' は asset_define.json に定義してください
+            // 'ronpa_bgm' は asset_define.json に定義してください
             this.time.delayedCall(500, () => {
-                this.soundManager.playBgm('bgm_battle', 500); // 500msかけてフェードイン
+                this.soundManager.playBgm('ronpa_bgm', 500); // 500msかけてフェードイン
                   console.log("戦闘bgm開始！");
             });
         }
