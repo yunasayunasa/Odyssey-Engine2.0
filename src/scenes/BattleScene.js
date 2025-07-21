@@ -75,7 +75,7 @@ this.soundManager = null; // ★★★ 追加:
         if (this.soundManager) {
             this.soundManager.stopBgm(500); 
             this.time.delayedCall(500, () => {
-                this.soundManager.playBgm('bgm_battle', 500); 
+                this.soundManager.playBgm('asset/gyakuten_bgm.mp3', 500); 
             });
         }
         
