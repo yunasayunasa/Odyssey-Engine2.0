@@ -1,10 +1,24 @@
 // src/core/SoundManager.js (グローバル化対応 - 最終版)
 
+// src/core/SoundManager.js (自己依存解決による最終修正)
+
 export default class SoundManager {
-    constructor(soundManager, systemScene, configManager) {
+    // ★★★ 修正箇所: constructorの引数からconfigManagerを削除 ★★★
+    constructor(soundManager, systemScene) {
         this.systemScene = systemScene; 
         this.sound = soundManager; 
-        this.configManager = configManager;
+        
+        // ★★★ 修正箇所: systemSceneのRegistryからConfigManagerを直接取得 ★★★
+        this.configManager = this.systemScene.sys.registry.get('configManager');
+        
+        // もしConfigManagerが取得できなかった場合の防御コード
+        if (!this.configManager) {
+            console.error("SoundManager: RegistryからConfigManagerが取得できませんでした！");
+            // エラーハンドリング (例えば、デフォルト値を使うなど)
+            // この場合、on()を呼ぶとエラーになるので、ここで処理を中断するのが安全
+            return; 
+        }
+
         this.currentBgm = null;
         this.currentBgmKey = null;
 
@@ -14,6 +28,7 @@ export default class SoundManager {
                 this.currentBgm.setVolume(newValue / 100);
             }
         });
+        // (seVolumeも同様に)
     }
 
    // ★★★ AudioContextを安全に再開するためのヘルパーメソッド ★★★

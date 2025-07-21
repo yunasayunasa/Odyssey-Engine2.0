@@ -61,12 +61,10 @@ export default class PreloadScene extends Phaser.Scene {
             // ★★★ 修正箇所: 全てのアセットロード完了後に、他のシーンを起動する ★★★
               this.scene.launch('SystemScene'); 
             const systemScene = this.scene.get('SystemScene');
-            if (systemScene) {
+          if (systemScene) {
                 systemScene.events.once(Phaser.Scenes.Events.CREATE, () => {
-                    // ★★★ SystemSceneのCREATEを待ってから、SoundManagerを生成 ★★★
-                    const configManager = this.registry.get('configManager');
-                    // ★★★ game.sound (グローバル) と systemScene (Tween用) と configManager を渡す ★★★
-                    const soundManager = new SoundManager(this.game.sound, systemScene, configManager);
+                    // ★★★ 修正箇所: SoundManagerのコンストラクタからconfigManagerを削除 ★★★
+                    const soundManager = new SoundManager(this.game.sound, systemScene);
                     this.registry.set('soundManager', soundManager);
 
                     systemScene.startInitialGame(charaDefs, 'test.ks'); 
