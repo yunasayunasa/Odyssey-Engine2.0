@@ -318,23 +318,20 @@ clearChoiceButtons() {
 
 
  // src/scenes/GameScene.js の performLoad メソッド (最終版)
-  async performLoad(slot, returnParams = null) {
-     // ★★★ 修正箇所: ロード処理中であれば、二重実行を防止 ★★★
+ async performLoad(slot, returnParams = null) {
+    this.isPerformingLoad = true;
+    try {
+        const jsonString = localStorage.getItem(`save_data_${slot}`);
+        if (!jsonString) {
+            console.error(`スロット[${slot}]のセーブデータが見つかりません。`);
+            // ★★★ 修正箇所 ★★★
+            // 失敗時も、必ず自分自身のイベントを発行してSystemSceneに通知
+            this.events.emit('gameScene-load-complete'); 
+            return;
+        }
         
-        this.isPerformingLoad = true; // ロード処理を開始
-        try {
-            const jsonString = localStorage.getItem(`save_data_${slot}`);
-            if (!jsonString) {
-                console.error(`スロット[${slot}]のセーブデータが見つかりません。復帰できません。`);
-                // ロード失敗時もイベントを発行して SystemScene のフラグを解除する
-                // ★SystemSceneが既に修正済みである前提★
-                const systemScene = this.scene.get('SystemScene');
-                if (systemScene) systemScene.events.emit('gameScene-load-complete'); // <- この行が重要
-                return;
-            }
-            const loadedState = JSON.parse(jsonString);
-            
-            this.stateManager.setState(loadedState);
+        const loadedState = JSON.parse(jsonString);
+        this.stateManager.setState(loadedState);
 
             if (returnParams) {
                 console.log("復帰パラメータを反映します:", returnParams);
@@ -374,21 +371,23 @@ clearChoiceButtons() {
                 this.time.delayedCall(10, () => this.scenarioManager.next());
             }
             
-            // ★★★ 全ての復帰処理が完了した後にフラグを立てる ★★★
-            this.isSceneFullyReady = true; 
-             console.log("---ロードフラグ  ---");
-            // SystemSceneにロード完了を通知するカスタムイベントを発行
-            // ★SystemSceneが既に修正済みである前提★
-            const systemScene = this.scene.get('SystemScene');
-            if (systemScene) systemScene.events.emit('gameScene-load-complete');
-        console.log("---ロードコンプリート、イベント発行---");
-        } catch (e) {
-            console.error(`ロード処理でエラーが発生しました。`, e);
-            // ★★★ 修正箇所: ロード失敗時もSystemSceneに通知し、フラグを解除させる ★★★
-            const systemScene = this.scene.get('SystemScene');
-            if (systemScene) systemScene.events.emit('gameScene-load-complete');
-        }
+                 this.isSceneFullyReady = true;
+
+        // ★★★ 修正の核心 ★★★
+        // SystemSceneに対してではなく、自分自身のイベントを発行する
+        this.events.emit('gameScene-load-complete');
+        console.log("GameScene: ロード完了。ロード完了イベントを発行しました。");
+
+    } catch (e) {
+        console.error(`ロード処理でエラーが発生しました。`, e);
+        // ★★★ 修正箇所 ★★★
+        // エラー発生時も、必ず自分自身のイベントを発行してSystemSceneのロックを解除させる
+        this.events.emit('gameScene-load-complete');
+    } finally {
+        // isPerformingLoadフラグは、成功・失敗に関わらず解除するのが安全
+        this.isPerformingLoad = false;
     }
+}
 }
 // ★★★ rebuildScene ヘルパー関数 (最終版) ★★★
 async function rebuildScene(manager, state) {
