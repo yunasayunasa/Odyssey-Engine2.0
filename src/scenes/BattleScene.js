@@ -63,36 +63,32 @@ this.soundManager = null; // ★★★ 追加:
         this.battleEnded = false; // init時にリセット
         this.eventEmitted = false; // ★★★ init時にイベント発行済みフラグもリセット ★★★
     }
-
-    create() {
-        console.log("ActionScene (as BattleScene): create 開始");
+  create() {
+        console.log("BattleScene: create 開始"); // ログ名をBattleSceneに変更
         this.cameras.main.setBackgroundColor('#8a2be2');
 
-        const gameScene = this.scene.get('GameScene');
-        if (gameScene && gameScene.stateManager) {
-            this.stateManager = gameScene.stateManager;
-            this.soundManager = gameScene.soundManager; 
-        
-        // ★★★ 追加: SoundManagerの操作対象シーンをこのBattleSceneに切り替える ★★★
-            if (this.soundManager) {
-                this.soundManager.setScene(this);
-            }
-        
-        } else {
-            console.error("BattleScene: GameSceneまたはそのマネージャーが見つかりません。");
+        // ★★★ 修正箇所: StateManagerとSoundManagerをRegistryから取得 ★★★
+        this.stateManager = this.sys.registry.get('stateManager');
+        this.soundManager = this.sys.registry.get('soundManager');
+
+        // もしマネージャーが取得できなかった場合は、エラーを出して停止
+        if (!this.stateManager || !this.soundManager) {
+            console.error("BattleScene: StateManagerまたはSoundManagerがRegistryから取得できませんでした。");
+            return;
         }
-// ★★★ 追加: バトルBGMの再生処理 ★★★
-        if (this.soundManager) {
-            // 現在のBGMをフェードアウト
-            this.soundManager.stopBgm(500); // 500msかけてフェードアウト
-            // 新しいバトルBGMをフェードイン
-            // 'ronpa_bgm' は asset_define.json に定義してください
-            this.time.delayedCall(500, () => {
-                this.soundManager.playBgm('cafe', 500); // 500msかけてフェードイン
-                  console.log("戦闘bgm開始！");
-            });
-        }
-        // ★★★ 修正箇所: プレースホルダーテキストをプロパティに保持 ★★★
+
+        // ★★★ バトルBGMの再生処理 ★★★
+        // 500msかけて現在のBGMをフェードアウトし、その後バトルBGMをフェードイン
+        this.soundManager.stopBgm(500); 
+        this.time.delayedCall(500, () => {
+            // 'bgm_battle' は asset_define.json に定義してください
+            this.soundManager.playBgm('bgm_battle', 500); 
+            console.log("戦闘bgm開始！");
+        });
+        
+        // --- ここから下のコードは、あなたの元のコードとほぼ同じです ---
+        // (ログの 'ActionScene (as BattleScene)' を 'BattleScene' に修正)
+        
         this.playerPlaceholderText = this.add.text(100, 360, 'PLAYER', { fontSize: '48px', fill: '#fff' }).setOrigin(0.5);
         this.enemyPlaceholderText = this.add.text(this.scale.width - 100, 360, 'ENEMY', { fontSize: '48px', fill: '#fff' }).setOrigin(0.5);
 
@@ -113,7 +109,7 @@ this.soundManager = null; // ★★★ 追加:
             stateManager: this.stateManager
         });
         this.enemyHpBar.x -= this.enemyHpBar.barWidth;
-            this.coinHud = new CoinHud(this, {
+        this.coinHud = new CoinHud(this, {
             x: 100,
             y: 50,
             stateManager: this.stateManager
@@ -130,7 +126,8 @@ this.soundManager = null; // ★★★ 追加:
         this.coinHud.setCoin(this.initialBattleParams.initialCoin);
 
         this.onFVariableChangedListener = this.onFVariableChanged.bind(this);
-         this.stateManager.on('f-variable-changed', this.onFVariableChangedListener);
+        this.stateManager.on('f-variable-changed', this.onFVariableChangedListener);
+        
         // バックパックのグリッド表示
         this.backpackGridSize = 6;
         this.cellSize = 60;
@@ -139,7 +136,6 @@ this.soundManager = null; // ★★★ 追加:
         this.gridX = this.scale.width / 2 - this.gridWidth / 2;
         this.gridY = this.scale.height / 2 - this.gridHeight / 2 + 50;
 
-        // ★★★ 修正箇所: グリッドの背景と線をプロパティの配列に保持 ★★★
         this.backpackGridObjects.push(this.add.rectangle(this.gridX + this.gridWidth / 2, this.gridY + this.gridHeight / 2, this.gridWidth, this.gridHeight, 0x333333, 0.9).setOrigin(0.5).setDepth(10));
         for (let i = 0; i <= this.backpackGridSize; i++) {
             this.backpackGridObjects.push(this.add.line(0, 0, this.gridX, this.gridY + i * this.cellSize, this.gridX + this.gridWidth, this.gridY + i * this.cellSize, 0x666666, 0.5).setOrigin(0).setDepth(11));
@@ -153,7 +149,6 @@ this.soundManager = null; // ★★★ 追加:
         const inventoryY = this.gridY;
         const inventoryWidth = 150;
         const inventoryHeight = this.gridHeight;
-        // ★★★ 修正箇所: インベントリの背景とテキストもプロパティの配列に保持 ★★★
         this.backpackGridObjects.push(this.add.rectangle(inventoryX + inventoryWidth / 2, inventoryY + inventoryHeight / 2, inventoryWidth, inventoryHeight, 0x555555, 0.8).setOrigin(0.5).setDepth(10));
         this.backpackGridObjects.push(this.add.text(inventoryX + inventoryWidth / 2, inventoryY + 20, 'インベントリ', { fontSize: '24px', fill: '#fff' }).setOrigin(0.5).setDepth(11));
 
@@ -162,7 +157,7 @@ this.soundManager = null; // ★★★ 追加:
         initialInventory.forEach(itemId => {
             const itemImage = this.createItem(itemId, inventoryX + inventoryWidth / 2, itemY);
             if (itemImage) { 
-                this.inventoryItems.push(itemImage); // インベントリのアイテムを保持
+                this.inventoryItems.push(itemImage);
             }
             itemY += 80;
         });
@@ -175,9 +170,8 @@ this.soundManager = null; // ★★★ 追加:
             padding: { x: 10, y: 5 }
         }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(11);
         this.startBattleButton.on('pointerdown', () => {
-            // ★★★ 追加: クリック時にボタンの入力を即座に無効化 ★★★
             this.startBattleButton.disableInteractive(); 
-            this.input.enabled = false; // 全体入力も一時無効化 (戦闘中ドラッグさせないため)
+            this.input.enabled = false;
             this.startBattle();
         });
         
@@ -191,27 +185,26 @@ this.soundManager = null; // ★★★ 追加:
             wordWrap: { width: 400 }
         }).setOrigin(0.5).setDepth(200);
 
-        // 戦闘結果ボタンの初期化（初期は非表示）
+        // 戦闘結果ボタンの初期化
         this.winButton = this.add.text(320, 600, '勝利してノベルパートに戻る', { fontSize: '32px', fill: '#0c0', backgroundColor: '#000' })
-            .setOrigin(0.5).setInteractive({ useHandCursor: true }).setVisible(false); // 初期は非表示
+            .setOrigin(0.5).setInteractive({ useHandCursor: true }).setVisible(false);
         this.winButton.on('pointerdown', () => {
-            // ★★★ 追加: クリック時にボタンの入力を即座に無効化 ★★★
             this.winButton.disableInteractive(); 
             if (this.loseButton) this.loseButton.disableInteractive();
             this.endBattle('win');
         });
 
         this.loseButton = this.add.text(this.scale.width - 320, 600, '敗北してゲームオーバー', { fontSize: '32px', fill: '#c00', backgroundColor: '#000' })
-            .setOrigin(0.5).setInteractive({ useHandCursor: true }).setVisible(false); // 初期は非表示
+            .setOrigin(0.5).setInteractive({ useHandCursor: true }).setVisible(false);
         this.loseButton.on('pointerdown', () => {
-            // ★★★ 追加: クリック時にボタンの入力を即座に無効化 ★★★
             this.loseButton.disableInteractive(); 
             if (this.winButton) this.winButton.disableInteractive();
             this.endBattle('lose');
         });
 
-        console.log("ActionScene (as BattleScene): create 完了");
+        console.log("BattleScene: create 完了");
     }
+// ... (省略: BattleSc
 
     startBattle() {
         console.log("戦闘開始！");

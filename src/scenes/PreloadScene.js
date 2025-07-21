@@ -1,7 +1,6 @@
-// src/scenes/PreloadScene.js (アセットロード完了後にシーンを起動する最終修正)
-
 import ConfigManager from '../core/ConfigManager.js';
 import StateManager from '../core/StateManager.js';
+import SoundManager from '../core/SoundManager.js';
 export default class PreloadScene extends Phaser.Scene {
     constructor() {
         super({ key: 'PreloadScene' });
@@ -62,18 +61,20 @@ export default class PreloadScene extends Phaser.Scene {
             // ★★★ 修正箇所: 全てのアセットロード完了後に、他のシーンを起動する ★★★
               this.scene.launch('SystemScene'); 
             const systemScene = this.scene.get('SystemScene');
-            
             if (systemScene) {
                 systemScene.events.once(Phaser.Scenes.Events.CREATE, () => {
-                    // ★★★ 修正箇所: startInitialGameにcharaDefsを渡す ★★★
+                    // ★★★ SystemSceneのCREATEを待ってから、SoundManagerを生成 ★★★
+                    const configManager = this.registry.get('configManager');
+                    // ★★★ game.sound (グローバル) と systemScene (Tween用) と configManager を渡す ★★★
+                    const soundManager = new SoundManager(this.game.sound, systemScene, configManager);
+                    this.registry.set('soundManager', soundManager);
+
                     systemScene.startInitialGame(charaDefs, 'test.ks'); 
-                    console.log("PreloadScene: SystemSceneのCREATEイベント受信、初期ゲーム起動を依頼しました。");
+                    console.log("PreloadScene: SoundManagerを生成し、初期ゲーム起動を依頼しました。");
                 });
             } else {
                 console.error("PreloadScene: SystemSceneのインスタンスが取得できませんでした。");
             }
-
-            this.scene.stop(this.scene.key);
         });
         
         this.load.start();
