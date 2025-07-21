@@ -70,7 +70,14 @@ this.soundManager = null; // ★★★ 追加:
         const gameScene = this.scene.get('GameScene');
         if (gameScene && gameScene.stateManager) {
             this.stateManager = gameScene.stateManager;
-            this.soundManager = gameScene.soundManager; 
+           this.sys.registry.get('soundManager'); 
+        
+        if (this.soundManager) {
+            this.soundManager.stopBgm(500); 
+            this.time.delayedCall(500, () => {
+                this.soundManager.playBgm('bgm_battle', 500); 
+            });
+        }
         
         } else {
             console.error("ActionScene (as BattleScene): GameSceneのStateManagerが見つかりません。ゲーム変数は更新できません。");

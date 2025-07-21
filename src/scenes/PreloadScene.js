@@ -2,6 +2,7 @@
 
 import ConfigManager from '../core/ConfigManager.js';
 import StateManager from '../core/StateManager.js';
+import SoundManager from '../core/SoundManager.js';
 export default class PreloadScene extends Phaser.Scene {
     constructor() {
         super({ key: 'PreloadScene' });
@@ -65,6 +66,10 @@ export default class PreloadScene extends Phaser.Scene {
             
             if (systemScene) {
                 systemScene.events.once(Phaser.Scenes.Events.CREATE, () => {
+                       // ★★★ game.sound (グローバル) と systemScene (Tween用) と configManager を渡す ★★★
+                    const configManager = this.registry.get('configManager');
+                    const soundManager = new SoundManager(this.game.sound, systemScene, configManager);
+                    this.registry.set('soundManager', soundManager);
                     // ★★★ 修正箇所: startInitialGameにcharaDefsを渡す ★★★
                     systemScene.startInitialGame(charaDefs, 'test.ks'); 
                     console.log("PreloadScene: SystemSceneのCREATEイベント受信、初期ゲーム起動を依頼しました。");

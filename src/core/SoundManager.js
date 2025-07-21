@@ -1,38 +1,40 @@
 export default class SoundManager {
-    constructor(scene, configManager) {
-        this.scene = scene;
-        this.configManager = configManager;
+    // ★★★ 修正箇所: constructorの引数を変更 ★★★
+    constructor(soundManager, systemScene, configManager) {
+        // this.sceneではなく、tweenを実行するためのsystemSceneへの参照を保持
+        this.systemScene = systemScene; 
+        // PhaserのグローバルなSoundManagerへの参照を保持
+        this.sound = soundManager; 
+        this.configManager = configManager; // ConfigManagerへの参照を保持
         this.currentBgm = null;
-        this.currentBgmKey = null; // ★ プロパティとして明示的に初期化
+        this.currentBgmKey = null;
 
         // ★★★ AudioContextの遅延初期化 ★★★
         this.audioContext = null; 
         // ユーザーの最初の操作でAudioContextを有効化する
-        this.scene.input.once('pointerdown', () => {
-            if (this.scene.sound.context.state === 'suspended') {
-                this.scene.sound.context.resume();
+        // systemSceneは常にアクティブなので、ここでのinputイベントは安定している
+        this.systemScene.input.once('pointerdown', () => {
+            if (this.sound.context.state === 'suspended') {
+                this.sound.context.resume();
             }
-            // PhaserのAudioContextを流用する
-            this.audioContext = this.scene.sound.context;
+            this.audioContext = this.sound.context;
             console.log("AudioContext is ready.");
         }, this);
 
         // --- 設定変更イベントの監視 ---
         this.configManager.on('change:bgmVolume', (newValue) => {
             if (this.currentBgm && this.currentBgm.isPlaying) {
-                this.currentBgm.setVolume(newValue);
+                this.currentBgm.setVolume(newValue / 100); // 0-1の範囲に変換
             }
         });
-
-        this.configManager.on('change:seVolume', (newValue) => {
-            // (将来的な拡張用)
-        });
+        // (seVolumeも同様に)
     }
 
     playSe(key, options = {}) {
         if (!key) return;
-        const se = this.scene.sound.add(key);
-        let volume = this.configManager.getValue('seVolume');
+        // ★★★ 修正箇所: this.scene.sound -> this.sound ★★★
+        const se = this.sound.add(key);
+        let volume = this.configManager.getValue('seVolume') / 100;
         if (options.volume !== undefined) {
             volume = Number(options.volume);
         }
@@ -44,7 +46,8 @@ export default class SoundManager {
         if (!key) return;
 
         if (this.currentBgm && this.currentBgm.isPlaying) {
-            this.scene.tweens.add({
+            // ★★★ 修正箇所: this.scene.tweens -> this.systemScene.tweens ★★★
+            this.systemScene.tweens.add({
                 targets: this.currentBgm,
                 volume: 0,
                 duration: fadeInTime,
@@ -54,14 +57,15 @@ export default class SoundManager {
             });
         }
 
-        const newBgm = this.scene.sound.add(key, { loop: true, volume: 0 });
+        const newBgm = this.sound.add(key, { loop: true, volume: 0 });
         newBgm.play();
         this.currentBgm = newBgm;
         this.currentBgmKey = key;
 
-        this.scene.tweens.add({
+        // ★★★ 修正箇所: this.scene.tweens -> this.systemScene.tweens ★★★
+        this.systemScene.tweens.add({
             targets: newBgm,
-            volume: this.configManager.getValue('bgmVolume'),
+            volume: this.configManager.getValue('bgmVolume') / 100, // 0-1の範囲に変換
             duration: fadeInTime
         });
     }
@@ -69,18 +73,23 @@ export default class SoundManager {
     stopBgm(fadeOutTime = 0) {
         if (this.currentBgm && this.currentBgm.isPlaying) {
             if (fadeOutTime > 0) {
-                this.scene.tweens.add({
+                // ★★★ 修正箇所: this.scene.tweens -> this.systemScene.tweens ★★★
+                this.systemScene.tweens.add({
                     targets: this.currentBgm,
                     volume: 0,
                     duration: fadeOutTime,
                     onComplete: () => {
-                        this.currentBgm.stop();
-                        this.currentBgm = null;
-                        this.currentBgmKey = null;
+                        if (this.currentBgm) {
+                            this.currentBgm.stop();
+                            this.currentBgm.destroy();
+                            this.currentBgm = null;
+                            this.currentBgmKey = null;
+                        }
                     }
                 });
             } else {
                 this.currentBgm.stop();
+                this.currentBgm.destroy();
                 this.currentBgm = null;
                 this.currentBgmKey = null;
             }
@@ -93,6 +102,7 @@ export default class SoundManager {
         }
         return null;
     }
+    
     
     playSynth(waveType = 'square', frequency = 1200, duration = 0.05) {
         // ★ AudioContextが有効になるまで何もしない
