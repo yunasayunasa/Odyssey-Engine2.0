@@ -4,23 +4,21 @@
 
 export default class SoundManager {
     // ★★★ 修正箇所: constructorの引数からconfigManagerを削除 ★★★
-    constructor(soundManager, systemScene) {
+      constructor(soundManager, systemScene) {
         this.systemScene = systemScene; 
         this.sound = soundManager; 
         
-        // ★★★ 修正箇所: systemSceneのRegistryからConfigManagerを直接取得 ★★★
-        this.configManager = this.systemScene.sys.registry.get('configManager');
+        // ★★★ 修正箇所: this.systemScene.sys.registry -> this.systemScene.registry ★★★
+        this.configManager = this.systemScene.registry.get('configManager');
         
-        // もしConfigManagerが取得できなかった場合の防御コード
         if (!this.configManager) {
             console.error("SoundManager: RegistryからConfigManagerが取得できませんでした！");
-            // エラーハンドリング (例えば、デフォルト値を使うなど)
-            // この場合、on()を呼ぶとエラーになるので、ここで処理を中断するのが安全
             return; 
         }
 
         this.currentBgm = null;
         this.currentBgmKey = null;
+
 
         // --- 設定変更イベントの監視 ---
         this.configManager.on('change:bgmVolume', (newValue) => {
