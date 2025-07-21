@@ -88,7 +88,7 @@ export default class PreloadScene extends Phaser.Scene {
                     this.registry.set('soundManager', soundManager);
                     
                     // ★★★ 追加: ゲーム全体の入力システムに、一度だけ実行されるリスナーを登録 ★★★
-                    this.game.input.once('pointerdown', () => {
+                   this.input.once('pointerdown', () => {
                         if (this.game.sound.context.state === 'suspended') {
                             this.game.sound.context.resume().then(() => {
                                 console.log("Global AudioContext has been resumed!");
@@ -106,6 +106,7 @@ export default class PreloadScene extends Phaser.Scene {
         
         this.load.start();
     }
+
 
 
     // ★★★ stop() メソッドでロード画面UIを破棄 ★★★
