@@ -1,4 +1,4 @@
-// src/scenes/PreloadScene.js (最終版)
+// src/scenes/PreloadScene.js (フリーズ問題を解決するための修正)
 
 import ConfigManager from '../core/ConfigManager.js';
 import StateManager from '../core/StateManager.js';
@@ -6,7 +6,8 @@ import SoundManager from '../core/SoundManager.js';
 
 export default class PreloadScene extends Phaser.Scene {
     constructor() {
-        super({ key: 'PreloadScene' });
+        // ★★★ 修正箇所: active: true を追加し、このシーンを自動起動させる ★★★
+        super({ key: 'PreloadScene', active: true });
         
         // UI要素への参照を初期化 (stop()で破棄するため)
         this.progressBar = null;
@@ -38,13 +39,11 @@ export default class PreloadScene extends Phaser.Scene {
     create() {
         console.log("PreloadScene: create開始。ConfigManagerとStateManagerを初期化します。");
         
-        // --- ConfigManagerとStateManagerを生成し、Registryに登録 ---
+        // --- ConfigManagerとStateManagerを生成し、「グローバル」Registryに登録 ---
         const configManager = new ConfigManager();
-        // ★★★ 修正箇所: this.registry -> this.sys.registry ★★★
         this.sys.registry.set('configManager', configManager);
         
         const stateManager = new StateManager();
-        // ★★★ 修正箇所: this.registry -> this.sys.registry ★★★
         this.sys.registry.set('stateManager', stateManager);
 
         // --- asset_define.jsonに基づいて残りのアセットをロードキューに追加 ---
@@ -77,18 +76,17 @@ export default class PreloadScene extends Phaser.Scene {
             }
             
             // SystemSceneを起動し、そのCREATEイベントを待ってから依存関係を解決する
-              
             this.scene.launch('SystemScene'); 
             const systemScene = this.scene.get('SystemScene');
             
             if (systemScene) {
                 systemScene.events.once(Phaser.Scenes.Events.CREATE, () => {
-                    // ★★★ 修正箇所: SoundManagerを生成し、Registryに登録 ★★★
-                        const soundManager = new SoundManager(this.game.sound, systemScene, configManager);
-                    this.registry.set('soundManager', soundManager);
+                    // ★★★ 修正箇所: SoundManagerを「グローバル」Registryに登録 ★★★
+                    const soundManager = new SoundManager(this.game.sound, systemScene, configManager);
+                    this.sys.registry.set('soundManager', soundManager);
                     
-                    // ★★★ 追加: ゲーム全体の入力システムに、一度だけ実行されるリスナーを登録 ★★★
-                   this.input.once('pointerdown', () => {
+                    // ゲーム全体の入力システムに、一度だけ実行されるリスナーを登録
+                    this.input.once('pointerdown', () => {
                         if (this.game.sound.context.state === 'suspended') {
                             this.game.sound.context.resume().then(() => {
                                 console.log("Global AudioContext has been resumed!");
@@ -98,6 +96,9 @@ export default class PreloadScene extends Phaser.Scene {
 
                     systemScene.startInitialGame(charaDefs, 'test.ks'); 
                     console.log("PreloadScene: SoundManagerを生成し、初期ゲーム起動を依頼しました。");
+
+                    // ★★★ 修正箇所: PreloadSceneの停止をここで行う ★★★
+                    this.scene.stop(this.scene.key);
                 });
             } else {
                 console.error("PreloadScene: SystemSceneのインスタンスが取得できませんでした。");
@@ -107,9 +108,6 @@ export default class PreloadScene extends Phaser.Scene {
         this.load.start();
     }
 
-
-
-    // ★★★ stop() メソッドでロード画面UIを破棄 ★★★
     stop() {
         super.stop();
         console.log("PreloadScene: stop されました。ロード画面UIを破棄します。");
