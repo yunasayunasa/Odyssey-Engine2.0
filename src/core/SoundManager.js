@@ -1,17 +1,17 @@
-// src/core/SoundManager.js (依存性の注入による最終修正)
 
 export default class SoundManager {
     // ★★★ 修正箇所: constructorの引数を、必要な部品を直接受け取る形に戻す ★★★
     constructor(soundManager, systemScene, configManager) {
         this.systemScene = systemScene; 
         this.sound = soundManager; 
-       // ★★★ 修正箇所: this.systemScene.registry.get -> this.systemScene.sys.registry.get ★★★
-        this.configManager = this.systemScene.sys.registry.get('configManager');
+        this.configManager = configManager; // ★★★ 引数で渡されたconfigManagerを直接保持 ★★★
         
+        // もしConfigManagerが取得できなかった場合の防御コード
         if (!this.configManager) {
-            console.error("SoundManager: RegistryからConfigManagerが取得できませんでした！");
+            console.error("SoundManager: constructorにConfigManagerが渡されていません！");
             return; 
         }
+
         this.currentBgm = null;
         this.currentBgmKey = null;
 
@@ -23,6 +23,7 @@ export default class SoundManager {
         });
         // (seVolumeも同様に)
     }
+
 
 
    // ★★★ AudioContextを安全に再開するためのヘルパーメソッド ★★★

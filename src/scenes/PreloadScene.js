@@ -81,13 +81,13 @@ export default class PreloadScene extends Phaser.Scene {
             const systemScene = this.scene.get('SystemScene');
             
             
-            if (systemScene) {
+             if (systemScene) {
                 systemScene.events.once(Phaser.Scenes.Events.CREATE, () => {
-                    // ★★★ 修正箇所: RegistryからConfigManagerを取得 ★★★
+                    // ★★★ 修正箇所: このPreloadSceneのRegistryからConfigManagerを取得 ★★★
                     const configManagerInstance = this.sys.registry.get('configManager');
                     
+                    // ★★★ SoundManagerのコンストラクタに、必要な部品を全て渡す ★★★
                     const soundManager = new SoundManager(this.game.sound, systemScene, configManagerInstance);
-                    // ★★★ 修正箇所: SoundManagerもグローバルなRegistryに登録 ★★★
                     this.sys.registry.set('soundManager', soundManager);
 
                     systemScene.startInitialGame(charaDefs, 'test.ks'); 
@@ -100,6 +100,7 @@ export default class PreloadScene extends Phaser.Scene {
         
         this.load.start();
     }
+
 
     // ★★★ stop() メソッドでロード画面UIを破棄 ★★★
     stop() {
