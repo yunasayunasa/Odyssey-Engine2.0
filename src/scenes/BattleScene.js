@@ -7,6 +7,7 @@ import { ITEM_DATA } from '../core/ItemData.js'; // ItemDataのimportを確認
 export default class BattleScene extends Phaser.Scene {
     constructor() {
         super('BattleScene');
+        
         this.receivedParams = null;
         this.stateManager = null;
         this.playerHpBar = null;
@@ -72,8 +73,13 @@ this.soundManager = null; // ★★★ 追加:
             this.stateManager = gameScene.stateManager;
             this.soundManager = gameScene.soundManager; 
         
+        // ★★★ 追加: SoundManagerの操作対象シーンをこのBattleSceneに切り替える ★★★
+            if (this.soundManager) {
+                this.soundManager.setScene(this);
+            }
+        
         } else {
-            console.error("ActionScene (as BattleScene): GameSceneのStateManagerが見つかりません。ゲーム変数は更新できません。");
+            console.error("BattleScene: GameSceneまたはそのマネージャーが見つかりません。");
         }
 // ★★★ 追加: バトルBGMの再生処理 ★★★
         if (this.soundManager) {

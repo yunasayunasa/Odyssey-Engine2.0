@@ -79,7 +79,19 @@ export default class SoundManager {
             duration: fadeInTime
         });
     }
-
+   // ★★★ 追加: SoundManagerが操作対象とするシーンを切り替えるメソッド ★★★
+    setScene(newScene) {
+        console.log(`SoundManager: 操作対象のシーンを ${this.scene.scene.key} から ${newScene.scene.key} に切り替えます。`);
+        this.scene = newScene;
+        // AudioContextの再開処理も、新しいシーンで再度行うようにする
+        this.scene.input.once('pointerdown', () => {
+            if (this.scene.sound.context.state === 'suspended') {
+                this.scene.sound.context.resume();
+            }
+            this.audioContext = this.scene.sound.context;
+            console.log("AudioContext is ready on new scene.");
+        }, this);
+    }
     stopBgm(fadeOutTime = 0) {
         if (this.currentBgm && this.currentBgm.isPlaying) {
             if (fadeOutTime > 0) {
