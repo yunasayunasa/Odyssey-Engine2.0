@@ -86,16 +86,22 @@ export default class SoundManager {
         });
     }
 
-    // ★★★ playBgmがasync/awaitを使い、Promiseを返すように修正 ★★★
-    async playBgm(key, fadeInTime = 0) {
-        if (!key || this.currentBgmKey === key || !this.configManager) { // ★★★ configManagerのnullチェックを追加 ★★★
-            return Promise.resolve();
+     playBgm(key, fadeInTime = 0, onComplete = null) {
+        if (!key) {
+            if (onComplete) onComplete(); // キーがなければ即時完了
+            return;
         }
         this.resumeContext();
 
-        await this.stopBgm(fadeInTime);
+        if (this.currentBgmKey === key) {
+            if (onComplete) onComplete(); // 同じBGMなら即時完了
+            return;
+        }
 
-        return new Promise(resolve => {
+        this.stopBgm(fadeInTime); // 既存のBGMをフェードアウト
+
+        // ★★★ 新しいBGMの再生は、stopBgmのフェードアウトと同じ時間だけ待ってから開始 ★★★
+        this.systemScene.time.delayedCall(fadeInTime, () => {
             const newBgm = this.sound.add(key, { loop: true, volume: 0 });
             newBgm.play();
             this.currentBgm = newBgm;
@@ -106,11 +112,14 @@ export default class SoundManager {
                     targets: newBgm,
                     volume: this.configManager.getValue('bgmVolume') / 100,
                     duration: fadeInTime,
+                    // ★★★ フェードイン完了時にonCompleteを呼び出す ★★★
+                    onComplete: () => {
+                        if (onComplete) onComplete();
+                    }
                 });
-                this.systemScene.time.delayedCall(fadeInTime, resolve);
             } else {
                 newBgm.setVolume(this.configManager.getValue('bgmVolume') / 100);
-                resolve();
+                if (onComplete) onComplete(); // 即時再生でも完了を通知
             }
         });
     }
