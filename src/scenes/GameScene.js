@@ -183,16 +183,18 @@ export default class GameScene extends Phaser.Scene {
     if (this.isResuming) {
         console.log("GameScene: 復帰処理を開始します。");
         this.performLoad(0, this.returnParams); 
-    } else {
+   } else {
         console.log("GameScene: 通常起動します。");
         this.performSave(0);
         this.scenarioManager.loadScenario(this.startScenario, this.startLabel);
         this.isSceneFullyReady = true;
 
-        // ★★★ 修正箇所：以下の2行を追加 ★★★
-        this.events.emit('gameScene-load-complete');
-        console.log("GameScene: 通常起動完了。ロード完了イベントを発行しました。");
-        
+        // ★★★ 修正の核心 (通常起動時) ★★★
+        // イベントの発行を、ごくわずかに（1フレーム後）遅らせる
+        this.time.delayedCall(1, () => {
+            this.events.emit('gameScene-load-complete');
+            console.log("GameScene: 通常起動完了。ロード完了イベントを発行しました。(遅延発行)");
+        });
         this.time.delayedCall(10, () => this.scenarioManager.next());
     }
         this.input.on('pointerdown', () => this.scenarioManager.onClick());
@@ -375,16 +377,19 @@ clearChoiceButtons() {
 
         // ★★★ 修正の核心 ★★★
         // SystemSceneに対してではなく、自分自身のイベントを発行する
-        this.events.emit('gameScene-load-complete');
-        console.log("GameScene: ロード完了。ロード完了イベントを発行しました。");
+        // ★★★ 修正の核心 (ロード完了時) ★★★
+        this.time.delayedCall(1, () => {
+            this.events.emit('gameScene-load-complete');
+            console.log("GameScene: ロード完了。ロード完了イベントを発行しました。(遅延発行)");
+        });
 
     } catch (e) {
         console.error(`ロード処理でエラーが発生しました。`, e);
-        // ★★★ 修正箇所 ★★★
-        // エラー発生時も、必ず自分自身のイベントを発行してSystemSceneのロックを解除させる
-        this.events.emit('gameScene-load-complete');
+        // ★★★ エラー時も同様 ★★★
+        this.time.delayedCall(1, () => {
+            this.events.emit('gameScene-load-complete');
+        });
     } finally {
-        // isPerformingLoadフラグは、成功・失敗に関わらず解除するのが安全
         this.isPerformingLoad = false;
     }
 }
