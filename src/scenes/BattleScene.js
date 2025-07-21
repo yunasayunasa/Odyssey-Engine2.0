@@ -114,7 +114,7 @@ this.soundManager = null; // ★★★ 追加:
         this.stateManager.f.player_hp = this.initialBattleParams.initialPlayerHp;
         this.playerHpBar.setHp(this.stateManager.f.player_hp, this.stateManager.f.player_max_hp);
 
-        this.stateManager.f.enemy_max_hp = 500; 
+        this.stateManager.f.enemy_max_hp = 100; 
         this.stateManager.f.enemy_hp = 100; 
         this.enemyHpBar.setHp(this.stateManager.f.enemy_hp, this.stateManager.f.enemy_max_hp);
 
