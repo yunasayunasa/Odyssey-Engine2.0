@@ -82,7 +82,7 @@ this.soundManager = null; // ★★★ 追加:
             // 新しいバトルBGMをフェードイン
             // 'ronpa_bgm' は asset_define.json に定義してください
             this.time.delayedCall(500, () => {
-                this.soundManager.playBgm('ronpa_bgm', 500); // 500msかけてフェードイン
+                this.soundManager.playBgm('cafe', 500); // 500msかけてフェードイン
                   console.log("戦闘bgm開始！");
             });
         }
