@@ -11,7 +11,7 @@ export default class SoundManager {
         this.currentBgmKey = null;
     }
 
-    // ★★★ 追加: ConfigManagerを受け取り、初期化を行うinit()メソッド ★★★
+    // ★★★ ConfigManagerを受け取り、初期化を行うinit()メソッド ★★★
     init(configManager) {
         if (!configManager) {
             console.error("SoundManager.init: ConfigManagerが渡されていません！");
@@ -21,21 +21,25 @@ export default class SoundManager {
 
         console.log("SoundManager: ConfigManagerを受け取り、初期化しました。");
 
-        // ★★★ constructorにあったイベントリスナー登録をここに移動 ★★★
         this.configManager.on('change:bgmVolume', (newValue) => {
             if (this.currentBgm && this.currentBgm.isPlaying) {
                 this.currentBgm.setVolume(newValue / 100);
             }
         });
     }
+    
+    // ★★★ AudioContextを安全に再開するためのヘルパーメソッド ★★★
+    resumeContext() {
+        if (this.sound.context && this.sound.context.state === 'suspended') {
+            this.sound.context.resume().then(() => {
+                console.log("SoundManager: AudioContext has been resumed.");
+            });
+        }
+    }
 
-
-
-   
-
-   playSe(key, options = {}) {
-        if (!key) return;
-        
+    playSe(key, options = {}) {
+        if (!key || !this.configManager) return; // ★★★ configManagerのnullチェックを追加 ★★★
+        this.resumeContext();
         
         const se = this.sound.add(key);
         let volume = this.configManager.getValue('seVolume') / 100;
@@ -46,109 +50,86 @@ export default class SoundManager {
         se.play();
     }
 
- 
-      // ★★★ 修正箇所: stopBgmがPromiseを返すように変更 ★★★
+    // ★★★ stopBgmがPromiseを返すように修正 ★★★
     stopBgm(fadeOutTime = 0) {
         return new Promise(resolve => {
             if (!this.currentBgm) {
-                resolve(); // BGMがなければ即時完了
+                resolve();
                 return;
             }
             
-            const tweenRunner = this._getTweenRunnerScene();
-            tweenRunner.tweens.killTweensOf(this.currentBgm);
+            // ★★★ Tweenは常にsystemSceneを使う ★★★
+            this.systemScene.tweens.killTweensOf(this.currentBgm);
 
             if (fadeOutTime > 0) {
-                tweenRunner.tweens.add({
+                this.systemScene.tweens.add({
                     targets: this.currentBgm,
                     volume: 0,
                     duration: fadeOutTime,
-                    onComplete: () => {
-                        if (this.currentBgm) {
-                            this.currentBgm.stop();
-                            this.currentBgm.destroy();
-                            this.currentBgm = null;
-                            this.currentBgmKey = null;
-                        }
-                    }
                 });
-                // ★★★ tween.onCompleteに頼らず、時間で完了を保証 ★★★
-                tweenRunner.time.delayedCall(fadeOutTime, resolve);
+                this.systemScene.time.delayedCall(fadeOutTime, () => {
+                    if (this.currentBgm) {
+                        this.currentBgm.stop();
+                        this.currentBgm.destroy();
+                        this.currentBgm = null;
+                        this.currentBgmKey = null;
+                    }
+                    resolve();
+                });
             } else {
                 this.currentBgm.stop();
                 this.currentBgm.destroy();
                 this.currentBgm = null;
                 this.currentBgmKey = null;
-                resolve(); // 即時完了
+                resolve();
             }
         });
     }
 
-    // ★★★ 修正箇所: playBgmがasync/awaitを使い、Promiseを返すように変更 ★★★
+    // ★★★ playBgmがasync/awaitを使い、Promiseを返すように修正 ★★★
     async playBgm(key, fadeInTime = 0) {
-        if (!key || this.currentBgmKey === key) {
-            return Promise.resolve(); // キーがない、または同じBGMなら即時完了
+        if (!key || this.currentBgmKey === key || !this.configManager) { // ★★★ configManagerのnullチェックを追加 ★★★
+            return Promise.resolve();
         }
         this.resumeContext();
 
-        // ★★★ 修正箇所: 古いBGMの停止をawaitで確実に待つ ★★★
         await this.stopBgm(fadeInTime);
 
-        // ★★★ 新しいBGMの再生処理もPromiseでラップする ★★★
         return new Promise(resolve => {
             const newBgm = this.sound.add(key, { loop: true, volume: 0 });
             newBgm.play();
             this.currentBgm = newBgm;
             this.currentBgmKey = key;
 
-            const tweenRunner = this._getTweenRunnerScene();
             if (fadeInTime > 0) {
-                tweenRunner.tweens.add({
+                this.systemScene.tweens.add({
                     targets: newBgm,
                     volume: this.configManager.getValue('bgmVolume') / 100,
                     duration: fadeInTime,
                 });
-                // ★★★ tween.onCompleteに頼らず、時間で完了を保証 ★★★
-                tweenRunner.time.delayedCall(fadeInTime, resolve);
+                this.systemScene.time.delayedCall(fadeInTime, resolve);
             } else {
                 newBgm.setVolume(this.configManager.getValue('bgmVolume') / 100);
-                resolve(); // 即時完了
+                resolve();
             }
         });
     }
-
-   // ★★★ 追加: SoundManagerが操作対象とするシーンを切り替えるメソッド ★★★
-    setScene(newScene) {
-        console.log(`SoundManager: 操作対象のシーンを ${this.scene.scene.key} から ${newScene.scene.key} に切り替えます。`);
-        this.scene = newScene;
-        // AudioContextの再開処理も、新しいシーンで再度行うようにする
-        this.scene.input.once('pointerdown', () => {
-            if (this.scene.sound.context.state === 'suspended') {
-                this.scene.sound.context.resume();
-            }
-            this.audioContext = this.scene.sound.context;
-            console.log("AudioContext is ready on new scene.");
-        }, this);
-    }
- 
+   
     getCurrentBgmKey() {
         if (this.currentBgm && this.currentBgm.isPlaying) {
             return this.currentBgmKey;
         }
         return null;
     }
-
-
-
-  
     
+    // playSynthはWeb Audio APIに直接依存するため、変更は最小限に
     playSynth(waveType = 'square', frequency = 1200, duration = 0.05) {
-        // ★ AudioContextが有効になるまで何もしない
-        if (!this.audioContext || this.audioContext.state !== 'running') {
-            console.warn("AudioContext is not ready. Cannot play synth sound.");
+        const audioContext = this.sound.context;
+        if (!audioContext || audioContext.state !== 'running' || !this.configManager) {
+            console.warn("AudioContext is not ready or ConfigManager is not initialized.");
             return;
         }
-
+       
         const oscillator = this.audioContext.createOscillator();
         oscillator.type = waveType;
         oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
