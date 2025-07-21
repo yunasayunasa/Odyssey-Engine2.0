@@ -47,54 +47,55 @@ export default class SoundManager {
     }
 
  
-     stopBgm(fadeOutTime = 0, onComplete = null) {
-        if (!this.currentBgm) {
-            if (onComplete) onComplete(); // BGMがなければ即時完了
-            return;
-        }
-        
-        const tweenRunner = this._getTweenRunnerScene();
-        tweenRunner.tweens.killTweensOf(this.currentBgm);
+      // ★★★ 修正箇所: stopBgmがPromiseを返すように変更 ★★★
+    stopBgm(fadeOutTime = 0) {
+        return new Promise(resolve => {
+            if (!this.currentBgm) {
+                resolve(); // BGMがなければ即時完了
+                return;
+            }
+            
+            const tweenRunner = this._getTweenRunnerScene();
+            tweenRunner.tweens.killTweensOf(this.currentBgm);
 
-        if (fadeOutTime > 0) {
-            tweenRunner.tweens.add({
-                targets: this.currentBgm,
-                volume: 0,
-                duration: fadeOutTime,
-                onComplete: () => {
-                    if (this.currentBgm) {
-                        this.currentBgm.stop();
-                        this.currentBgm.destroy();
-                        this.currentBgm = null;
-                        this.currentBgmKey = null;
+            if (fadeOutTime > 0) {
+                tweenRunner.tweens.add({
+                    targets: this.currentBgm,
+                    volume: 0,
+                    duration: fadeOutTime,
+                    onComplete: () => {
+                        if (this.currentBgm) {
+                            this.currentBgm.stop();
+                            this.currentBgm.destroy();
+                            this.currentBgm = null;
+                            this.currentBgmKey = null;
+                        }
                     }
-                    if (onComplete) onComplete(); // ★★★ 停止完了を通知 ★★★
-                }
-            });
-        } else {
-            this.currentBgm.stop();
-            this.currentBgm.destroy();
-            this.currentBgm = null;
-            this.currentBgmKey = null;
-            if (onComplete) onComplete(); // ★★★ 停止完了を通知 ★★★
-        }
+                });
+                // ★★★ tween.onCompleteに頼らず、時間で完了を保証 ★★★
+                tweenRunner.time.delayedCall(fadeOutTime, resolve);
+            } else {
+                this.currentBgm.stop();
+                this.currentBgm.destroy();
+                this.currentBgm = null;
+                this.currentBgmKey = null;
+                resolve(); // 即時完了
+            }
+        });
     }
 
-    playBgm(key, fadeInTime = 0, onComplete = null) {
-        if (!key) {
-            if (onComplete) onComplete();
-            return;
+    // ★★★ 修正箇所: playBgmがasync/awaitを使い、Promiseを返すように変更 ★★★
+    async playBgm(key, fadeInTime = 0) {
+        if (!key || this.currentBgmKey === key) {
+            return Promise.resolve(); // キーがない、または同じBGMなら即時完了
         }
         this.resumeContext();
 
-        if (this.currentBgmKey === key) {
-            if (onComplete) onComplete();
-            return;
-        }
+        // ★★★ 修正箇所: 古いBGMの停止をawaitで確実に待つ ★★★
+        await this.stopBgm(fadeInTime);
 
-        // ★★★ 修正箇所: stopBgmの完了を待ってから新しいBGMを再生 ★★★
-        this.stopBgm(fadeInTime, () => {
-            // stopBgmが完了した後にこのコールバックが実行される
+        // ★★★ 新しいBGMの再生処理もPromiseでラップする ★★★
+        return new Promise(resolve => {
             const newBgm = this.sound.add(key, { loop: true, volume: 0 });
             newBgm.play();
             this.currentBgm = newBgm;
@@ -106,13 +107,12 @@ export default class SoundManager {
                     targets: newBgm,
                     volume: this.configManager.getValue('bgmVolume') / 100,
                     duration: fadeInTime,
-                    onComplete: () => {
-                        if (onComplete) onComplete(); // ★★★ 再生完了を通知 ★★★
-                    }
                 });
+                // ★★★ tween.onCompleteに頼らず、時間で完了を保証 ★★★
+                tweenRunner.time.delayedCall(fadeInTime, resolve);
             } else {
                 newBgm.setVolume(this.configManager.getValue('bgmVolume') / 100);
-                if (onComplete) onComplete(); // ★★★ 再生完了を通知 ★★★
+                resolve(); // 即時完了
             }
         });
     }
@@ -130,33 +130,7 @@ export default class SoundManager {
             console.log("AudioContext is ready on new scene.");
         }, this);
     }
-  stopBgm(fadeOutTime = 0) {
-        if (!this.currentBgm) return;
-        
-        this.systemScene.tweens.killTweensOf(this.currentBgm);
-
-        if (fadeOutTime > 0) {
-            this.systemScene.tweens.add({
-                targets: this.currentBgm,
-                volume: 0,
-                duration: fadeOutTime,
-                onComplete: () => {
-                    if (this.currentBgm) {
-                        this.currentBgm.stop();
-                        this.currentBgm.destroy();
-                        this.currentBgm = null;
-                        this.currentBgmKey = null;
-                    }
-                }
-            });
-        } else {
-            this.currentBgm.stop();
-            this.currentBgm.destroy();
-            this.currentBgm = null;
-            this.currentBgmKey = null;
-        }
-    }
-
+ 
     getCurrentBgmKey() {
         if (this.currentBgm && this.currentBgm.isPlaying) {
             return this.currentBgmKey;
