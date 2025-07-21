@@ -83,6 +83,7 @@ this.soundManager = null; // ★★★ 追加:
             // 'bgm_battle' は asset_define.json に定義してください
             this.time.delayedCall(500, () => {
                 this.soundManager.playBgm('bgm_battle', 500); // 500msかけてフェードイン
+                  console.log("戦闘bgm開始！");
             });
         }
         // ★★★ 修正箇所: プレースホルダーテキストをプロパティに保持 ★★★
