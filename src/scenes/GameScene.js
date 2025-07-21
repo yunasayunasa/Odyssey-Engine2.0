@@ -110,11 +110,7 @@ export default class GameScene extends Phaser.Scene {
         this.layer.message.add(this.messageWindow); 
         this.scenarioManager = new ScenarioManager(this, this.layer, this.charaDefs, this.messageWindow, this.soundManager, this.stateManager, this.configManager);
   // ★★★ 追加: 最初のクリックで一度だけAudioContextを有効化する ★★★
-        this.input.once('pointerdown', () => {
-            if (this.soundManager) {
-                this.soundManager._resumeAudioContext();
-            }
-        }, this);
+     
         // --- HUDのインスタンス化 ---
         // ★★★ 修正箇所: CoinHudとHpBarにstateManagerを渡してインスタンス化 ★★★
         // これにより、各HUDが自分自身でStateManagerの変更を監視するようになります。
