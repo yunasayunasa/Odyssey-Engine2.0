@@ -179,22 +179,22 @@ export default class GameScene extends Phaser.Scene {
         this.scenarioManager.registerTag('stopvideo', handleStopVideo);
         this.scenarioManager.registerTag('voice', handleVoice);
      
-        // --- ゲーム開始ロジック ---
-        if (this.isResuming) {
-            console.log("GameScene: 復帰処理を開始します。");
-            this.performLoad(0, this.returnParams); 
-        } else {
-            console.log("GameScene: 通常起動します。");
-            this.performSave(0);
-           
-            this.scenarioManager.loadScenario(this.startScenario, this.startLabel);
+          // --- ゲーム開始ロジック ---
+    if (this.isResuming) {
+        console.log("GameScene: 復帰処理を開始します。");
+        this.performLoad(0, this.returnParams); 
+    } else {
+        console.log("GameScene: 通常起動します。");
+        this.performSave(0);
+        this.scenarioManager.loadScenario(this.startScenario, this.startLabel);
+        this.isSceneFullyReady = true;
 
-            // シーンの準備完了フラグを立てる
-            this.isSceneFullyReady = true; 
-            this.time.delayedCall(10, () => this.scenarioManager.next());
-        }
-          // ★★★ 追加: 最初のクリックで一度だけAudioContextを有効化する ★★★
+        // ★★★ 修正箇所：以下の2行を追加 ★★★
+        this.events.emit('gameScene-load-complete');
+        console.log("GameScene: 通常起動完了。ロード完了イベントを発行しました。");
         
+        this.time.delayedCall(10, () => this.scenarioManager.next());
+    }
         this.input.on('pointerdown', () => this.scenarioManager.onClick());
         console.log("GameScene: create 完了");
     }
