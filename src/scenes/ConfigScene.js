@@ -30,7 +30,7 @@ export default class ConfigScene extends Phaser.Scene {
         });
 
         // --- 3. 設定項目を定義から自動生成 ---
-        const configDefs = this.configManager.getDefs();
+         const configDefs = this.configManager.constructor.DEFS; // 静的プロパティDEFSを参照
         let y = 250;
 
         for (const key in configDefs) {

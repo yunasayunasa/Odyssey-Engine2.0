@@ -54,8 +54,7 @@ export default class SoundManager {
 
                 this.currentBgm = newBgm;
                 this.currentBgmKey = key;
-                
-                const targetVolume = this.configManager.getValue('bgmVolume') / 100;
+                   const targetVolume = this.configManager.getValue('bgmVolume') / 100;
 
                 // Game Eventsを使って、シーンから独立したTween（フェード）を実現
                 if (fadeInTime > 0) {
