@@ -131,9 +131,8 @@ export default class SystemScene extends Phaser.Scene {
     }
 
 // ... SystemScene.js の他のメソッド ...
-  
-    /**
-     * ★★★ 新しいシーンを起動し、完了まで監視するコアメソッド (改訂版) ★★★
+      /**
+     * ★★★ 新しいシーンを起動し、完了まで監視するコアメソッド (最終完成版) ★★★
      * @param {string} sceneKey - 起動するシーンのキー
      * @param {object} params - シーンに渡すデータ
      */
@@ -148,27 +147,27 @@ export default class SystemScene extends Phaser.Scene {
         console.log(`[SystemScene] シーン[${sceneKey}]の起動を開始。ゲーム全体の入力を無効化。`);
 
         // ★★★ 修正の核心 ★★★
-        // runは、指定したシーンがCREATEされた後にコールバックを実行してくれる
-        this.scene.run(sceneKey, params);
+        // シーンマネージャーのCREATEイベントを一度だけリッスンする
+        this.scene.manager.events.once(Phaser.Scenes.Events.CREATE, (scene) => {
+            // 作成されたシーンが、我々が待っていたシーンかどうかをキーでチェック
+            if (scene.scene.key === sceneKey) {
+                console.log(`[SystemScene] ターゲットシーン[${sceneKey}]のCREATEイベントをキャッチ。`);
 
-        const targetScene = this.scene.get(sceneKey);
-        
-        // CREATEイベントを待つ必要がなくなるため、コードがシンプルになる。
-        // targetSceneは確実に新しいインスタンスを指している。
-        console.log(`[SystemScene] シーン[${sceneKey}]のCREATEを待機します。`);
-        
-        // GameSceneの場合は、さらにロード完了イベントを待つ
-        if (sceneKey === 'GameScene') {
-            targetScene.events.once('gameScene-load-complete', () => {
-                this._onTransitionComplete(sceneKey);
-            });
-        } else {
-            // GameScene以外はCREATE完了（runの完了）で即時遷移完了とみなしたいが、
-            // 念のためCREATEイベントをリッスンする方が安全
-            targetScene.events.once(Phaser.Scenes.Events.CREATE, () => {
-                 this._onTransitionComplete(sceneKey);
-            });
-        }
+                if (sceneKey === 'GameScene') {
+                    // GameSceneの場合は、新しく作られたシーンインスタンス(scene)の
+                    // イベントを待つ
+                    scene.events.once('gameScene-load-complete', () => {
+                        this._onTransitionComplete(sceneKey);
+                    });
+                } else {
+                    // GameScene以外はCREATE完了で遷移完了とみなす
+                    this._onTransitionComplete(sceneKey);
+                }
+            }
+        });
+
+        // シーンの起動をスケジュールする
+        this.scene.run(sceneKey, params);
     }
 
     /**
