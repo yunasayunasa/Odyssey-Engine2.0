@@ -40,9 +40,12 @@ export default class PreloadScene extends Phaser.Scene {
         
         // --- ConfigManagerとStateManagerを生成し、Registryに登録 ---
         const configManager = new ConfigManager();
-        this.registry.set('configManager', configManager);
+        // ★★★ 修正箇所: this.registry -> this.sys.registry ★★★
+        this.sys.registry.set('configManager', configManager);
+        
         const stateManager = new StateManager();
-        this.registry.set('stateManager', stateManager);
+        // ★★★ 修正箇所: this.registry -> this.sys.registry ★★★
+        this.sys.registry.set('stateManager', stateManager);
 
         // --- asset_define.jsonに基づいて残りのアセットをロードキューに追加 ---
         const assetDefine = this.cache.json.get('asset_define');
@@ -77,28 +80,24 @@ export default class PreloadScene extends Phaser.Scene {
             this.scene.launch('SystemScene'); 
             const systemScene = this.scene.get('SystemScene');
             
+            
             if (systemScene) {
                 systemScene.events.once(Phaser.Scenes.Events.CREATE, () => {
-                    // SystemSceneが完全に準備できたことを確認してから、SoundManagerを生成
-                    const configManagerInstance = this.registry.get('configManager');
+                    // ★★★ 修正箇所: RegistryからConfigManagerを取得 ★★★
+                    const configManagerInstance = this.sys.registry.get('configManager');
+                    
                     const soundManager = new SoundManager(this.game.sound, systemScene, configManagerInstance);
-                    this.registry.set('soundManager', soundManager);
+                    // ★★★ 修正箇所: SoundManagerもグローバルなRegistryに登録 ★★★
+                    this.sys.registry.set('soundManager', soundManager);
 
-                    // SoundManagerの準備ができてから、初期ゲームを開始する
                     systemScene.startInitialGame(charaDefs, 'test.ks'); 
                     console.log("PreloadScene: SoundManagerを生成し、初期ゲーム起動を依頼しました。");
                 });
             } else {
-                console.error("PreloadScene: SystemSceneのインスタンスが取得できませんでした。ゲーム起動に失敗。");
+                console.error("PreloadScene: SystemSceneのインスタンスが取得できませんでした。");
             }
-
-            // PreloadSceneは役割を終えるので、次のフレームで自身を停止する
-            this.time.delayedCall(1, () => {
-                this.scene.stop(this.scene.key);
-            });
         });
         
-        // --- ロードを開始 ---
         this.load.start();
     }
 

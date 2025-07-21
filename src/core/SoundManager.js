@@ -5,14 +5,13 @@ export default class SoundManager {
     constructor(soundManager, systemScene, configManager) {
         this.systemScene = systemScene; 
         this.sound = soundManager; 
-        this.configManager = configManager; // ★★★ 引数で渡されたconfigManagerを直接保持 ★★★
+       // ★★★ 修正箇所: this.systemScene.registry.get -> this.systemScene.sys.registry.get ★★★
+        this.configManager = this.systemScene.sys.registry.get('configManager');
         
-        // もしConfigManagerが取得できなかった場合の防御コード
         if (!this.configManager) {
-            console.error("SoundManager: constructorにConfigManagerが渡されていません！");
+            console.error("SoundManager: RegistryからConfigManagerが取得できませんでした！");
             return; 
         }
-
         this.currentBgm = null;
         this.currentBgmKey = null;
 
