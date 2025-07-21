@@ -1,166 +1,119 @@
-// src/core/SoundManager.js (遅延初期化による最終修正)
+// src/scenes/PreloadScene.js (フリーズ問題を解決するための修正)
 
-export default class SoundManager {
-    constructor(soundManager, systemScene) {
-        this.systemScene = systemScene; 
-        this.sound = soundManager; 
+import ConfigManager from '../core/ConfigManager.js';
+import StateManager from '../core/StateManager.js';
+import SoundManager from '../core/SoundManager.js';
+
+export default class PreloadScene extends Phaser.Scene {
+    constructor() {
+        // ★★★ 修正箇所: active: true を追加し、このシーンを自動起動させる ★★★
+        super({ key: 'PreloadScene', active: true });
         
-        // ★★★ constructorでは、ConfigManagerへのアクセスは行わない ★★★
-        this.configManager = null; 
-        this.currentBgm = null;
-        this.currentBgmKey = null;
+        // UI要素への参照を初期化 (stop()で破棄するため)
+        this.progressBar = null;
+        this.progressBox = null;
+        this.percentText = null;
+        this.loadingText = null;
     }
 
-    // ★★★ 追加: ConfigManagerを受け取り、初期化を行うinit()メソッド ★★★
-    init(configManager) {
-        if (!configManager) {
-            console.error("SoundManager.init: ConfigManagerが渡されていません！");
-            return;
-        }
-        this.configManager = configManager;
-
-        console.log("SoundManager: ConfigManagerを受け取り、初期化しました。");
-
-        // ★★★ constructorにあったイベントリスナー登録をここに移動 ★★★
-        this.configManager.on('change:bgmVolume', (newValue) => {
-            if (this.currentBgm && this.currentBgm.isPlaying) {
-                this.currentBgm.setVolume(newValue / 100);
-            }
+    preload() {
+        console.log("PreloadScene: 起動。全アセットのロードを開始します。");
+        
+        // --- 1. ロード画面UIの表示 ---
+        this.progressBox = this.add.graphics();
+        this.progressBox.fillStyle(0x222222, 0.8).fillRect(340, 320, 600, 50);
+        this.progressBar = this.add.graphics();
+        this.percentText = this.add.text(640, 345, '0%', { fontSize: '24px', fill: '#fff' }).setOrigin(0.5);
+        this.loadingText = this.add.text(640, 280, 'Now Loading...', { fontSize: '36px', fill: '#ffffff' }).setOrigin(0.5);
+        
+        this.load.on('progress', (value) => {
+            if (this.percentText) this.percentText.setText(parseInt(value * 100) + '%');
+            if (this.progressBar) this.progressBar.clear().fillStyle(0xffffff, 1).fillRect(350, 330, 580 * value, 30);
         });
+        
+        // --- 2. 最初に必要なアセットのみをロード ---
+        this.load.json('asset_define', 'assets/asset_define.json');
+        this.load.script('webfont', 'https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js');
     }
 
-
-
-   
-
-   playSe(key, options = {}) {
-        if (!key) return;
+    create() {
+        console.log("PreloadScene: create開始。ConfigManagerとStateManagerを初期化します。");
         
+        // --- ConfigManagerとStateManagerを生成し、「グローバル」Registryに登録 ---
+        const configManager = new ConfigManager();
+        this.sys.registry.set('configManager', configManager);
         
-        const se = this.sound.add(key);
-        let volume = this.configManager.getValue('seVolume') / 100;
-        if (options.volume !== undefined) {
-            volume = Number(options.volume);
-        }
-        se.setVolume(volume);
-        se.play();
-    }
+        const stateManager = new StateManager();
+        this.sys.registry.set('stateManager', stateManager);
 
- 
-      // ★★★ 修正箇所: stopBgmがPromiseを返すように変更 ★★★
-    stopBgm(fadeOutTime = 0) {
-        return new Promise(resolve => {
-            if (!this.currentBgm) {
-                resolve(); // BGMがなければ即時完了
-                return;
+        // --- asset_define.jsonに基づいて残りのアセットをロードキューに追加 ---
+        const assetDefine = this.cache.json.get('asset_define');
+        for (const key in assetDefine.images) { this.load.image(key, assetDefine.images[key]); }
+        for (const key in assetDefine.sounds) { this.load.audio(key, assetDefine.sounds[key]); }
+        for (const key in assetDefine.videos) { this.load.video(key, assetDefine.videos[key]); }
+        
+        // ゲームで使う可能性のあるシナリオファイルをすべてロード
+        this.load.text('scene1.ks', 'assets/scene1.ks');
+        this.load.text('scene2.ks', 'assets/scene2.ks');
+        this.load.text('overlay_test.ks', 'assets/overlay_test.ks');
+        this.load.text('test.ks', 'assets/test.ks');
+        this.load.text('test_main.ks', 'assets/test_main.ks');
+        this.load.text('test_sub.ks', 'assets/test_sub.ks');
+
+        // --- 全てのアセットのロード完了後の処理を定義 ---
+        this.load.once('complete', () => {
+            console.log("PreloadScene: 全アセットロード完了。");
+            
+            // キャラクター定義の生成
+            const charaDefs = {};
+            for (const key in assetDefine.images) {
+                const parts = key.split('_');
+                if (parts.length === 2) {
+                    const [charaName, faceName] = parts;
+                    if (!charaDefs[charaName]) charaDefs[charaName] = { jname: charaName, face: {} };
+                    charaDefs[charaName].face[faceName] = key;
+                }
             }
             
-            const tweenRunner = this._getTweenRunnerScene();
-            tweenRunner.tweens.killTweensOf(this.currentBgm);
-
-            if (fadeOutTime > 0) {
-                tweenRunner.tweens.add({
-                    targets: this.currentBgm,
-                    volume: 0,
-                    duration: fadeOutTime,
-                    onComplete: () => {
-                        if (this.currentBgm) {
-                            this.currentBgm.stop();
-                            this.currentBgm.destroy();
-                            this.currentBgm = null;
-                            this.currentBgmKey = null;
+            // SystemSceneを起動し、そのCREATEイベントを待ってから依存関係を解決する
+            this.scene.launch('SystemScene'); 
+            const systemScene = this.scene.get('SystemScene');
+            
+            if (systemScene) {
+                systemScene.events.once(Phaser.Scenes.Events.CREATE, () => {
+                    // ★★★ 修正箇所: SoundManagerを「グローバル」Registryに登録 ★★★
+                    const soundManager = new SoundManager(this.game.sound, systemScene, configManager);
+                    this.sys.registry.set('soundManager', soundManager);
+                    
+                    // ゲーム全体の入力システムに、一度だけ実行されるリスナーを登録
+                    this.input.once('pointerdown', () => {
+                        if (this.game.sound.context.state === 'suspended') {
+                            this.game.sound.context.resume().then(() => {
+                                console.log("Global AudioContext has been resumed!");
+                            });
                         }
-                    }
+                    }, this);
+
+                    systemScene.startInitialGame(charaDefs, 'test.ks'); 
+                    console.log("PreloadScene: SoundManagerを生成し、初期ゲーム起動を依頼しました。");
+
+                    // ★★★ 修正箇所: PreloadSceneの停止をここで行う ★★★
+                    this.scene.stop(this.scene.key);
                 });
-                // ★★★ tween.onCompleteに頼らず、時間で完了を保証 ★★★
-                tweenRunner.time.delayedCall(fadeOutTime, resolve);
             } else {
-                this.currentBgm.stop();
-                this.currentBgm.destroy();
-                this.currentBgm = null;
-                this.currentBgmKey = null;
-                resolve(); // 即時完了
+                console.error("PreloadScene: SystemSceneのインスタンスが取得できませんでした。");
             }
         });
+        
+        this.load.start();
     }
 
-    // ★★★ 修正箇所: playBgmがasync/awaitを使い、Promiseを返すように変更 ★★★
-    async playBgm(key, fadeInTime = 0) {
-        if (!key || this.currentBgmKey === key) {
-            return Promise.resolve(); // キーがない、または同じBGMなら即時完了
-        }
-        this.resumeContext();
-
-        // ★★★ 修正箇所: 古いBGMの停止をawaitで確実に待つ ★★★
-        await this.stopBgm(fadeInTime);
-
-        // ★★★ 新しいBGMの再生処理もPromiseでラップする ★★★
-        return new Promise(resolve => {
-            const newBgm = this.sound.add(key, { loop: true, volume: 0 });
-            newBgm.play();
-            this.currentBgm = newBgm;
-            this.currentBgmKey = key;
-
-            const tweenRunner = this._getTweenRunnerScene();
-            if (fadeInTime > 0) {
-                tweenRunner.tweens.add({
-                    targets: newBgm,
-                    volume: this.configManager.getValue('bgmVolume') / 100,
-                    duration: fadeInTime,
-                });
-                // ★★★ tween.onCompleteに頼らず、時間で完了を保証 ★★★
-                tweenRunner.time.delayedCall(fadeInTime, resolve);
-            } else {
-                newBgm.setVolume(this.configManager.getValue('bgmVolume') / 100);
-                resolve(); // 即時完了
-            }
-        });
-    }
-
-   // ★★★ 追加: SoundManagerが操作対象とするシーンを切り替えるメソッド ★★★
-    setScene(newScene) {
-        console.log(`SoundManager: 操作対象のシーンを ${this.scene.scene.key} から ${newScene.scene.key} に切り替えます。`);
-        this.scene = newScene;
-        // AudioContextの再開処理も、新しいシーンで再度行うようにする
-        this.scene.input.once('pointerdown', () => {
-            if (this.scene.sound.context.state === 'suspended') {
-                this.scene.sound.context.resume();
-            }
-            this.audioContext = this.scene.sound.context;
-            console.log("AudioContext is ready on new scene.");
-        }, this);
-    }
- 
-    getCurrentBgmKey() {
-        if (this.currentBgm && this.currentBgm.isPlaying) {
-            return this.currentBgmKey;
-        }
-        return null;
-    }
-
-
-
-  
-    
-    playSynth(waveType = 'square', frequency = 1200, duration = 0.05) {
-        // ★ AudioContextが有効になるまで何もしない
-        if (!this.audioContext || this.audioContext.state !== 'running') {
-            console.warn("AudioContext is not ready. Cannot play synth sound.");
-            return;
-        }
-
-        const oscillator = this.audioContext.createOscillator();
-        oscillator.type = waveType;
-        oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
-
-        const gainNode = this.audioContext.createGain();
-        gainNode.gain.setValueAtTime(this.configManager.getValue('seVolume'), this.audioContext.currentTime); // ★ SE音量を適用
-        gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + duration);
-
-        oscillator.connect(gainNode);
-        gainNode.connect(this.audioContext.destination);
-
-        oscillator.start(this.audioContext.currentTime);
-        oscillator.stop(this.audioContext.currentTime + duration);
+    stop() {
+        super.stop();
+        console.log("PreloadScene: stop されました。ロード画面UIを破棄します。");
+        if (this.progressBar) { this.progressBar.destroy(); this.progressBar = null; }
+        if (this.progressBox) { this.progressBox.destroy(); this.progressBox = null; }
+        if (this.percentText) { this.percentText.destroy(); this.percentText = null; }
+        if (this.loadingText) { this.loadingText.destroy(); this.loadingText = null; }
     }
 }
