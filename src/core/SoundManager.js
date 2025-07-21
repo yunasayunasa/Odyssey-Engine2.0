@@ -1,28 +1,34 @@
+// src/core/SoundManager.js (遅延初期化による最終修正)
 
 export default class SoundManager {
-    // ★★★ 修正箇所: constructorの引数を、必要な部品を直接受け取る形に戻す ★★★
-    constructor(soundManager, systemScene, configManager) {
+    constructor(soundManager, systemScene) {
         this.systemScene = systemScene; 
         this.sound = soundManager; 
-        this.configManager = configManager; // ★★★ 引数で渡されたconfigManagerを直接保持 ★★★
         
-        // もしConfigManagerが取得できなかった場合の防御コード
-        if (!this.configManager) {
-            console.error("SoundManager: constructorにConfigManagerが渡されていません！");
-            return; 
-        }
-
+        // ★★★ constructorでは、ConfigManagerへのアクセスは行わない ★★★
+        this.configManager = null; 
         this.currentBgm = null;
         this.currentBgmKey = null;
+    }
 
-        // --- 設定変更イベントの監視 ---
+    // ★★★ 追加: ConfigManagerを受け取り、初期化を行うinit()メソッド ★★★
+    init(configManager) {
+        if (!configManager) {
+            console.error("SoundManager.init: ConfigManagerが渡されていません！");
+            return;
+        }
+        this.configManager = configManager;
+
+        console.log("SoundManager: ConfigManagerを受け取り、初期化しました。");
+
+        // ★★★ constructorにあったイベントリスナー登録をここに移動 ★★★
         this.configManager.on('change:bgmVolume', (newValue) => {
             if (this.currentBgm && this.currentBgm.isPlaying) {
                 this.currentBgm.setVolume(newValue / 100);
             }
         });
-        // (seVolumeも同様に)
     }
+
 
 
 
@@ -53,7 +59,10 @@ export default class SoundManager {
     playBgm(key, fadeInTime = 0) {
                if (!key) return;
         this._resumeAudioContext(); // 再生前に再開を試みる
-
+  if (!this.configManager) {
+            console.warn("SoundManagerはまだ初期化されていません。playBgmをスキップします。");
+            return;
+        }
         if (this.currentBgmKey === key) return;
 
         this.stopBgm(fadeInTime);
