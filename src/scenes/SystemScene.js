@@ -131,8 +131,9 @@ export default class SystemScene extends Phaser.Scene {
     }
 
 // ... SystemScene.js の他のメソッド ...
+  
     /**
-     * ★★★ 新しいシーンを起動し、完了まで監視するコアメソッド ★★★
+     * ★★★ 新しいシーンを起動し、完了まで監視するコアメソッド (改訂版) ★★★
      * @param {string} sceneKey - 起動するシーンのキー
      * @param {object} params - シーンに渡すデータ
      */
@@ -146,24 +147,28 @@ export default class SystemScene extends Phaser.Scene {
         this.game.input.enabled = false;
         console.log(`[SystemScene] シーン[${sceneKey}]の起動を開始。ゲーム全体の入力を無効化。`);
 
-        this.scene.start(sceneKey, params);
-        
+        // ★★★ 修正の核心 ★★★
+        // runは、指定したシーンがCREATEされた後にコールバックを実行してくれる
+        this.scene.run(sceneKey, params);
+
         const targetScene = this.scene.get(sceneKey);
         
-        // CREATEイベントを待つ
-        targetScene.events.once(Phaser.Scenes.Events.CREATE, () => {
-            console.log(`[SystemScene] シーン[${sceneKey}]のCREATEイベント受信。`);
-
-            // GameSceneの場合は、さらにロード完了イベントを待つ
-            if (sceneKey === 'GameScene') {
-                targetScene.events.once('gameScene-load-complete', () => {
-                    this._onTransitionComplete(sceneKey);
-                });
-            } else {
-                // GameScene以外はCREATE完了で即時遷移完了とみなす
+        // CREATEイベントを待つ必要がなくなるため、コードがシンプルになる。
+        // targetSceneは確実に新しいインスタンスを指している。
+        console.log(`[SystemScene] シーン[${sceneKey}]のCREATEを待機します。`);
+        
+        // GameSceneの場合は、さらにロード完了イベントを待つ
+        if (sceneKey === 'GameScene') {
+            targetScene.events.once('gameScene-load-complete', () => {
                 this._onTransitionComplete(sceneKey);
-            }
-        });
+            });
+        } else {
+            // GameScene以外はCREATE完了（runの完了）で即時遷移完了とみなしたいが、
+            // 念のためCREATEイベントをリッスンする方が安全
+            targetScene.events.once(Phaser.Scenes.Events.CREATE, () => {
+                 this._onTransitionComplete(sceneKey);
+            });
+        }
     }
 
     /**
