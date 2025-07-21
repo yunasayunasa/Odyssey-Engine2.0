@@ -1,32 +1,19 @@
+// src/handlers/playbgm.js (Promiseを正しく解決する)
+
 /**
  * [playbgm] タグの処理
- * BGMを再生、またはクロスフェードで切り替える
+ * BGMを再生し、フェードインが完了するまで待機する。
  * @param {ScenarioManager} manager
- * @param {Object} params - { storage, volume, time }
+ * @param {Object} params - { storage, fadein }
  * @returns {Promise<void>}
  */
 export function handlePlayBgm(manager, params) {
+    // ★★★ 修正箇所: Promiseを返すように全体を書き換える ★★★
     return new Promise(resolve => {
-        const storage = params.storage;
-        if (!storage) {
-            console.warn('[playbgm] storageは必須です。');
-            resolve();
-            return;
-        }
+        const key = params.storage;
+        const fadeInTime = params.fadein ? parseInt(params.fadein, 10) : 0;
 
-        // volume は SoundManager の config を参照するので、ここでは渡さないのが一般的
-        // time はフェードイン時間
-        const time = Number(params.time) || 0;
-
-        // ★★★ SoundManagerに再生を依頼するだけ ★★★
-        manager.soundManager.playBgm(storage, time);
-
-        // ★★★ stateManagerの更新は不要 ★★★
-        // SoundManagerが現在のBGMを管理し、セーブ時にStateManagerがそれを取得する
-
-        // フェードイン時間分だけ待機してから完了を通知する
-        manager.scene.time.delayedCall(time, () => {
-            resolve();
-        });
+        // SoundManagerに、完了時にresolveを呼び出すよう依頼
+        manager.soundManager.playBgm(key, fadeInTime, resolve);
     });
 }

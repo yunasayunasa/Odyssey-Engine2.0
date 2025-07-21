@@ -47,28 +47,44 @@ export default class SoundManager {
     }
 
  
-   playBgm(key, fadeInTime = 0) {
-        if (!key) return;
-       
-        if (this.currentBgmKey === key) return;
-
-        this.stopBgm(fadeInTime);
-
-        const newBgm = this.sound.add(key, { loop: true, volume: 0 });
-        newBgm.play();
-        this.currentBgm = newBgm;
-        this.currentBgmKey = key;
-
-        if (fadeInTime > 0) {
-            this.systemScene.tweens.add({
-                targets: newBgm,
-                volume: this.configManager.getValue('bgmVolume') / 100,
-                duration: fadeInTime
-            });
-        } else {
-            newBgm.setVolume(this.configManager.getValue('bgmVolume') / 100);
+     playBgm(key, fadeInTime = 0, onComplete = null) {
+        if (!key) {
+            if (onComplete) onComplete(); // キーがなければ即時完了
+            return;
         }
+        this.resumeContext();
+
+        if (this.currentBgmKey === key) {
+            if (onComplete) onComplete(); // 同じBGMなら即時完了
+            return;
+        }
+
+        this.stopBgm(fadeInTime); // 既存のBGMをフェードアウト
+
+        // ★★★ 新しいBGMの再生は、stopBgmのフェードアウトと同じ時間だけ待ってから開始 ★★★
+        this.systemScene.time.delayedCall(fadeInTime, () => {
+            const newBgm = this.sound.add(key, { loop: true, volume: 0 });
+            newBgm.play();
+            this.currentBgm = newBgm;
+            this.currentBgmKey = key;
+
+            if (fadeInTime > 0) {
+                this.systemScene.tweens.add({
+                    targets: newBgm,
+                    volume: this.configManager.getValue('bgmVolume') / 100,
+                    duration: fadeInTime,
+                    // ★★★ フェードイン完了時にonCompleteを呼び出す ★★★
+                    onComplete: () => {
+                        if (onComplete) onComplete();
+                    }
+                });
+            } else {
+                newBgm.setVolume(this.configManager.getValue('bgmVolume') / 100);
+                if (onComplete) onComplete(); // 即時再生でも完了を通知
+            }
+        });
     }
+
    // ★★★ 追加: SoundManagerが操作対象とするシーンを切り替えるメソッド ★★★
     setScene(newScene) {
         console.log(`SoundManager: 操作対象のシーンを ${this.scene.scene.key} から ${newScene.scene.key} に切り替えます。`);
