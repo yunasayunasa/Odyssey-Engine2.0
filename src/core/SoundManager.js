@@ -55,30 +55,41 @@ export default class SoundManager {
     }
 
     playBgm(key, fadeInTime = 0) {
-        if (!key) return;
+              if (!key) return;
 
-        if (this.currentBgm && this.currentBgm.isPlaying) {
-            this.scene.tweens.add({
-                targets: this.currentBgm,
-                volume: 0,
-                duration: fadeInTime,
-                onComplete: () => {
-                    this.currentBgm.stop();
-                }
-            });
+        // ★★★ 修正箇所: 既に同じBGMが再生中、またはフェードイン中であれば何もしない ★★★
+        if (this.currentBgmKey === key) {
+            // もし音量が0なら、フェードインだけは再実行する
+            if (this.currentBgm && this.currentBgm.volume === 0) {
+                // 既存のTweenをキャンセル
+                const tweenRunner = this._getTweenRunnerScene();
+                tweenRunner.tweens.killTweensOf(this.currentBgm);
+                tweenRunner.tweens.add({
+                    targets: this.currentBgm,
+                    volume: this.configManager.getValue('bgmVolume') / 100,
+                    duration: fadeInTime
+                });
+            }
+            return;
         }
 
+        // 既存のBGMがあれば停止処理
+        this.stopBgm(fadeInTime);
+
+        // 新しいBGMを再生
         const newBgm = this.scene.sound.add(key, { loop: true, volume: 0 });
         newBgm.play();
         this.currentBgm = newBgm;
         this.currentBgmKey = key;
 
-        this.scene.tweens.add({
+        const tweenRunner = this._getTweenRunnerScene();
+        tweenRunner.tweens.add({
             targets: newBgm,
-            volume: this.configManager.getValue('bgmVolume'),
+            volume: this.configManager.getValue('bgmVolume') / 100,
             duration: fadeInTime
         });
     }
+
    // ★★★ 追加: SoundManagerが操作対象とするシーンを切り替えるメソッド ★★★
     setScene(newScene) {
         console.log(`SoundManager: 操作対象のシーンを ${this.scene.scene.key} から ${newScene.scene.key} に切り替えます。`);
@@ -93,25 +104,37 @@ export default class SoundManager {
         }, this);
     }
     stopBgm(fadeOutTime = 0) {
-        if (this.currentBgm && this.currentBgm.isPlaying) {
-            if (fadeOutTime > 0) {
-                this.scene.tweens.add({
-                    targets: this.currentBgm,
-                    volume: 0,
-                    duration: fadeOutTime,
-                    onComplete: () => {
+        if (!this.currentBgm) return; // ★★★ BGMが存在しない場合は何もしない ★★★
+        
+        const tweenRunner = this._getTweenRunnerScene();
+        // ★★★ 修正箇所: 既存のTweenがあればキャンセルしてから新しいTweenを開始 ★★★
+        tweenRunner.tweens.killTweensOf(this.currentBgm);
+
+        if (fadeOutTime > 0) {
+            // フェードアウト用のTweenが完了したらBGMを破棄
+            tweenRunner.tweens.add({
+                targets: this.currentBgm,
+                volume: 0,
+                duration: fadeOutTime,
+                onComplete: () => {
+                    // ★★★ 修正箇所: onComplete内で再度nullチェックを行う ★★★
+                    if (this.currentBgm) {
                         this.currentBgm.stop();
+                        this.currentBgm.destroy();
                         this.currentBgm = null;
                         this.currentBgmKey = null;
                     }
-                });
-            } else {
-                this.currentBgm.stop();
-                this.currentBgm = null;
-                this.currentBgmKey = null;
-            }
+                }
+            });
+        } else {
+            // 即時停止
+            this.currentBgm.stop();
+            this.currentBgm.destroy();
+            this.currentBgm = null;
+            this.currentBgmKey = null;
         }
     }
+
 
     getCurrentBgmKey() {
         if (this.currentBgm && this.currentBgm.isPlaying) {
