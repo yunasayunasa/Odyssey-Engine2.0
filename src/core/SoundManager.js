@@ -47,40 +47,72 @@ export default class SoundManager {
     }
 
  
-     playBgm(key, fadeInTime = 0, onComplete = null) {
+     stopBgm(fadeOutTime = 0, onComplete = null) {
+        if (!this.currentBgm) {
+            if (onComplete) onComplete(); // BGMがなければ即時完了
+            return;
+        }
+        
+        const tweenRunner = this._getTweenRunnerScene();
+        tweenRunner.tweens.killTweensOf(this.currentBgm);
+
+        if (fadeOutTime > 0) {
+            tweenRunner.tweens.add({
+                targets: this.currentBgm,
+                volume: 0,
+                duration: fadeOutTime,
+                onComplete: () => {
+                    if (this.currentBgm) {
+                        this.currentBgm.stop();
+                        this.currentBgm.destroy();
+                        this.currentBgm = null;
+                        this.currentBgmKey = null;
+                    }
+                    if (onComplete) onComplete(); // ★★★ 停止完了を通知 ★★★
+                }
+            });
+        } else {
+            this.currentBgm.stop();
+            this.currentBgm.destroy();
+            this.currentBgm = null;
+            this.currentBgmKey = null;
+            if (onComplete) onComplete(); // ★★★ 停止完了を通知 ★★★
+        }
+    }
+
+    playBgm(key, fadeInTime = 0, onComplete = null) {
         if (!key) {
-            if (onComplete) onComplete(); // キーがなければ即時完了
+            if (onComplete) onComplete();
             return;
         }
         this.resumeContext();
 
         if (this.currentBgmKey === key) {
-            if (onComplete) onComplete(); // 同じBGMなら即時完了
+            if (onComplete) onComplete();
             return;
         }
 
-        this.stopBgm(fadeInTime); // 既存のBGMをフェードアウト
-
-        // ★★★ 新しいBGMの再生は、stopBgmのフェードアウトと同じ時間だけ待ってから開始 ★★★
-        this.systemScene.time.delayedCall(fadeInTime, () => {
+        // ★★★ 修正箇所: stopBgmの完了を待ってから新しいBGMを再生 ★★★
+        this.stopBgm(fadeInTime, () => {
+            // stopBgmが完了した後にこのコールバックが実行される
             const newBgm = this.sound.add(key, { loop: true, volume: 0 });
             newBgm.play();
             this.currentBgm = newBgm;
             this.currentBgmKey = key;
 
+            const tweenRunner = this._getTweenRunnerScene();
             if (fadeInTime > 0) {
-                this.systemScene.tweens.add({
+                tweenRunner.tweens.add({
                     targets: newBgm,
                     volume: this.configManager.getValue('bgmVolume') / 100,
                     duration: fadeInTime,
-                    // ★★★ フェードイン完了時にonCompleteを呼び出す ★★★
                     onComplete: () => {
-                        if (onComplete) onComplete();
+                        if (onComplete) onComplete(); // ★★★ 再生完了を通知 ★★★
                     }
                 });
             } else {
                 newBgm.setVolume(this.configManager.getValue('bgmVolume') / 100);
-                if (onComplete) onComplete(); // 即時再生でも完了を通知
+                if (onComplete) onComplete(); // ★★★ 再生完了を通知 ★★★
             }
         });
     }
