@@ -95,10 +95,7 @@ export default class ScenarioManager {
 
      // --- クリック処理 ---
     onClick() {
-        // ★★★ 修正箇所: SoundManagerのresumeContext()を呼び出す ★★★
-        if (this.soundManager) {
-            this.soundManager.resumeContext();
-        }
+       
         
         if (this.isEnd) return;
         

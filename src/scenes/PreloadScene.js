@@ -84,16 +84,20 @@ export default class PreloadScene extends Phaser.Scene {
             if (systemScene) {
                 systemScene.events.once(Phaser.Scenes.Events.CREATE, () => {
                     // ★★★ 修正箇所: SoundManagerを生成し、Registryに登録 ★★★
-                    const soundManager = new SoundManager(this.game.sound, systemScene);
-                    this.sys.registry.set('soundManager', soundManager);
+                        const soundManager = new SoundManager(this.game.sound, systemScene, configManager);
+                    this.registry.set('soundManager', soundManager);
+                    
+                    // ★★★ 追加: ゲーム全体の入力システムに、一度だけ実行されるリスナーを登録 ★★★
+                    this.game.input.once('pointerdown', () => {
+                        if (this.game.sound.context.state === 'suspended') {
+                            this.game.sound.context.resume().then(() => {
+                                console.log("Global AudioContext has been resumed!");
+                            });
+                        }
+                    }, this);
 
-                    // ★★★ SystemSceneの準備ができた後、SoundManagerを初期化する ★★★
-                    const configManagerInstance = this.sys.registry.get('configManager');
-                    soundManager.init(configManagerInstance);
-
-                    // SoundManagerの準備ができてから、初期ゲームを開始する
                     systemScene.startInitialGame(charaDefs, 'test.ks'); 
-                    console.log("PreloadScene: SoundManagerを初期化し、初期ゲーム起動を依頼しました。");
+                    console.log("PreloadScene: SoundManagerを生成し、初期ゲーム起動を依頼しました。");
                 });
             } else {
                 console.error("PreloadScene: SystemSceneのインスタンスが取得できませんでした。");

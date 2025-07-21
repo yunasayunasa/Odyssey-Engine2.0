@@ -30,20 +30,12 @@ export default class SoundManager {
     }
 
 
-// ★★★ 追加: AudioContextを安全に再開するための公開メソッド ★★★
-    resumeContext() {
-        if (this.sound.context && this.sound.context.state === 'suspended') {
-            this.sound.context.resume().then(() => {
-                console.log("SoundManager: AudioContext has been resumed on demand.");
-            });
-        }
-    }
 
    
 
    playSe(key, options = {}) {
         if (!key) return;
-        this.resumeContext(); 
+        
         
         const se = this.sound.add(key);
         let volume = this.configManager.getValue('seVolume') / 100;
@@ -57,8 +49,7 @@ export default class SoundManager {
  
    playBgm(key, fadeInTime = 0) {
         if (!key) return;
-        this.resumeContext(); // ★★★ 再生前に再開を試みる ★★★
-
+       
         if (this.currentBgmKey === key) return;
 
         this.stopBgm(fadeInTime);
