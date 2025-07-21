@@ -54,7 +54,7 @@ export default class SoundManager {
 
                 this.currentBgm = newBgm;
                 this.currentBgmKey = key;
-                   const targetVolume = this.configManager.getValue('bgmVolume') / 100;
+                 const targetVolume = this.configManager.getValue('bgmVolume');
 
                 // Game Eventsを使って、シーンから独立したTween（フェード）を実現
                 if (fadeInTime > 0) {
@@ -109,9 +109,11 @@ export default class SoundManager {
         });
     }
 
+  // ★ playSe も同様に修正
     playSe(key) {
         this.resumeContext();
-        const seVolume = this.configManager.getValue('seVolume') / 100;
+        // ConfigManagerから取得した値をそのまま使う
+        const seVolume = this.configManager.getValue('seVolume');
         this.sound.play(key, { volume: seVolume });
     }
 
@@ -119,9 +121,10 @@ export default class SoundManager {
         return (this.currentBgm && this.currentBgm.isPlaying) ? this.currentBgmKey : null;
     }
 
-    onBgmVolumeChange(newVolume) {
+      onBgmVolumeChange(newVolume) {
         if (this.currentBgm && this.currentBgm.isPlaying) {
-            this.currentBgm.setVolume(newVolume / 100);
+            // newVolumeは既に0-1の値なので、そのまま渡す
+            this.currentBgm.setVolume(newVolume);
         }
     }
     

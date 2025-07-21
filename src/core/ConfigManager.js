@@ -1,32 +1,31 @@
-// src/core/ConfigManager.js (改訂版)
+// src/core/ConfigManager.js (最終版)
+
+// ★★★ 1. 設定定義は、ファイルの上部で一度だけ行う ★★★
+const configDefs = {
+    // ★★★ 2. 音量スケールを 0-1 に統一し、デフォルト値を十分な大きさに ★★★
+    bgmVolume: { type: 'slider', label: 'BGM 音量', min: 0, max: 1, step: 0.1, defaultValue: 0.8 },
+    seVolume: { type: 'slider', label: 'SE 音量', min: 0, max: 1, step: 0.1, defaultValue: 0.9 },
+    textSpeed: { type: 'slider', label: 'テキスト速度', min: 0, max: 100, step: 10, defaultValue: 50 },
+    typeSound: {
+        type: 'option',
+        label: 'タイプ音',
+        options: { 'se': '効果音', 'none': '無し' },
+        defaultValue: 'se'
+    }
+};
 
 const STORAGE_KEY = 'my_novel_engine_config';
 
-export default class ConfigManager extends Phaser.Events.EventEmitter {
-    
-    // ★★★ クラス自身が設定定義を持つように変更 ★★★
-    static get DEFS() {
-        return {
-            bgmVolume: { type: 'slider', label: 'BGM 音量', min: 0, max: 100, step: 10, defaultValue: 80 },
-            seVolume: { type: 'slider', label: 'SE 音量', min: 0, max: 100, step: 10, defaultValue: 90 },
-            textSpeed: { type: 'slider', label: 'テキスト速度', min: 0, max: 100, step: 10, defaultValue: 50 },
-            typeSound: {
-                type: 'option',
-                label: 'タイプ音',
-                options: { 'se': '効果音', 'none': '無し' },
-                defaultValue: 'se'
-            }
-        };
-    }
 
+// ★★★ 3. ConfigManagerクラスを定義する ★★★
+export default class ConfigManager extends Phaser.Events.EventEmitter {
     constructor() {
-        super();
+        super(); 
         this.values = {};
         const savedValues = this.load();
-        const defs = ConfigManager.DEFS;
 
-        for (const key in defs) {
-            this.values[key] = savedValues[key] !== undefined ? savedValues[key] : defs[key].defaultValue;
+        for (const key in configDefs) {
+            this.values[key] = savedValues[key] !== undefined ? savedValues[key] : configDefs[key].defaultValue;
         }
         console.log("ConfigManager 初期化完了:", this.values);
     }
@@ -45,7 +44,12 @@ export default class ConfigManager extends Phaser.Events.EventEmitter {
     }
     
     save() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.values));
+        try {
+            const jsonString = JSON.stringify(this.values);
+            localStorage.setItem(STORAGE_KEY, jsonString);
+        } catch (e) {
+            console.error("設定の保存に失敗しました。", e);
+        }
     }
 
     load() {
@@ -59,6 +63,6 @@ export default class ConfigManager extends Phaser.Events.EventEmitter {
     }
 
     getDefs() {
-        return ConfigManager.DEFS;
+        return configDefs;
     }
 }
