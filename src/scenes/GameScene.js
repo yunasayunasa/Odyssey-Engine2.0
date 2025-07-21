@@ -104,7 +104,7 @@ export default class GameScene extends Phaser.Scene {
         // --- マネージャー/UIクラスの生成 ---
         this.configManager = this.sys.registry.get('configManager');
         this.stateManager = this.sys.registry.get('stateManager'); 
-        this.soundManager = this.sys.registry.get('soundManager'); 
+        this.soundManager = new SoundManager(this, this.configManager);
         this.messageWindow = new MessageWindow(this, this.soundManager, this.configManager);
         this.layer.message.add(this.messageWindow); 
         this.scenarioManager = new ScenarioManager(this, this.layer, this.charaDefs, this.messageWindow, this.soundManager, this.stateManager, this.configManager);
@@ -128,7 +128,6 @@ export default class GameScene extends Phaser.Scene {
             stateManager: this.stateManager // ★★★ ここでstateManagerを確実に渡す ★★★
         });
         this.playerHpBar.setVisible(false);
- 
 
         // ★★★ 削除: GameSceneがStateManagerのイベントを購読するロジックは不要になる ★★★
         // this.stateManager.on('f-variable-changed', this.onFVariableChanged, this); // この行を削除
@@ -187,7 +186,14 @@ export default class GameScene extends Phaser.Scene {
             this.isSceneFullyReady = true; 
             this.time.delayedCall(10, () => this.scenarioManager.next());
         }
-        
+          // ★★★ 追加: 最初のクリックで一度だけAudioContextを有効化する ★★★
+        this.input.once('pointerdown', () => {
+            if (this.sound.context.state === 'suspended') {
+                this.sound.context.resume().then(() => {
+                    console.log("AudioContext resumed successfully!");
+                });
+            }
+        }, this);
         this.input.on('pointerdown', () => this.scenarioManager.onClick());
         console.log("GameScene: create 完了");
     }

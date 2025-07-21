@@ -70,19 +70,21 @@ this.soundManager = null; // ★★★ 追加:
         const gameScene = this.scene.get('GameScene');
         if (gameScene && gameScene.stateManager) {
             this.stateManager = gameScene.stateManager;
-           this.sys.registry.get('soundManager'); 
-        
-        if (this.soundManager) {
-            this.soundManager.stopBgm(500); 
-            this.time.delayedCall(500, () => {
-                this.soundManager.playBgm('asset/gyakuten_bgm.mp3', 500); 
-            });
-        }
+            this.soundManager = gameScene.soundManager; 
         
         } else {
             console.error("ActionScene (as BattleScene): GameSceneのStateManagerが見つかりません。ゲーム変数は更新できません。");
         }
-
+// ★★★ 追加: バトルBGMの再生処理 ★★★
+        if (this.soundManager) {
+            // 現在のBGMをフェードアウト
+            this.soundManager.stopBgm(500); // 500msかけてフェードアウト
+            // 新しいバトルBGMをフェードイン
+            // 'bgm_battle' は asset_define.json に定義してください
+            this.time.delayedCall(500, () => {
+                this.soundManager.playBgm('bgm_battle', 500); // 500msかけてフェードイン
+            });
+        }
         // ★★★ 修正箇所: プレースホルダーテキストをプロパティに保持 ★★★
         this.playerPlaceholderText = this.add.text(100, 360, 'PLAYER', { fontSize: '48px', fill: '#fff' }).setOrigin(0.5);
         this.enemyPlaceholderText = this.add.text(this.scale.width - 100, 360, 'ENEMY', { fontSize: '48px', fill: '#fff' }).setOrigin(0.5);
@@ -114,8 +116,8 @@ this.soundManager = null; // ★★★ 追加:
         this.stateManager.f.player_hp = this.initialBattleParams.initialPlayerHp;
         this.playerHpBar.setHp(this.stateManager.f.player_hp, this.stateManager.f.player_max_hp);
 
-        this.stateManager.f.enemy_max_hp = 100; 
-        this.stateManager.f.enemy_hp = 100; 
+        this.stateManager.f.enemy_max_hp = 500; 
+        this.stateManager.f.enemy_hp = 500; 
         this.enemyHpBar.setHp(this.stateManager.f.enemy_hp, this.stateManager.f.enemy_max_hp);
 
         this.coinHud.setCoin(this.initialBattleParams.initialCoin);

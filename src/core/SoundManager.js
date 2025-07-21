@@ -1,39 +1,52 @@
 export default class SoundManager {
-    // ★★★ 修正箇所: constructorの引数を変更 ★★★
-    constructor(soundManager, systemScene, configManager) {
-        // this.sceneではなく、tweenを実行するためのsystemSceneへの参照を保持
-        this.systemScene = systemScene; 
-        // PhaserのグローバルなSoundManagerへの参照を保持
-        this.sound = soundManager; 
-        this.configManager = configManager; // ConfigManagerへの参照を保持
+    constructor(scene, configManager) {
+        this.scene = scene;
+        this.configManager = configManager;
         this.currentBgm = null;
-        this.currentBgmKey = null;
+        this.currentBgmKey = null; // ★ プロパティとして明示的に初期化
 
-      
+        // ★★★ AudioContextの遅延初期化 ★★★
+        this.audioContext = null; 
+        // ユーザーの最初の操作でAudioContextを有効化する
+        this.scene.input.once('pointerdown', () => {
+            if (this.scene.sound.context.state === 'suspended') {
+                this.scene.sound.context.resume();
+            }
+            // PhaserのAudioContextを流用する
+            this.audioContext = this.scene.sound.context;
+            console.log("AudioContext is ready.");
+        }, this);
 
         // --- 設定変更イベントの監視 ---
         this.configManager.on('change:bgmVolume', (newValue) => {
             if (this.currentBgm && this.currentBgm.isPlaying) {
-                this.currentBgm.setVolume(newValue / 100); // 0-1の範囲に変換
+                this.currentBgm.setVolume(newValue);
             }
         });
-        // (seVolumeも同様に)
-    }
-   // ★★★ 追加: AudioContextを安全に再開するためのヘルパーメソッド ★★★
-    _resumeAudioContext() {
-        if (this.sound.context && this.sound.context.state === 'suspended') {
-            this.sound.context.resume();
-            console.log("SoundManager: AudioContext is resuming...");
-        }
-    }
 
+        this.configManager.on('change:seVolume', (newValue) => {
+            // (将来的な拡張用)
+        });
+    }
+   // ★★★ 追加: Tweenを実行するための、現在アクティブなシーンを取得するヘルパー ★★★
+    _getTweenRunnerScene() {
+        // 自身の親シーンがアクティブなら、それを使う
+        if (this.scene && this.scene.scene.isActive()) {
+            return this.scene;
+        }
+        // 親シーンがアクティブでない場合（pause/stopされている）、
+        // 常にアクティブなSystemSceneをフォールバックとして使う
+        const systemScene = this.scene.scene.get('SystemScene');
+        if (systemScene && systemScene.scene.isActive()) {
+            return systemScene;
+        }
+        // どちらも見つからない場合は、自身のシーンを返す（エラーになる可能性があるが、最善を尽くす）
+        return this.scene;
+    }
     playSe(key, options = {}) {
         if (!key) return;
-        // ★★★ 追加: 再生前にAudioContextを再開 ★★★
-        this._resumeAudioContext();
-        
-        const se = this.sound.add(key);
-        let volume = this.configManager.getValue('seVolume') / 100;
+        const se = this.scene.sound.add(key);
+        let volume = this.configManager.getValue('seVolume');
         if (options.volume !== undefined) {
             volume = Number(options.volume);
         }
@@ -42,16 +55,10 @@ export default class SoundManager {
     }
 
     playBgm(key, fadeInTime = 0) {
-         if (!key) return;
-        // ★★★ 追加: 再生前にAudioContextを再開 ★★★
-        this._resumeAudioContext();
+        if (!key) return;
 
-        if (this.currentBgmKey === key) return;
-
-        // 既存のBGMを停止
         if (this.currentBgm && this.currentBgm.isPlaying) {
-            // ★★★ 修正箇所: this.scene.tweens -> this.systemScene.tweens ★★★
-            this.systemScene.tweens.add({
+            this.scene.tweens.add({
                 targets: this.currentBgm,
                 volume: 0,
                 duration: fadeInTime,
@@ -61,43 +68,33 @@ export default class SoundManager {
             });
         }
 
-          const newBgm = this.sound.add(key, { loop: true, volume: 0 });
+        const newBgm = this.scene.sound.add(key, { loop: true, volume: 0 });
         newBgm.play();
         this.currentBgm = newBgm;
         this.currentBgmKey = key;
 
-        // フェードイン
-        if (fadeInTime > 0) {
-            this.systemScene.tweens.add({
-                targets: newBgm,
-                volume: this.configManager.getValue('bgmVolume') / 100,
-                duration: fadeInTime
-            });
-        } else {
-            newBgm.setVolume(this.configManager.getValue('bgmVolume') / 100);
-        }
+        this.scene.tweens.add({
+            targets: newBgm,
+            volume: this.configManager.getValue('bgmVolume'),
+            duration: fadeInTime
+        });
     }
 
     stopBgm(fadeOutTime = 0) {
         if (this.currentBgm && this.currentBgm.isPlaying) {
             if (fadeOutTime > 0) {
-                // ★★★ 修正箇所: this.scene.tweens -> this.systemScene.tweens ★★★
-                this.systemScene.tweens.add({
+                this.scene.tweens.add({
                     targets: this.currentBgm,
                     volume: 0,
                     duration: fadeOutTime,
                     onComplete: () => {
-                        if (this.currentBgm) {
-                            this.currentBgm.stop();
-                            this.currentBgm.destroy();
-                            this.currentBgm = null;
-                            this.currentBgmKey = null;
-                        }
+                        this.currentBgm.stop();
+                        this.currentBgm = null;
+                        this.currentBgmKey = null;
                     }
                 });
             } else {
                 this.currentBgm.stop();
-                this.currentBgm.destroy();
                 this.currentBgm = null;
                 this.currentBgmKey = null;
             }
@@ -111,19 +108,13 @@ export default class SoundManager {
         return null;
     }
     
-    
     playSynth(waveType = 'square', frequency = 1200, duration = 0.05) {
         // ★ AudioContextが有効になるまで何もしない
         if (!this.audioContext || this.audioContext.state !== 'running') {
             console.warn("AudioContext is not ready. Cannot play synth sound.");
             return;
         }
-    // ★★★ audioContextの参照をthis.sound.contextに直接変更 ★★★
-        const audioContext = this.sound.context;
-        if (!audioContext || audioContext.state !== 'running') {
-            console.warn("AudioContext is not ready. Cannot play synth sound.");
-            return;
-        }
+
         const oscillator = this.audioContext.createOscillator();
         oscillator.type = waveType;
         oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
