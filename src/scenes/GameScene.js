@@ -193,13 +193,7 @@ export default class GameScene extends Phaser.Scene {
             this.time.delayedCall(10, () => this.scenarioManager.next());
         }
           // ★★★ 追加: 最初のクリックで一度だけAudioContextを有効化する ★★★
-        this.input.once('pointerdown', () => {
-            if (this.sound.context.state === 'suspended') {
-                this.sound.context.resume().then(() => {
-                    console.log("AudioContext resumed successfully!");
-                });
-            }
-        }, this);
+        
         this.input.on('pointerdown', () => this.scenarioManager.onClick());
         console.log("GameScene: create 完了");
     }

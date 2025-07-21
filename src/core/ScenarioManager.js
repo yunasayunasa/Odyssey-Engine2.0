@@ -93,25 +93,28 @@ export default class ScenarioManager {
         console.log(`[Loop] << ループ停止。isEnd=${this.isEnd}, isWaitingClick=${this.isWaitingClick}, isWaitingChoice=${this.isWaitingChoice}`);
     }
 
-    // --- クリック処理 ---
+     // --- クリック処理 ---
     onClick() {
+        // ★★★ 修正箇所: SoundManagerのresumeContext()を呼び出す ★★★
+        if (this.soundManager) {
+            this.soundManager.resumeContext();
+        }
+        
         if (this.isEnd) return;
         
-        // 選択肢表示中は、何もしない
         if (this.isWaitingChoice) return;
 
-        // テキストのテロップ送り
         if (this.messageWindow.isTyping) {
             this.messageWindow.skipTyping();
             return;
         }
 
-        // クリック待ち状態なら、ループを再開
         if (this.isWaitingClick) {
             this.messageWindow.hideNextArrow();
-            this.next(); // isWaitingClickをfalseにして、gameLoopを開始
+            this.next(); 
         }
     }
+
 
  // --- parseメソッドは、状態を変更するだけ ---
     // ScenarioManager.js の parse メソッド (最終版 Ver.2)
