@@ -83,8 +83,8 @@ export default class GameScene extends Phaser.Scene {
 
    // src/scenes/GameScene.js の create() メソッドの正しい形
 
-    create() {
-        console.log("GameScene: クリエイト処理を開始します。");
+        async create() { 
+            console.log("GameScene: クリエイト処理を開始します。");
         this.cameras.main.setBackgroundColor('#000000');
         
         // --- レイヤー生成とdepth設定 ---
@@ -182,7 +182,7 @@ export default class GameScene extends Phaser.Scene {
           // --- ゲーム開始ロジック ---
     if (this.isResuming) {
         console.log("GameScene: 復帰処理を開始します。");
-        this.performLoad(0, this.returnParams); 
+         await this.performLoad(0, this.returnParams);
    } else {
         console.log("GameScene: 通常起動します。");
         this.performSave(0);
