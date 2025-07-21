@@ -19,10 +19,19 @@ export default class SoundManager {
         });
         // (seVolumeも同様に)
     }
+   // ★★★ 追加: AudioContextを安全に再開するためのヘルパーメソッド ★★★
+    _resumeAudioContext() {
+        if (this.sound.context && this.sound.context.state === 'suspended') {
+            this.sound.context.resume();
+            console.log("SoundManager: AudioContext is resuming...");
+        }
+    }
 
     playSe(key, options = {}) {
         if (!key) return;
-        // ★★★ 修正箇所: this.scene.sound -> this.sound ★★★
+        // ★★★ 追加: 再生前にAudioContextを再開 ★★★
+        this._resumeAudioContext();
+        
         const se = this.sound.add(key);
         let volume = this.configManager.getValue('seVolume') / 100;
         if (options.volume !== undefined) {
@@ -33,8 +42,13 @@ export default class SoundManager {
     }
 
     playBgm(key, fadeInTime = 0) {
-        if (!key) return;
+         if (!key) return;
+        // ★★★ 追加: 再生前にAudioContextを再開 ★★★
+        this._resumeAudioContext();
 
+        if (this.currentBgmKey === key) return;
+
+        // 既存のBGMを停止
         if (this.currentBgm && this.currentBgm.isPlaying) {
             // ★★★ 修正箇所: this.scene.tweens -> this.systemScene.tweens ★★★
             this.systemScene.tweens.add({
@@ -47,17 +61,21 @@ export default class SoundManager {
             });
         }
 
-        const newBgm = this.sound.add(key, { loop: true, volume: 0 });
+          const newBgm = this.sound.add(key, { loop: true, volume: 0 });
         newBgm.play();
         this.currentBgm = newBgm;
         this.currentBgmKey = key;
 
-        // ★★★ 修正箇所: this.scene.tweens -> this.systemScene.tweens ★★★
-        this.systemScene.tweens.add({
-            targets: newBgm,
-            volume: this.configManager.getValue('bgmVolume') / 100, // 0-1の範囲に変換
-            duration: fadeInTime
-        });
+        // フェードイン
+        if (fadeInTime > 0) {
+            this.systemScene.tweens.add({
+                targets: newBgm,
+                volume: this.configManager.getValue('bgmVolume') / 100,
+                duration: fadeInTime
+            });
+        } else {
+            newBgm.setVolume(this.configManager.getValue('bgmVolume') / 100);
+        }
     }
 
     stopBgm(fadeOutTime = 0) {
