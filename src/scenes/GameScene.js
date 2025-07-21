@@ -436,11 +436,11 @@ async function rebuildScene(manager, state) {
         }
     }
 
-    // 5. BGMを復元
-      if (state.sound && state.sound.bgm) {
-        // 現在のBGMキーと比較し、同じでなければ再生する（より丁寧な方法）
+     // 5. BGMを復元
+    if (state.sound && state.sound.bgm) {
         if (manager.soundManager.getCurrentBgmKey() !== state.sound.bgm) {
-            manager.soundManager.playBgm(state.sound.bgm, 0); 
+            // ★★★ 修正箇所: awaitを追加してBGMの再生完了を待つ ★★★
+            await manager.soundManager.playBgm(state.sound.bgm, 0); 
         }
     }
     
