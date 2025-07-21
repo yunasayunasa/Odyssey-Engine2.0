@@ -132,7 +132,7 @@ export default class SystemScene extends Phaser.Scene {
 
 // ... SystemScene.js の他のメソッド ...
       /**
-     * ★★★ 新しいシーンを起動し、完了まで監視するコアメソッド (最終完成版) ★★★
+     * ★★★ 新しいシーンを起動し、完了まで監視するコアメソッド (最終確定版) ★★★
      * @param {string} sceneKey - 起動するシーンのキー
      * @param {object} params - シーンに渡すデータ
      */
@@ -147,26 +147,25 @@ export default class SystemScene extends Phaser.Scene {
         console.log(`[SystemScene] シーン[${sceneKey}]の起動を開始。ゲーム全体の入力を無効化。`);
 
         // ★★★ 修正の核心 ★★★
-        // シーンマネージャーのCREATEイベントを一度だけリッスンする
-        this.scene.manager.events.once(Phaser.Scenes.Events.CREATE, (scene) => {
-            // 作成されたシーンが、我々が待っていたシーンかどうかをキーでチェック
-            if (scene.scene.key === sceneKey) {
-                console.log(`[SystemScene] ターゲットシーン[${sceneKey}]のCREATEイベントをキャッチ。`);
+        // シーンをrun(またはstart)で起動する前に、
+        // ターゲットシーンのCREATEイベントを待機するリスナーを登録する
+        // これにより、どのタイミングでシーンが作られても確実に捕捉できる
+        this.scene.get(sceneKey).events.once(Phaser.Scenes.Events.CREATE, (newlyCreatedScene) => {
+            console.log(`[SystemScene] ターゲットシーン[${sceneKey}]のCREATEイベントをキャッチ。`);
 
-                if (sceneKey === 'GameScene') {
-                    // GameSceneの場合は、新しく作られたシーンインスタンス(scene)の
-                    // イベントを待つ
-                    scene.events.once('gameScene-load-complete', () => {
-                        this._onTransitionComplete(sceneKey);
-                    });
-                } else {
-                    // GameScene以外はCREATE完了で遷移完了とみなす
+            if (sceneKey === 'GameScene') {
+                // GameSceneの場合は、新しく作られたシーンインスタンス(newlyCreatedScene)の
+                // イベントを待つ
+                newlyCreatedScene.events.once('gameScene-load-complete', () => {
                     this._onTransitionComplete(sceneKey);
-                }
+                });
+            } else {
+                // GameScene以外はCREATE完了で遷移完了とみなす
+                this._onTransitionComplete(sceneKey);
             }
         });
 
-        // シーンの起動をスケジュールする
+        // リスナーを登録した後に、シーンの起動をスケジュールする
         this.scene.run(sceneKey, params);
     }
 
