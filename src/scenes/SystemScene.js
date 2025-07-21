@@ -118,7 +118,7 @@ export default class SystemScene extends Phaser.Scene {
         if (this.initialGameData) {
             this.startInitialGame(this.initialGameData);
         }
-    }
+    
 
 
         // --- オーバーレイ関連のイベントリスナー ---
