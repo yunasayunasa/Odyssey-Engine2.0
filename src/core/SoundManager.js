@@ -9,17 +9,7 @@ export default class SoundManager {
         this.currentBgm = null;
         this.currentBgmKey = null;
 
-        // ★★★ AudioContextの遅延初期化 ★★★
-        this.audioContext = null; 
-        // ユーザーの最初の操作でAudioContextを有効化する
-        // systemSceneは常にアクティブなので、ここでのinputイベントは安定している
-        this.systemScene.input.once('pointerdown', () => {
-            if (this.sound.context.state === 'suspended') {
-                this.sound.context.resume();
-            }
-            this.audioContext = this.sound.context;
-            console.log("AudioContext is ready.");
-        }, this);
+      
 
         // --- 設定変更イベントの監視 ---
         this.configManager.on('change:bgmVolume', (newValue) => {
@@ -110,7 +100,12 @@ export default class SoundManager {
             console.warn("AudioContext is not ready. Cannot play synth sound.");
             return;
         }
-
+    // ★★★ audioContextの参照をthis.sound.contextに直接変更 ★★★
+        const audioContext = this.sound.context;
+        if (!audioContext || audioContext.state !== 'running') {
+            console.warn("AudioContext is not ready. Cannot play synth sound.");
+            return;
+        }
         const oscillator = this.audioContext.createOscillator();
         oscillator.type = waveType;
         oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);

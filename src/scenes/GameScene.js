@@ -128,6 +128,13 @@ export default class GameScene extends Phaser.Scene {
             stateManager: this.stateManager // ★★★ ここでstateManagerを確実に渡す ★★★
         });
         this.playerHpBar.setVisible(false);
+  this.input.once('pointerdown', () => {
+            if (this.sound.context.state === 'suspended') {
+                this.sound.context.resume().then(() => {
+                    console.log("AudioContext resumed successfully!");
+                });
+            }
+        }, this);
 
         // ★★★ 削除: GameSceneがStateManagerのイベントを購読するロジックは不要になる ★★★
         // this.stateManager.on('f-variable-changed', this.onFVariableChanged, this); // この行を削除
