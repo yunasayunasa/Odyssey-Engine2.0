@@ -1,140 +1,140 @@
-// src/core/SoundManager.js (遅延初期化による最終修正)
+// src/core/SoundManager.js (全面改訂版)
 
 export default class SoundManager {
-    constructor(soundManager, systemScene) {
-        this.systemScene = systemScene; 
-        this.sound = soundManager; 
-        
-        // ★★★ constructorでは、ConfigManagerへのアクセスは行わない ★★★
-        this.configManager = null; 
+    /**
+     * @param {Phaser.Game} game - Phaser.Gameのインスタンス
+     */
+    constructor(game) {
+        // 特定のシーンではなく、PhaserのGameインスタンスを保持
+        this.game = game;
+        this.sound = game.sound;
+        this.configManager = game.registry.get('configManager');
+
         this.currentBgm = null;
         this.currentBgmKey = null;
+
+        // ボリューム変更をリッスン
+        this.configManager.on('change:bgmVolume', this.onBgmVolumeChange, this);
+        this.configManager.on('change:seVolume', this.onSeVolumeChange, this);
+        
+        // ゲームが破棄されるときにリスナーをクリーンアップ
+        this.game.events.once(Phaser.Core.Events.DESTROY, this.destroy, this);
+
+        console.log("SoundManager: グローバルサービスとして正常に初期化されました。");
     }
 
-    // ★★★ ConfigManagerを受け取り、初期化を行うinit()メソッド ★★★
-    init(configManager) {
-        if (!configManager) {
-            console.error("SoundManager.init: ConfigManagerが渡されていません！");
-            return;
+    // AudioContextを安全に再開
+    resumeContext() {
+        if (this.sound.context.state === 'suspended') {
+            this.sound.context.resume().then(() => console.log("SoundManager: AudioContextが再開されました。"));
         }
-        this.configManager = configManager;
+    }
 
-        console.log("SoundManager: ConfigManagerを受け取り、初期化しました。");
+    /**
+     * BGMを再生します。このメソッドはPromiseを返します。
+     * @param {string} key - 再生するBGMのアセットキー
+     * @param {number} fadeInTime - フェードイン時間(ms)
+     * @returns {Promise<void>} フェードイン完了時に解決されるPromise
+     */
+    playBgm(key, fadeInTime = 0) {
+        return new Promise(resolve => {
+            this.resumeContext();
 
-        this.configManager.on('change:bgmVolume', (newValue) => {
-            if (this.currentBgm && this.currentBgm.isPlaying) {
-                this.currentBgm.setVolume(newValue / 100);
+            // 既に同じBGMが再生中の場合は、何もせずに即座に解決
+            if (this.currentBgm && this.currentBgm.isPlaying && this.currentBgmKey === key) {
+                console.log(`BGM '${key}' は既に再生中のためスキップします。`);
+                resolve();
+                return;
+            }
+
+            // 現在のBGMがあれば停止処理を行う
+            this.stopBgm(fadeInTime > 0 ? fadeInTime / 2 : 0).then(() => {
+                const newBgm = this.sound.add(key, { loop: true, volume: 0 });
+                newBgm.play();
+
+                this.currentBgm = newBgm;
+                this.currentBgmKey = key;
+                
+                const targetVolume = this.configManager.getValue('bgmVolume') / 100;
+
+                // Game Eventsを使って、シーンから独立したTween（フェード）を実現
+                if (fadeInTime > 0) {
+                    this.game.tweens.add({
+                        targets: newBgm,
+                        volume: targetVolume,
+                        duration: fadeInTime,
+                        onComplete: () => {
+                            resolve();
+                        }
+                    });
+                } else {
+                    newBgm.setVolume(targetVolume);
+                    resolve();
+                }
+            });
+        });
+    }
+
+    /**
+     * BGMを停止します。このメソッドはPromiseを返します。
+     * @param {number} fadeOutTime - フェードアウト時間(ms)
+     * @returns {Promise<void>} フェードアウト完了時に解決されるPromise
+     */
+    stopBgm(fadeOutTime = 0) {
+        return new Promise(resolve => {
+            if (!this.currentBgm || !this.currentBgm.isPlaying) {
+                resolve();
+                return;
+            }
+
+            const bgmToStop = this.currentBgm;
+            this.currentBgm = null;
+            this.currentBgmKey = null;
+
+            if (fadeOutTime > 0) {
+                this.game.tweens.add({
+                    targets: bgmToStop,
+                    volume: 0,
+                    duration: fadeOutTime,
+                    onComplete: () => {
+                        bgmToStop.stop();
+                        bgmToStop.destroy();
+                        resolve();
+                    }
+                });
+            } else {
+                bgmToStop.stop();
+                bgmToStop.destroy();
+                resolve();
             }
         });
     }
-    
-    // ★★★ AudioContextを安全に再開するためのヘルパーメソッド ★★★
-    resumeContext() {
-        if (this.sound.context && this.sound.context.state === 'suspended') {
-            this.sound.context.resume().then(() => {
-                console.log("SoundManager: AudioContext has been resumed.");
-            });
-        }
-    }
 
-    playSe(key, options = {}) {
-        if (!key || !this.configManager) return; // ★★★ configManagerのnullチェックを追加 ★★★
+    playSe(key) {
         this.resumeContext();
-        
-        const se = this.sound.add(key);
-        let volume = this.configManager.getValue('seVolume') / 100;
-        if (options.volume !== undefined) {
-            volume = Number(options.volume);
-        }
-        se.setVolume(volume);
-        se.play();
+        const seVolume = this.configManager.getValue('seVolume') / 100;
+        this.sound.play(key, { volume: seVolume });
     }
 
-   
-
-    // ★★★ 追加: 新しいBGMを再生する内部メソッド ★★★
-    _playNewBgm(key, fadeInTime, onComplete) {
-        if (this.currentBgmKey === key) { // 既に停止処理後なので、同じキーなら何もしない
-            if (onComplete) onComplete();
-            return;
-        }
-
-        const newBgm = this.scene.sound.add(key, { loop: true, volume: 0 });
-        newBgm.play();
-        this.currentBgm = newBgm;
-        this.currentBgmKey = key;
-
-        if (fadeInTime > 0) {
-            this.scene.tweens.add({
-                targets: newBgm,
-                volume: this.configManager.getValue('bgmVolume') / 100,
-                duration: fadeInTime,
-                // ★★★ フェードイン完了時にonCompleteを呼び出す ★★★
-                onComplete: () => {
-                    if (onComplete) onComplete();
-                }
-            });
-        } else {
-            newBgm.setVolume(this.configManager.getValue('bgmVolume') / 100);
-            if (onComplete) onComplete(); // 即時再生でも完了を通知
-        }
-    }
-
-    // ★★★ 修正箇所: 引数に onComplete コールバックを追加 ★★★
-    stopBgm(fadeOutTime = 0, onComplete = null) {
-        if (!this.currentBgm || !this.currentBgm.isPlaying) {
-            if (onComplete) onComplete();
-            return;
-        }
-
-        if (fadeOutTime > 0) {
-            this.scene.tweens.add({
-                targets: this.currentBgm,
-                volume: 0,
-                duration: fadeOutTime,
-                onComplete: () => {
-                    if (this.currentBgm) {
-                        this.currentBgm.stop();
-                        this.currentBgm = null;
-                        this.currentBgmKey = null;
-                    }
-                    if (onComplete) onComplete(); // ★★★ 停止完了を通知 ★★★
-                }
-            });
-        } else {
-            this.currentBgm.stop();
-            this.currentBgm = null;
-            this.currentBgmKey = null;
-            if (onComplete) onComplete(); // ★★★ 停止完了を通知 ★★★
-        }
-    }
     getCurrentBgmKey() {
+        return (this.currentBgm && this.currentBgm.isPlaying) ? this.currentBgmKey : null;
+    }
+
+    onBgmVolumeChange(newVolume) {
         if (this.currentBgm && this.currentBgm.isPlaying) {
-            return this.currentBgmKey;
+            this.currentBgm.setVolume(newVolume / 100);
         }
-        return null;
     }
     
-    // playSynthはWeb Audio APIに直接依存するため、変更は最小限に
-    playSynth(waveType = 'square', frequency = 1200, duration = 0.05) {
-        const audioContext = this.sound.context;
-        if (!audioContext || audioContext.state !== 'running' || !this.configManager) {
-            console.warn("AudioContext is not ready or ConfigManager is not initialized.");
-            return;
-        }
-       
-        const oscillator = this.audioContext.createOscillator();
-        oscillator.type = waveType;
-        oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+    onSeVolumeChange(newVolume) {
+        // SEは再生時に音量を設定するため、ここでは何もしない
+    }
 
-        const gainNode = this.audioContext.createGain();
-        gainNode.gain.setValueAtTime(this.configManager.getValue('seVolume'), this.audioContext.currentTime); // ★ SE音量を適用
-        gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + duration);
-
-        oscillator.connect(gainNode);
-        gainNode.connect(this.audioContext.destination);
-
-        oscillator.start(this.audioContext.currentTime);
-        oscillator.stop(this.audioContext.currentTime + duration);
+    // ゲーム終了時に呼ばれるクリーンアップ処理
+    destroy() {
+        this.configManager.off('change:bgmVolume', this.onBgmVolumeChange, this);
+        this.configManager.off('change:seVolume', this.onSeVolumeChange, this);
+        this.stopBgm(0);
+        console.log("SoundManager: 破棄されました。");
     }
 }
