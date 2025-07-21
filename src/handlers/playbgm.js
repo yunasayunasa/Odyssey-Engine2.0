@@ -1,3 +1,4 @@
+// src/handlers/playbgm.js (このコードが正しい)
 
 /**
  * [playbgm] タグの処理
@@ -7,7 +8,7 @@
  * @returns {Promise<void>}
  */
 export function handlePlayBgm(manager, params) {
-    // ★★★ 修正箇所: Promiseを返すように全体を書き換える ★★★
+    // ★★★ このPromiseベースのコードが、コールバックを受け取るSoundManagerと正しく連携します ★★★
     return new Promise(resolve => {
         const key = params.storage;
         const fadeInTime = params.fadein ? parseInt(params.fadein, 10) : 0;

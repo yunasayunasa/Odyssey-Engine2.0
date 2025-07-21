@@ -50,80 +50,64 @@ export default class SoundManager {
         se.play();
     }
 
-    // ★★★ stopBgmがPromiseを返すように修正 ★★★
-    stopBgm(fadeOutTime = 0) {
-        return new Promise(resolve => {
-            if (!this.currentBgm) {
-                resolve();
-                return;
-            }
-            
-            // ★★★ Tweenは常にsystemSceneを使う ★★★
-            this.systemScene.tweens.killTweensOf(this.currentBgm);
+   
 
-            if (fadeOutTime > 0) {
-                this.systemScene.tweens.add({
-                    targets: this.currentBgm,
-                    volume: 0,
-                    duration: fadeOutTime,
-                });
-                this.systemScene.time.delayedCall(fadeOutTime, () => {
+    // ★★★ 追加: 新しいBGMを再生する内部メソッド ★★★
+    _playNewBgm(key, fadeInTime, onComplete) {
+        if (this.currentBgmKey === key) { // 既に停止処理後なので、同じキーなら何もしない
+            if (onComplete) onComplete();
+            return;
+        }
+
+        const newBgm = this.scene.sound.add(key, { loop: true, volume: 0 });
+        newBgm.play();
+        this.currentBgm = newBgm;
+        this.currentBgmKey = key;
+
+        if (fadeInTime > 0) {
+            this.scene.tweens.add({
+                targets: newBgm,
+                volume: this.configManager.getValue('bgmVolume') / 100,
+                duration: fadeInTime,
+                // ★★★ フェードイン完了時にonCompleteを呼び出す ★★★
+                onComplete: () => {
+                    if (onComplete) onComplete();
+                }
+            });
+        } else {
+            newBgm.setVolume(this.configManager.getValue('bgmVolume') / 100);
+            if (onComplete) onComplete(); // 即時再生でも完了を通知
+        }
+    }
+
+    // ★★★ 修正箇所: 引数に onComplete コールバックを追加 ★★★
+    stopBgm(fadeOutTime = 0, onComplete = null) {
+        if (!this.currentBgm || !this.currentBgm.isPlaying) {
+            if (onComplete) onComplete();
+            return;
+        }
+
+        if (fadeOutTime > 0) {
+            this.scene.tweens.add({
+                targets: this.currentBgm,
+                volume: 0,
+                duration: fadeOutTime,
+                onComplete: () => {
                     if (this.currentBgm) {
                         this.currentBgm.stop();
-                        this.currentBgm.destroy();
                         this.currentBgm = null;
                         this.currentBgmKey = null;
                     }
-                    resolve();
-                });
-            } else {
-                this.currentBgm.stop();
-                this.currentBgm.destroy();
-                this.currentBgm = null;
-                this.currentBgmKey = null;
-                resolve();
-            }
-        });
-    }
-
-     playBgm(key, fadeInTime = 0, onComplete = null) {
-        if (!key) {
-            if (onComplete) onComplete(); // キーがなければ即時完了
-            return;
+                    if (onComplete) onComplete(); // ★★★ 停止完了を通知 ★★★
+                }
+            });
+        } else {
+            this.currentBgm.stop();
+            this.currentBgm = null;
+            this.currentBgmKey = null;
+            if (onComplete) onComplete(); // ★★★ 停止完了を通知 ★★★
         }
-        this.resumeContext();
-
-        if (this.currentBgmKey === key) {
-            if (onComplete) onComplete(); // 同じBGMなら即時完了
-            return;
-        }
-
-        this.stopBgm(fadeInTime); // 既存のBGMをフェードアウト
-
-        // ★★★ 新しいBGMの再生は、stopBgmのフェードアウトと同じ時間だけ待ってから開始 ★★★
-        this.systemScene.time.delayedCall(fadeInTime, () => {
-            const newBgm = this.sound.add(key, { loop: true, volume: 0 });
-            newBgm.play();
-            this.currentBgm = newBgm;
-            this.currentBgmKey = key;
-
-            if (fadeInTime > 0) {
-                this.systemScene.tweens.add({
-                    targets: newBgm,
-                    volume: this.configManager.getValue('bgmVolume') / 100,
-                    duration: fadeInTime,
-                    // ★★★ フェードイン完了時にonCompleteを呼び出す ★★★
-                    onComplete: () => {
-                        if (onComplete) onComplete();
-                    }
-                });
-            } else {
-                newBgm.setVolume(this.configManager.getValue('bgmVolume') / 100);
-                if (onComplete) onComplete(); // 即時再生でも完了を通知
-            }
-        });
     }
-   
     getCurrentBgmKey() {
         if (this.currentBgm && this.currentBgm.isPlaying) {
             return this.currentBgmKey;
