@@ -1,5 +1,5 @@
 // src/scenes/SystemScene.js (矛盾を解消し、堅牢性を高める最終修正)
-
+import SoundManager from '../core/SoundManager.js'; // ★★★ この行を追加 ★★★
 export default class SystemScene extends Phaser.Scene {
     constructor() {
         super({ key: 'SystemScene' }); // main.jsでactive:falseに統一済み
