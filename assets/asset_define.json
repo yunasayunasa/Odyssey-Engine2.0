@@ -16,9 +16,11 @@
      "enzan2": "assets/enzan2.png"
   },
   "sounds": {
-"popopo": "assets/gyakuten_popopo.mp3",
-"cafe": "assets/cafe.mp3",
-"ronpa_bgm": "assets/ronpa_bgm.mp3"
+"popopo": "assets/audio/gyakuten_popopo.mp3",
+"cafe": "assets/audio/cafe.mp3",
+ "bgm_battle": "assets/audio/gyakuten_bgm.mp3 ",
+"ronpa_bgm": "assets/audio/ronpa_bgm.mp3"
+
   },
   "videos": {
     "opening": "assets/opening.mp4"

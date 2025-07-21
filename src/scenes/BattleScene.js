@@ -12,7 +12,7 @@ export default class BattleScene extends Phaser.Scene {
         this.playerHpBar = null;
         this.enemyHpBar = null;
         this.coinHud = null;
-
+this.soundManager = null; // ★★★ 追加: 
         this.backpackGridSize = 6;
         this.cellSize = 60;
         this.gridX = 0;
@@ -70,10 +70,21 @@ export default class BattleScene extends Phaser.Scene {
         const gameScene = this.scene.get('GameScene');
         if (gameScene && gameScene.stateManager) {
             this.stateManager = gameScene.stateManager;
+            this.soundManager = gameScene.soundManager; 
+        
         } else {
             console.error("ActionScene (as BattleScene): GameSceneのStateManagerが見つかりません。ゲーム変数は更新できません。");
         }
-
+// ★★★ 追加: バトルBGMの再生処理 ★★★
+        if (this.soundManager) {
+            // 現在のBGMをフェードアウト
+            this.soundManager.stopBgm(500); // 500msかけてフェードアウト
+            // 新しいバトルBGMをフェードイン
+            // 'bgm_battle' は asset_define.json に定義してください
+            this.time.delayedCall(500, () => {
+                this.soundManager.playBgm('bgm_battle', 500); // 500msかけてフェードイン
+            });
+        }
         // ★★★ 修正箇所: プレースホルダーテキストをプロパティに保持 ★★★
         this.playerPlaceholderText = this.add.text(100, 360, 'PLAYER', { fontSize: '48px', fill: '#fff' }).setOrigin(0.5);
         this.enemyPlaceholderText = this.add.text(this.scale.width - 100, 360, 'ENEMY', { fontSize: '48px', fill: '#fff' }).setOrigin(0.5);
@@ -423,7 +434,10 @@ export default class BattleScene extends Phaser.Scene {
                     this.onFVariableChangedListener = null;
                     console.log("BattleScene: endBattle(win)内でStateManagerのイベントリスナーを解除しました。");
                 }
-
+ // ★★★ 追加: シーン遷移の前にバトルBGMを停止 ★★★
+                if (this.soundManager) {
+                    this.soundManager.stopBgm(500); // 500msかけてフェードアウト
+                }
                 // SystemSceneにノベルパートへの復帰をリクエスト
                 this.scene.get('SystemScene').events.emit('return-to-novel', {
                     from: this.scene.key,
@@ -463,6 +477,10 @@ export default class BattleScene extends Phaser.Scene {
                         this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);
                         this.onFVariableChangedListener = null;
                     }
+                     // ★★★ 追加: シーン遷移の前にバトルBGMを停止 ★★★
+                if (this.soundManager) {
+                    this.soundManager.stopBgm(500); // 500msかけてフェードアウト
+                }
                     console.log("BattleScene: もう一度挑戦します。");
                     this.scene.get('SystemScene').events.emit('request-scene-transition', {
                         to: this.scene.key,
@@ -484,6 +502,10 @@ export default class BattleScene extends Phaser.Scene {
                     // イベント発行前にリスナーを解除
                     if (this.stateManager && this.onFVariableChangedListener) {
                         this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);
+                         // ★★★ 追加: シーン遷移の前にバトルBGMを停止 ★★★
+                if (this.soundManager) {
+                    this.soundManager.stopBgm(500); // 500msかけてフェードアウト
+                }
                         this.onFVariableChangedListener = null;
                     }
                     console.log("BattleScene: タイトルに戻ります。");
