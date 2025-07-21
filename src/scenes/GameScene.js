@@ -319,17 +319,17 @@ clearChoiceButtons() {
 
 
 
- // src/scenes/GameScene.js の performLoad メソッド (最終版)
- async performLoad(slot, returnParams = null) {
+
+async performLoad(slot, returnParams = null) {
     this.isPerformingLoad = true;
-    try {
+    let success = false; // ロードが成功したかを追跡するフラグ
+
+     try {
         const jsonString = localStorage.getItem(`save_data_${slot}`);
         if (!jsonString) {
             console.error(`スロット[${slot}]のセーブデータが見つかりません。`);
-            // ★★★ 修正箇所 ★★★
-            // 失敗時も、必ず自分自身のイベントを発行してSystemSceneに通知
-            this.events.emit('gameScene-load-complete'); 
-            return;
+            // この場合、シーンは復元できないので、早期に終了
+            return; 
         }
         
         const loadedState = JSON.parse(jsonString);
@@ -373,24 +373,24 @@ clearChoiceButtons() {
                 this.time.delayedCall(10, () => this.scenarioManager.next());
             }
             
-                 this.isSceneFullyReady = true;
-
-        // ★★★ 修正の核心 ★★★
-        // SystemSceneに対してではなく、自分自身のイベントを発行する
-        // ★★★ 修正の核心 (ロード完了時) ★★★
-        this.time.delayedCall(1, () => {
-            this.events.emit('gameScene-load-complete');
-            console.log("GameScene: ロード完了。ロード完了イベントを発行しました。(遅延発行)");
-        });
+                    this.isSceneFullyReady = true;
+        console.log(`スロット[${slot}]からロードしました。`);
+        success = true; // 成功フラグを立てる
 
     } catch (e) {
         console.error(`ロード処理でエラーが発生しました。`, e);
-        // ★★★ エラー時も同様 ★★★
+        success = false; // 失敗フラグ
+
+    } finally {
+        // ★★★ 修正の核心 ★★★
+        // tryまたはcatchの処理が完了した後、"必ず"実行されるブロック
+        this.isPerformingLoad = false;
+        
+        // イベントの発行を次のフレームに遅延させる
         this.time.delayedCall(1, () => {
             this.events.emit('gameScene-load-complete');
+            console.log("GameScene: 処理完了。ロード完了イベントを発行しました。(finallyブロック)");
         });
-    } finally {
-        this.isPerformingLoad = false;
     }
 }
 }
