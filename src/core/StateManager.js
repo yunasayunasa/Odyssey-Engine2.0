@@ -55,15 +55,14 @@ export default class StateManager extends Phaser.Events.EventEmitter {
         
         return {
             saveDate: new Date().toLocaleString('ja-JP'),
-            f: this.f, // "variables"でネストしない
-            sf: this.sf,
+            variables: { f: this.f }, 
             scenario: scenarioState,
             layers: {
                 background: backgroundState,
                 characters: characterStates,
             },
             sound: {
-                bgmKey: scenarioManager.soundManager.getCurrentBgmKey()
+                bgm: scenarioManager.soundManager.getCurrentBgmKey(),
             }
         };
     }
@@ -72,14 +71,17 @@ export default class StateManager extends Phaser.Events.EventEmitter {
      * ロードした状態から変数を復元する
      * @param {Object} loadedState - localStorageから読み込んだ状態オブジェクト
      */
-        setState(loadedState) {
-        this.f = {}; // 一旦リセット
-        if (loadedState.f) {
-            for (const key in loadedState.f) {
-                this.setF(key, loadedState.f[key]); // イベントを発行しながら復元
-            }
+    setState(loadedState) {
+        // ★★★ 修正点①: あなたの元のロジックを尊重する ★★★
+        this.f = loadedState.variables.f || {};
+        // sf変数の復元もここで行うのが安全
+        this.sf = loadedState.variables.sf || this.loadSystemVariables();
+
+        // ★★★ 修正点②: ロード完了後、すべてのf変数について「変更通知」を発行する ★★★
+        // これにより、すべてのHUDが自分自身の表示を更新する
+        for (const key in this.f) {
+            this.emit('f-variable-changed', key, this.f[key]);
         }
-        this.sf = loadedState.sf || {};
     }
 
          /**
