@@ -6,6 +6,8 @@ export default class SystemScene extends Phaser.Scene {
         this.globalCharaDefs = null;
         this.isProcessingTransition = false;
         this.initialGameData = null;
+         // ★★★ ノベルシーンのBGM情報を一時的に保持する場所 ★★★
+        this.novelBgmKey = null;
     }
 
     init(data) {
@@ -48,45 +50,68 @@ export default class SystemScene extends Phaser.Scene {
         });
     }
     
-    /**
-     * [jump]などによるシーン遷移リクエストを処理
-     * @param {object} data - { from: string, to: string, params: object }
+     /**
+     * [jump]などによるシーン遷移リクエストを処理 (修正版)
      */
-    _handleRequestSceneTransition(data) {
+     async _handleRequestSceneTransition(data) {
         console.log(`[SystemScene] シーン遷移リクエスト: ${data.from} -> ${data.to}`);
+        
+        const soundManager = this.sys.registry.get('soundManager');
+
+        // ★ 1. 遷移元のBGM状態を処理
+        if (data.from === 'GameScene') {
+            // GameSceneから離れるので、現在のBGMキーを退避
+            this.novelBgmKey = soundManager.getCurrentBgmKey();
+            console.log(`[SystemScene] ノベルBGMキーを退避しました: ${this.novelBgmKey}`);
+        }
+        
+        // ★ 2. シーンを停止
         if (this.scene.isActive(data.from)) {
             this.scene.stop(data.from);
         }
-        if (this.scene.isActive('UIScene')) {
-            this.scene.get('UIScene').setVisible(false); // UIは非表示にする
+
+        // ★ 3. UIを非表示
+        if (this.scene.isActive('UIScene') && data.to !== 'GameScene') {
+            this.scene.get('UIScene').setVisible(false);
         }
-        this._startAndMonitorScene(data.to, {
-            charaDefs: this.globalCharaDefs,
-            resumedFrom: data.from, // どこから来たかを伝える
-            returnParams: data.params, // パラメータを渡す
+
+        // ★ 4. 新しいシーンを起動
+        // BattleSceneのinitに渡すデータ構造を調整
+        this._startAndMonitorScene(data.to, { 
+            // BattleSceneのinitが `data.transitionParams` を期待している場合
+            transitionParams: data.params 
         });
-    }
+    };
+    
 
     /**
      * サブシーンからノベルパートへの復帰リクエストを処理
      * @param {object} data - { from: string, params: object }
      */
-    _handleReturnToNovel(data) {
+     /**
+     * サブシーンからノベルパートへの復帰リクエストを処理 (修正版)
+     */
+   async _handleReturnToNovel(data) {
         console.log(`[SystemScene] ノベル復帰リクエスト: from ${data.from}`);
+
+        // ★ 1. サブシーンを停止
         if (this.scene.isActive(data.from)) {
             this.scene.stop(data.from);
         }
+        
+        // ★ 2. UIを再表示
         if (this.scene.isActive('UIScene')) {
-            this.scene.get('UIScene').setVisible(true); // UIを再表示
+            this.scene.get('UIScene').setVisible(true);
         }
+
+        // ★ 3. オートセーブデータ(slot 0)から復帰
+        // performLoadが呼ばれるので、GameSceneはセーブデータからBGMを復元しようとする
+        // novelBgmKeyを直接渡す必要はない。performSave時にsf変数に保存するアプローチも良い。
         this._startAndMonitorScene('GameScene', {
-            charaDefs: this.globalCharaDefs,
             resumedFrom: data.from,
             returnParams: data.params,
         });
     }
-// ... SystemScene.js の他のメソッド ...
-
     /**
      * オーバーレイ表示のリクエストを処理
      * @param {object} data - { from: string, scenario: string }

@@ -205,30 +205,40 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // ★★★ 修正箇所: stop()メソッドを一つに統一し、全てのクリーンアップを行う ★★★
-    stop() {
-        super.stop();
-        console.log("GameScene: stop されました。全てのマネージャーとリソースを停止・破棄します。");
+    shutdown() {
+    console.log("GameScene: shutdown されました。全てのマネージャーとリソースを停止・破棄します。");
 
-        // 1. ScenarioManagerのループを完全に停止させる
-        if (this.scenarioManager) {
-            this.scenarioManager.stop();
-        }
-
-        // 2. StateManagerのイベントリスナーを解除
-        if (this.stateManager) {
-            this.stateManager.off('f-variable-changed', this.onFVariableChanged, this);
-        }
-
-        // 3. 全てのPhaserオブジェクト（HUD、MessageWindowなど）を破棄
-        if (this.coinHud) { this.coinHud.destroy(); this.coinHud = null; }
-        if (this.playerHpBar) { this.playerHpBar.destroy(); this.playerHpBar = null; }
-        if (this.messageWindow) { this.messageWindow.destroy(); this.messageWindow = null; }
-        
-        // 4. BGMを停止する
-        if (this.soundManager) {
-            this.soundManager.stopBgm(0);
-        }
+    // 1. ScenarioManagerのループを完全に停止させる
+    if (this.scenarioManager) {
+        this.scenarioManager.stop();
     }
+
+    // 2. StateManagerのイベントリスナーを解除
+    if (this.stateManager) {
+        // ★★★ 修正: GameSceneが独自に購読しているリスナーを全て解除 ★★★
+        this.stateManager.off('f-variable-changed', this.onFVariableChanged, this);
+        this.events.off('force-hud-update'); // もし使っていれば
+    }
+    
+    // 3. 全てのPhaserオブジェクト（HUD、MessageWindowなど）を破棄
+    // この部分は既存のままでOK
+    if (this.coinHud) { this.coinHud.destroy(); this.coinHud = null; }
+    if (this.playerHpBar) { this.playerHpBar.destroy(); this.playerHpBar = null; }
+    if (this.messageWindow) { this.messageWindow.destroy(); this.messageWindow = null; }
+    // ... 他のUI要素も同様にdestroy ...
+    this.clearChoiceButtons();
+    this.uiButtons.forEach(b => b.destroy());
+    this.uiButtons = [];
+
+    // 4. ★★★★★ このシーンが管理するBGMを停止しない ★★★★★
+    // BGMの管理はSystemSceneと各シーンのcreateに任せるため、この行をコメントアウトまたは削除
+    // if (this.soundManager) {
+    //     this.soundManager.stopBgm(0); 
+    // }
+    
+    super.shutdown(); // Phaser.Sceneの親シャットダウン処理を呼ぶ
+}
+
       // ★★★ 修正箇所: onFVariableChanged, updatePlayerHpBar, updateCoinHudを削除し、onFVariableChangedに一本化 ★★★
     onFVariableChanged(key, value) {
         if (!this.isSceneFullyReady) return;
@@ -246,24 +256,28 @@ export default class GameScene extends Phaser.Scene {
  // ★★★ セーブ処理 ★★★
      // ★★★ セーブ処理 (スロット0をオートセーブスロットとして使う) ★★★
     performSave(slot) {
-        if (slot === 0) { // オートセーブの場合のみ
-            // ★★★ 修正点①: セーブ直前に、現在のBGMキーをf変数に保存 ★★★
-            const currentBgmKey = this.soundManager.getCurrentBgmKey();
-            if (currentBgmKey) {
-                this.stateManager.f.tmp_current_bgm = currentBgmKey;
-            } else {
-                delete this.stateManager.f.tmp_current_bgm; // BGMがなければ変数を削除
-            }
+    if (slot === 0) { // オートセーブの場合のみ
+        // ★★★ BGMキーを `sf` (システム変数) に保存 ★★★
+        const currentBgmKey = this.soundManager.getCurrentBgmKey();
+        if (currentBgmKey) {
+            this.stateManager.sf.tmp_current_bgm = currentBgmKey;
+        } else {
+            delete this.stateManager.sf.tmp_current_bgm;
         }
-        try {
-            const gameState = this.stateManager.getState(this.scenarioManager);
-            const jsonString = JSON.stringify(gameState, null, 2);
-            localStorage.setItem(`save_data_${slot}`, jsonString);
-            console.log(`スロット[${slot}]にセーブしました。`);
-        } catch (e) {
-            console.error(`セーブに失敗しました: スロット[${slot}]`, e);
-        }
+        // sf変数の変更を永続化
+        this.stateManager.saveSystemVariables(); 
     }
+    try {
+        const gameState = this.stateManager.getState(this.scenarioManager);
+        // ★★★ state.sound.bgmには常に最新の情報が入るようになる ★★★
+        const jsonString = JSON.stringify(gameState, null, 2);
+        localStorage.setItem(`save_data_${slot}`, jsonString);
+        console.log(`スロット[${slot}]にセーブしました。`);
+    } catch (e) {
+        console.error(`セーブに失敗しました: スロット[${slot}]`, e);
+    }
+}
+
 
 /**
  * 溜まっている選択肢情報を元に、ボタンを一括で画面に表示する
@@ -422,7 +436,7 @@ async function rebuildScene(manager, state) {
     manager.layers.character.removeAll(true);
     scene.characters = {};
     console.log("[LOG-BOMB] rebuildScene: AWAITING stopBgm..."); // ★
-     await manager.soundManager.stopBgm(0);  // フェードなしで即時停止
+    
     manager.messageWindow.reset();
     scene.cameras.main.resetFX(); // カメラエフェクトもリセット
 console.log("[LOG-BOMB] rebuildScene: AWAITING stopBgm..."); // ★
@@ -458,10 +472,27 @@ console.log("[LOG-BOMB] rebuildScene: AWAITING stopBgm..."); // ★
         }
     }
 
-     // 5. BGMを復元
-       if (state.sound && state.sound.bgmKey) {
-        await manager.soundManager.playBgm(state.sound.bgmKey, 500);
-    
+     // ★★★★★ 5. BGMを復元 ★★★★★
+    // SoundManagerの現在のBGMと、ロードデータが示すBGMを比較する
+    const currentBgmKey = manager.soundManager.getCurrentBgmKey();
+    const targetBgmKey = state.sound.bgm; // ★★★ `bgmKey` から `bgm` に修正！ ★★★
+
+    if (targetBgmKey) {
+        // 再生すべきBGMがあり、かつ現在再生中のBGMと違う場合
+        if (currentBgmKey !== targetBgmKey) {
+            console.log(`[rebuildScene] BGMを復元します: ${targetBgmKey}`);
+            await manager.soundManager.playBgm(targetBgmKey, 500);
+        } else {
+            console.log(`[rebuildScene] BGMは既に再生中です: ${targetBgmKey}`);
+        }
+    } else {
+        // 再生すべきBGMがなく、何か再生中なら停止する
+        if (currentBgmKey) {
+            console.log(`[rebuildScene] 再生中のBGMを停止します。`);
+            await manager.soundManager.stopBgm(500);
+        }
+    }
+
     // 6. メッセージウィンドウを復元 (クリック待ちだった場合)
     if (state.scenario.isWaitingClick) {
         // ★ 話者情報も渡して復元 ★
@@ -484,5 +515,4 @@ console.log("[LOG-BOMB] rebuildScene: AWAITING stopBgm..."); // ★
     
     console.log("--- rebuildScene 正常終了 ---");
     
-}
 }

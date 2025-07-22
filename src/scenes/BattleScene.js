@@ -64,8 +64,11 @@ export default class BattleScene extends Phaser.Scene {
         }
 
         // ★★★ 修正点②: BGMの再生処理をawaitで正しく待つ ★★★
-        await this.soundManager.stopBgm(1500); 
-        await this.soundManager.playBgm('ronpa_bgm', 500); 
+        const soundManager = this.sys.registry.get('soundManager');
+        if (soundManager.getCurrentBgmKey() !== 'ronpa_bgm') {
+            await soundManager.stopBgm(1000); 
+            await soundManager.playBgm('ronpa_bgm', 500);
+        }
         console.log("戦闘bgm開始！");
         
         // --- UIとゲームオブジェクトの生成 (あなたのコードのまま) ---
@@ -182,33 +185,33 @@ export default class BattleScene extends Phaser.Scene {
             
             this.input.enabled = true; 
 
-            this.retryButton.on('pointerdown', async () => {
+             // ★★★ 問題3の修正箇所 ★★★
+            this.retryButton.on('pointerdown', () => {
                 if (this.eventEmitted) return;
                 this.eventEmitted = true;
-                this.input.enabled = false;
-
-                if (this.soundManager) await this.soundManager.stopBgm(500);
-                if (this.stateManager) this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);
                 
+                // ★ SystemSceneに遷移をリクエストする (自分自身への遷移) ★
                 this.scene.get('SystemScene').events.emit('request-scene-transition', {
-                    to: this.scene.key, from: this.scene.key, params: this.initialBattleParams
+                    to: this.scene.key,       // 自分自身のキー
+                    from: this.scene.key,     // 自分自身のキー
+                    params: this.receivedParams // 最初のinitで受け取ったパラメータを再度渡す
                 });
             });
 
-            this.titleButton.on('pointerdown', async () => {
+            this.titleButton.on('pointerdown', () => {
                 if (this.eventEmitted) return;
                 this.eventEmitted = true;
-                this.input.enabled = false;
+                // ★ タイトルに戻る場合もSystemScene経由が良い (例)
+                // this.scene.get('SystemScene').events.emit('request-scene-transition', { to: 'TitleScene', from: this.scene.key });
                 
-                if (this.soundManager) await this.soundManager.stopBgm(500);
-                if (this.stateManager) this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);
-
+                // 現在の実装はノベルに戻るので、これはOK
                 this.scene.get('SystemScene').events.emit('return-to-novel', {
                     from: this.scene.key, params: { 'f.battle_result': 'game_over' }
                 });
             });
         }
     }
+
 
     // --- startBattle: あなたの元のコードのまま ---
     startBattle() {
@@ -384,7 +387,7 @@ export default class BattleScene extends Phaser.Scene {
     // stop()メソッドはシーンの再起動時に問題を引き起こすため、使用しません。
 
     // ★★★ 修正点⑥: shutdown()にクリーンアップ処理を集約する ★★★
-    shutdown() {
+     shutdown() {
         console.log("BattleScene: shutdown されました。リスナーをクリーンアップします。");
         if (this.stateManager && this.onFVariableChangedListener) {
             this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);

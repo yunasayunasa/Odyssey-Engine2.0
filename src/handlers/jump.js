@@ -43,8 +43,14 @@ export function handleJump(manager, params) {
         manager.scene.scene.get('SystemScene').events.emit('request-scene-transition', {
             to: params.storage,
             from: fromSceneKey,
-            params: transitionParams
+           params: transitionParams, // ★ ここはBattleSceneのinitで受け取れるようにキーを調整
+            
+            // ★★★ BGM制御情報を追加 ★★★
+            bgm: {
+                shouldFadeOut: params.fadeout_bgm === 'true'
+            }
         });
+
 
         // 4. ★★★ 最重要：シナリオループを完全に停止させる ★★★
         manager.stop();
