@@ -65,8 +65,10 @@ export default class SoundManager {
                     volume: targetVolume,
                     duration: fadeInTime,
                     onComplete: resolve// tween完了時にPromiseを解決
-                     console.log("[LOG-BOMB] playBgm: エンドtween..."); // ★
+                     
                 });
+console.log("[LOG-BOMB] playBgm: エンドtween..."); // ★
+
             });
         } else {
                 console.log("[LOG-BOMB] playBgm: END"); // ★
