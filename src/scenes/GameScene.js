@@ -182,8 +182,10 @@ export default class GameScene extends Phaser.Scene {
           // --- ゲーム開始ロジック ---
     if (this.isResuming) {
         console.log("GameScene: 復帰処理を開始します。");
-         await this.performLoad(0, this.returnParams);
-   } else {
+        console.log("[LOG-BOMB] GameScene.create: AWAITING performLoad..."); // ★
+        await this.performLoad(0, this.returnParams);
+        console.log("[LOG-BOMB] GameScene.create: ...performLoad COMPLETED."); // ★
+     } else {
         console.log("GameScene: 通常起動します。");
         this.performSave(0);
         this.scenarioManager.loadScenario(this.startScenario, this.startLabel);
@@ -199,6 +201,7 @@ export default class GameScene extends Phaser.Scene {
     }
         this.input.on('pointerdown', () => this.scenarioManager.onClick());
         console.log("GameScene: create 完了");
+            console.log("[LOG-BOMB] GameScene.create: END");
     }
 
     // ★★★ 修正箇所: stop()メソッドを一つに統一し、全てのクリーンアップを行う ★★★
