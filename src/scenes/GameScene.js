@@ -485,3 +485,4 @@ console.log("[LOG-BOMB] rebuildScene: AWAITING stopBgm..."); // ★
     console.log("--- rebuildScene 正常終了 ---");
     
 }
+}
