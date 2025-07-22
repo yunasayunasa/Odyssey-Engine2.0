@@ -53,27 +53,18 @@ export default class SystemScene extends Phaser.Scene {
      /**
      * [jump]などによるシーン遷移リクエストを処理 (修正版)
      */
-     async _handleRequestSceneTransition(data) {
+       _handleRequestSceneTransition(data) {
         console.log(`[SystemScene] シーン遷移リクエスト: ${data.from} -> ${data.to}`);
         
-        const soundManager = this.sys.registry.get('soundManager');
+        // ★ BGMの操作は一切しない ★
 
-        // ★ 1. 遷移元のBGM状態を処理
-        if (data.from === 'GameScene') {
-            // GameSceneから離れるので、現在のBGMキーを退避
-            this.novelBgmKey = soundManager.getCurrentBgmKey();
-            console.log(`[SystemScene] ノベルBGMキーを退避しました: ${this.novelBgmKey}`);
-        }
-        
-        // ★ 2. シーンを停止
         if (this.scene.isActive(data.from)) {
-            this.scene.stop(data.from);
+            this.scene.stop(data.from); 
         }
-
-        // ★ 3. UIを非表示
-        if (this.scene.isActive('UIScene') && data.to !== 'GameScene') {
+        if (this.scene.isActive('UIScene')) {
             this.scene.get('UIScene').setVisible(false);
         }
+
 
         // ★ 4. 新しいシーンを起動
         // BattleSceneのinitに渡すデータ構造を調整

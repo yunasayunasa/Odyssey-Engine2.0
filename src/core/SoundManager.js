@@ -22,50 +22,94 @@ export default class SoundManager {
     }
 
    
-      async playBgm(key, fadeInTime = 0) {
-        // フェード処理中なら、新しい再生リクエストを無視する（あるいは少し待つなど）
+       /**
+     * BGMを再生する (最終修正版)
+     * 既に再生中の曲があれば、それをフェードアウトさせてから新しい曲を再生する。
+     * @param {string} key - 再生するBGMのアセットキー
+     * @param {number} fadeTime - フェードイン/アウトにかける時間 (ms)
+     */
+    async playBgm(key, fadeTime = 500) {
+        this.resumeContext();
+
+        // 同じ曲が既に再生中なら何もしない
+        if (this.currentBgm && this.currentBgm.isPlaying && this.currentBgmKey === key) {
+            console.log(`[SoundManager] BGM '${key}' は既に再生中です。`);
+            return;
+        }
+        
+        // ★★★ 競合防止ロック (isFadingは残す) ★★★
         if (this.isFading) {
             console.warn(`[SoundManager] フェード処理中に新しいplayBgmリクエストがありました。無視します。`);
             return;
         }
-        this.resumeContext();
-        if (!this.configManager || (this.currentBgm && this.currentBgmKey === key)) {
-            return;
+        
+        // 1. もし現在、別のBGMが再生中なら、それをフェードアウトさせる
+        if (this.currentBgm && this.currentBgm.isPlaying) {
+            console.log(`[SoundManager] 古いBGM '${this.currentBgmKey}' を停止します。`);
+            // await を使って、停止処理が終わるのを「完全に」待つ
+            await this.stopBgm(fadeTime); 
         }
 
-        await this.stopBgm(fadeInTime > 0 ? fadeInTime / 2 : 0);
-
-        const newBgm = this.sound.add(key, { loop: true, volume: 0 });
-        newBgm.play();
-        this.currentBgm = newBgm; this.currentBgmKey = key;
+        // 2. 新しいBGMをフェードインで再生する
+        console.log(`[SoundManager] 新しいBGM '${key}' を再生します。`);
+        
         const targetVolume = this.configManager.getValue('bgmVolume');
+        const newBgm = this.sound.add(key, { loop: true, volume: 0 });
+        
+        this.currentBgm = newBgm;
+        this.currentBgmKey = key;
+        
+        newBgm.play();
 
-        if (fadeInTime > 0 && targetVolume > 0) {
-            await this.fadeTo(newBgm, targetVolume, fadeInTime);
+        if (fadeTime > 0 && targetVolume > 0) {
+            await this.fadeTo(newBgm, targetVolume, fadeTime);
         } else {
             newBgm.setVolume(targetVolume);
         }
+        console.log(`[SoundManager] BGM '${key}' の再生を開始しました。`);
     }
 
-    async stopBgm(fadeOutTime = 0) {
+    /**
+     * BGMを停止する (最終修正版)
+     * @param {number} fadeOutTime - フェードアウトにかける時間 (ms)
+     */
+    async stopBgm(fadeOutTime = 500) {
+        if (!this.currentBgm || !this.currentBgm.isPlaying) {
+            this.currentBgm = null;
+            this.currentBgmKey = null;
+            return; // 止めるべきBGMがなければ即終了
+        }
+        
         if (this.isFading) {
             console.warn(`[SoundManager] フェード処理中に新しいstopBgmリクエストがありました。無視します。`);
             return;
         }
-        if (!this.currentBgm || !this.currentBgm.isPlaying) {
-            return;
-        }
+
         const bgmToStop = this.currentBgm;
-        this.currentBgm = null; this.currentBgmKey = null;
+        const stoppingKey = this.currentBgmKey;
+        
+        // ★ 先にプロパティをnullにして、連続呼び出しを防ぐ
+        this.currentBgm = null;
+        this.currentBgmKey = null;
+        
+        console.log(`[SoundManager] BGM '${stoppingKey}' の停止処理を開始します。`);
 
         if (fadeOutTime > 0 && bgmToStop.volume > 0) {
             await this.fadeTo(bgmToStop, 0, fadeOutTime);
-            bgmToStop.stop(); bgmToStop.destroy();
+            // フェード完了後に破棄
+            if (bgmToStop.isPlaying) {
+                bgmToStop.stop();
+            }
+            bgmToStop.destroy();
         } else {
-            bgmToStop.stop(); bgmToStop.destroy();
+            // 即時停止
+            if (bgmToStop.isPlaying) {
+                bgmToStop.stop();
+            }
+            bgmToStop.destroy();
         }
+        console.log(`[SoundManager] BGM '${stoppingKey}' を完全に停止・破棄しました。`);
     }
-
     // ★★★ ロック機構を組み込んだ、究極の手動Tween ★★★
     fadeTo(soundObject, targetVolume, duration) {
         return new Promise(resolve => {

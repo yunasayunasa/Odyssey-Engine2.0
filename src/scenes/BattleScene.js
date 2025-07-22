@@ -64,11 +64,9 @@ export default class BattleScene extends Phaser.Scene {
         }
 
         // ★★★ 修正点②: BGMの再生処理をawaitで正しく待つ ★★★
-        const soundManager = this.sys.registry.get('soundManager');
-        if (soundManager.getCurrentBgmKey() !== 'ronpa_bgm') {
-            await soundManager.stopBgm(1000); 
-            await soundManager.playBgm('ronpa_bgm', 500);
-        }
+         // ★★★ BGMの制御は、この一行だけ！ ★★★
+        // soundManager.playBgmが、前の曲を勝手に止めてくれる
+        this.soundManager.playBgm('ronpa_bgm', 1000); // 1秒かけてクロスフェード
         console.log("戦闘bgm開始！");
         
         // --- UIとゲームオブジェクトの生成 (あなたのコードのまま) ---
