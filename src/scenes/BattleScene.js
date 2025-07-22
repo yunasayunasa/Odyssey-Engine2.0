@@ -359,7 +359,8 @@ export default class BattleScene extends Phaser.Scene {
         }
     }
 
-  endBattle(result) {
+    // ★★★ endBattleメソッドを、あなたのロジックを活かしたまま修正 ★★★
+    async endBattle(result) {
         if (this.battleEnded) return;
         this.battleEnded = true;
 
@@ -370,118 +371,77 @@ export default class BattleScene extends Phaser.Scene {
         if (this.loseButton) this.loseButton.disableInteractive();
         
         if (result === 'win') {
-            // ★★★ 勝利時の処理 ★★★
-            // シーン全体の入力を無効化
-            this.input.enabled = false; 
+            // --- 勝利時の処理 ---
+            this.input.enabled = false;
+            if (this.eventEmitted) return;
+            this.eventEmitted = true;
 
-            // イベント発行を一度に限定
-            if (!this.eventEmitted) {
-                this.eventEmitted = true;
+            // ★ awaitでBGM停止を待つ
+            if (this.soundManager) await this.soundManager.stopBgm(500);
 
-                // SystemSceneにイベントを発行する「前」に、リスナーを解除
-                if (this.stateManager && this.onFVariableChangedListener) {
-                    this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);
-                    this.onFVariableChangedListener = null;
-                    console.log("BattleScene: endBattle(win)内でStateManagerのイベントリスナーを解除しました。");
-                }
- // ★★★ 追加: シーン遷移の前にバトルBGMを停止 ★★★
-                if (this.soundManager) {
-                    this.soundManager.stopBgm(500); // 500msかけてフェードアウト
-                }
-                // SystemSceneにノベルパートへの復帰をリクエスト
-                this.scene.get('SystemScene').events.emit('return-to-novel', {
-                    from: this.scene.key,
-                    params: { 
-                        'f.battle_result': 'win',
-                        'f.player_hp': this.playerStats.hp, 
-                        'f.coin': this.stateManager.f.coin 
-                    }
-                });
-                
-                // ★★★ イベント発行後、このシーン自身を停止する (ゾンビ化防止) ★★★
-                this.scene.stop(this.scene.key);
-                console.log("BattleScene: 自身でstop()を呼び出しました。");
+            if (this.stateManager && this.onFVariableChangedListener) {
+                this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);
+                this.onFVariableChangedListener = null;
             }
-        } else { // result === 'lose'
-            // ★★★ 敗北時の処理 ★★★
-            console.log("BattleScene: ゲームオーバー処理を開始します。");
-            
-            // ゲームオーバーUIの生成
-            this.gameOverText = this.add.text(this.scale.width / 2, this.scale.height / 2 - 50, 'GAME OVER', { fontSize: '64px', fill: '#f00', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setDepth(999);
-            this.retryButton = this.add.text(this.scale.width / 2, this.scale.height / 2 + 50, 'もう一度挑戦', { fontSize: '32px', fill: '#fff', backgroundColor: '#880000', padding: { x: 20, y: 10 } }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(999);
-            this.titleButton = this.add.text(this.scale.width / 2, this.scale.height / 2 + 120, 'タイトルに戻る', { fontSize: '32px', fill: '#fff', backgroundColor: '#444444', padding: { x: 20, y: 10 } }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(999);
-            
-            // ★★★ ゲームオーバーボタンを操作できるように、このシーンの入力を有効化 ★★★
-            this.input.enabled = true; 
 
-            // リトライボタンのクリック処理
-            this.retryButton.on('pointerdown', () => {
-                this.input.enabled = false; // 遷移前に再度無効化
-                this.retryButton.disableInteractive();
-                if (this.titleButton) this.titleButton.disableInteractive();
-                
-                if (!this.eventEmitted) {
-                    this.eventEmitted = true;
-                    // イベント発行前にリスナーを解除
-                    if (this.stateManager && this.onFVariableChangedListener) {
-                        this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);
-                        this.onFVariableChangedListener = null;
-                    }
-                     // ★★★ 追加: シーン遷移の前にバトルBGMを停止 ★★★
-                if (this.soundManager) {
-                    this.soundManager.stopBgm(500); // 500msかけてフェードアウト
-                }
-                    console.log("BattleScene: もう一度挑戦します。");
-                    this.scene.get('SystemScene').events.emit('request-scene-transition', {
-                        to: this.scene.key,
-                        from: this.scene.key,
-                        params: this.initialBattleParams
-                    });
-                   
+            this.scene.get('SystemScene').events.emit('return-to-novel', {
+                from: this.scene.key,
+                params: { 
+                    'f.battle_result': 'win',
+                    'f.player_hp': this.playerStats.hp, 
+                    'f.coin': this.stateManager.f.coin 
                 }
             });
 
-            // タイトルに戻るボタンのクリック処理
-            this.titleButton.on('pointerdown', () => {
-                this.input.enabled = false; // 遷移前に再度無効化
-                this.titleButton.disableInteractive();
-                if (this.retryButton) this.retryButton.disableInteractive();
+            // ★ 自分でstop()を呼び出さない！
+            // this.scene.stop(this.scene.key);
+            
+        } else { // result === 'lose'
+            // --- 敗北時の処理 ---
+            console.log("BattleScene: ゲームオーバー処理を開始します。");
+            
+            // ゲームオーバーUIの生成
+            this.gameOverText = this.add.text(this.scale.width / 2, this.scale.height / 2 - 50, 'GAME OVER', { /* ... */ }).setOrigin(0.5).setDepth(999);
+            this.retryButton = this.add.text(this.scale.width / 2, this.scale.height / 2 + 50, 'もう一度挑戦', { /* ... */ }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(999);
+            this.titleButton = this.add.text(this.scale.width / 2, this.scale.height / 2 + 120, 'タイトルに戻る', { /* ... */ }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(999);
+            
+            this.input.enabled = true; 
+
+            // リトライボタンのクリック処理 (コールバックをasyncにする)
+            this.retryButton.on('pointerdown', async () => {
+                if (this.eventEmitted) return;
+                this.eventEmitted = true;
+                this.input.enabled = false;
+
+                // ★ awaitでBGM停止を待つ
+                if (this.soundManager) await this.soundManager.stopBgm(500);
+
+                if (this.stateManager) this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);
                 
-                if (!this.eventEmitted) {
-                    this.eventEmitted = true;
-                    // イベント発行前にリスナーを解除
-                    if (this.stateManager && this.onFVariableChangedListener) {
-                        this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);
-                         // ★★★ 追加: シーン遷移の前にバトルBGMを停止 ★★★
-                if (this.soundManager) {
-                    this.soundManager.stopBgm(500); // 500msかけてフェードアウト
-                }
-                        this.onFVariableChangedListener = null;
-                    }
-                    console.log("BattleScene: タイトルに戻ります。");
-                    this.scene.get('SystemScene').events.emit('return-to-novel', {
-                        from: this.scene.key,
-                        params: { 'f.battle_result': 'async handleWin() {
-        if (this.eventEmitted) return;
-        this.eventEmitted = true;
+                this.scene.get('SystemScene').events.emit('request-scene-transition', {
+                    to: this.scene.key,
+                    from: this.scene.key,
+                    params: this.initialBattleParams
+                });
+            });
 
-        if (this.soundManager) {
-            await this.soundManager.stopBgm(500);
+            // タイトルに戻るボタンのクリック処理 (コールバックをasyncにする)
+            this.titleButton.on('pointerdown', async () => {
+                if (this.eventEmitted) return;
+                this.eventEmitted = true;
+                this.input.enabled = false;
+                
+                // ★ awaitでBGM停止を待つ
+                if (this.soundManager) await this.soundManager.stopBgm(500);
+
+                if (this.stateManager) this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);
+
+                this.scene.get('SystemScene').events.emit('return-to-novel', {
+                    from: this.scene.key,
+                    params: { 'f.battle_result': 'game_over' }
+                });
+            });
         }
-
-        if (this.stateManager && this.onFVariableChangedListener) {
-            this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);
-        }
-
-        this.scene.get('SystemScene').events.emit('return-to-novel', {
-            from: this.scene.key,
-            params: { 
-                'f.battle_result': 'win',
-                'f.player_hp': this.playerStats.hp, 
-                'f.coin': this.stateManager.f.coin 
-            }
-        });
-        // ★★★ 修正点⑤: 自分でstop()を呼び出さない！ ★★★
     }
     
     handleLose() {
