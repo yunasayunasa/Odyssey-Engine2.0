@@ -84,34 +84,33 @@ export default class SystemScene extends Phaser.Scene {
     };
     
 
-    /**
-     * サブシーンからノベルパートへの復帰リクエストを処理
+   /**
+     * サブシーンからノベルパートへの復帰リクエストを処理 (最終修正版)
      * @param {object} data - { from: string, params: object }
      */
-     /**
-     * サブシーンからノベルパートへの復帰リクエストを処理 (修正版)
-     */
-   async _handleReturnToNovel(data) {
+    _handleReturnToNovel(data) {
         console.log(`[SystemScene] ノベル復帰リクエスト: from ${data.from}`);
 
-        // ★ 1. サブシーンを停止
         if (this.scene.isActive(data.from)) {
             this.scene.stop(data.from);
         }
-        
-        // ★ 2. UIを再表示
         if (this.scene.isActive('UIScene')) {
             this.scene.get('UIScene').setVisible(true);
         }
 
-        // ★ 3. オートセーブデータ(slot 0)から復帰
-        // performLoadが呼ばれるので、GameSceneはセーブデータからBGMを復元しようとする
-        // novelBgmKeyを直接渡す必要はない。performSave時にsf変数に保存するアプローチも良い。
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ これが今回の修正の核心 ★★★
+        // ★★★ GameSceneが必要とするデータを全て渡す ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
         this._startAndMonitorScene('GameScene', {
-            resumedFrom: data.from,
-            returnParams: data.params,
+            charaDefs: this.globalCharaDefs, // ★★★ 最重要: キャラ定義を渡す！ ★★★
+            resumedFrom: data.from,          // どこから来たかを伝える
+            returnParams: data.params,       // サブシーンからの戻り値を渡す
+            // startScenarioやstartLabelは、復帰処理(performLoad)で
+            // セーブデータから復元されるので、ここでは不要
         });
     }
+
     /**
      * オーバーレイ表示のリクエストを処理
      * @param {object} data - { from: string, scenario: string }

@@ -472,24 +472,21 @@ console.log("[LOG-BOMB] rebuildScene: AWAITING stopBgm..."); // ★
         }
     }
 
-     // ★★★★★ 5. BGMを復元 ★★★★★
-    // SoundManagerの現在のBGMと、ロードデータが示すBGMを比較する
-    const currentBgmKey = manager.soundManager.getCurrentBgmKey();
-    const targetBgmKey = state.sound.bgm; // ★★★ `bgmKey` から `bgm` に修正！ ★★★
+        // ★★★★★ 5. BGMを復元 ★★★★★
+    const soundManager = manager.soundManager;
+    const currentBgmKey = soundManager.getCurrentBgmKey();
+    const targetBgmKey = state.sound.bgm; // ★★★ `bgmKey` ではなく `bgm` ★★★
 
+    // 再生すべきBGMキーがセーブデータに存在する場合
     if (targetBgmKey) {
-        // 再生すべきBGMがあり、かつ現在再生中のBGMと違う場合
+        // 現在再生中の曲と違う場合のみ、新しい曲を再生
         if (currentBgmKey !== targetBgmKey) {
-            console.log(`[rebuildScene] BGMを復元します: ${targetBgmKey}`);
-            await manager.soundManager.playBgm(targetBgmKey, 500);
-        } else {
-            console.log(`[rebuildScene] BGMは既に再生中です: ${targetBgmKey}`);
+            await soundManager.playBgm(targetBgmKey, 500);
         }
     } else {
-        // 再生すべきBGMがなく、何か再生中なら停止する
+        // セーブデータにBGM情報がなく、何か再生中なら停止する
         if (currentBgmKey) {
-            console.log(`[rebuildScene] 再生中のBGMを停止します。`);
-            await manager.soundManager.stopBgm(500);
+            await soundManager.stopBgm(500);
         }
     }
 
