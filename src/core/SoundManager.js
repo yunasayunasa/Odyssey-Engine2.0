@@ -28,86 +28,96 @@ export default class SoundManager {
      * @param {string} key - 再生するBGMのアセットキー
      * @param {number} fadeTime - フェードイン/アウトにかける時間 (ms)
      */
+       /**
+     * BGMを再生する (非同期競合対策版)
+     */
     async playBgm(key, fadeTime = 500) {
         this.resumeContext();
 
-        // 同じ曲が既に再生中なら何もしない
         if (this.currentBgm && this.currentBgm.isPlaying && this.currentBgmKey === key) {
-            console.log(`[SoundManager] BGM '${key}' は既に再生中です。`);
             return;
         }
         
-        // ★★★ 競合防止ロック (isFadingは残す) ★★★
         if (this.isFading) {
-            console.warn(`[SoundManager] フェード処理中に新しいplayBgmリクエストがありました。無視します。`);
+            console.warn(`[SoundManager] フェード処理中に新しいplayBgmリクエスト '${key}' がありました。無視します。`);
             return;
         }
         
-        // 1. もし現在、別のBGMが再生中なら、それをフェードアウトさせる
+        // ★ 処理開始時にロック
+        this.isFading = true;
+
+        // 1. 古いBGMがあれば、停止処理を完了させる
         if (this.currentBgm && this.currentBgm.isPlaying) {
+            const oldBgm = this.currentBgm;
             console.log(`[SoundManager] 古いBGM '${this.currentBgmKey}' を停止します。`);
-            // await を使って、停止処理が終わるのを「完全に」待つ
-            await this.stopBgm(fadeTime); 
+            
+            // フェードアウト
+            if (fadeTime > 0 && oldBgm.volume > 0) {
+                await this.fadeTo(oldBgm, 0, fadeTime);
+            }
+
+            // ★ 完全に停止・破棄してから、状態をnullにする
+            if (oldBgm.isPlaying) oldBgm.stop();
+            oldBgm.destroy();
+            this.currentBgm = null;
+            this.currentBgmKey = null;
+            console.log(`[SoundManager] 古いBGMを完全に停止しました。`);
         }
 
-        // 2. 新しいBGMをフェードインで再生する
+        // 2. 新しいBGMを再生する
         console.log(`[SoundManager] 新しいBGM '${key}' を再生します。`);
         
-        const targetVolume = this.configManager.getValue('bgmVolume');
+        const targetVolume = 1.0; // ★ デバッグのためボリュームは1で固定
         const newBgm = this.sound.add(key, { loop: true, volume: 0 });
         
+        // ★ 再生を開始する直前に、状態をセットする
         this.currentBgm = newBgm;
         this.currentBgmKey = key;
-        
         newBgm.play();
 
-        if (fadeTime > 0 && targetVolume > 0) {
+        // フェードイン
+        if (fadeTime > 0) {
             await this.fadeTo(newBgm, targetVolume, fadeTime);
         } else {
             newBgm.setVolume(targetVolume);
         }
-        console.log(`[SoundManager] BGM '${key}' の再生を開始しました。`);
+
+        // ★ 全ての処理が終わったらロックを解除
+        this.isFading = false;
+        console.log(`[SoundManager] BGM '${key}' の再生が安定しました。`);
     }
 
     /**
-     * BGMを停止する (最終修正版)
-     * @param {number} fadeOutTime - フェードアウトにかける時間 (ms)
+     * BGMを停止する (非同期競合対策版)
      */
     async stopBgm(fadeOutTime = 500) {
         if (!this.currentBgm || !this.currentBgm.isPlaying) {
-            this.currentBgm = null;
-            this.currentBgmKey = null;
-            return; // 止めるべきBGMがなければ即終了
+            return;
         }
-        
+
         if (this.isFading) {
             console.warn(`[SoundManager] フェード処理中に新しいstopBgmリクエストがありました。無視します。`);
             return;
         }
+        this.isFading = true;
 
         const bgmToStop = this.currentBgm;
         const stoppingKey = this.currentBgmKey;
-        
-        // ★ 先にプロパティをnullにして、連続呼び出しを防ぐ
-        this.currentBgm = null;
-        this.currentBgmKey = null;
         
         console.log(`[SoundManager] BGM '${stoppingKey}' の停止処理を開始します。`);
 
         if (fadeOutTime > 0 && bgmToStop.volume > 0) {
             await this.fadeTo(bgmToStop, 0, fadeOutTime);
-            // フェード完了後に破棄
-            if (bgmToStop.isPlaying) {
-                bgmToStop.stop();
-            }
-            bgmToStop.destroy();
-        } else {
-            // 即時停止
-            if (bgmToStop.isPlaying) {
-                bgmToStop.stop();
-            }
-            bgmToStop.destroy();
         }
+        
+        if (bgmToStop.isPlaying) bgmToStop.stop();
+        bgmToStop.destroy();
+
+        // ★ 完全に停止・破棄が完了した後に、状態をnullにする
+        this.currentBgm = null;
+        this.currentBgmKey = null;
+        
+        this.isFading = false;
         console.log(`[SoundManager] BGM '${stoppingKey}' を完全に停止・破棄しました。`);
     }
     // ★★★ ロック機構を組み込んだ、究極の手動Tween ★★★
