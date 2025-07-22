@@ -1,24 +1,12 @@
 /**
  * [stopbgm] タグの処理
- * 現在再生中のBGMをフェードアウトさせて停止する
+ * 新しい非同期SoundManagerに対応
  * @param {ScenarioManager} manager
- * @param {Object} params - { time }
- * @returns {Promise<void>}
+ * @param {Object} params - { fadeout }
  */
-export function handleStopBgm(manager, params) {
-    return new Promise(resolve => {
-        const time = Number(params.time) || 0; // フェードアウト時間
+export async function handleStopBgm(manager, params) {
+    const fadeOutTime = params.fadeout ? parseInt(params.fadeout, 10) : 0;
 
-        // ★★★ SoundManagerに停止を依頼するだけ ★★★
-        manager.soundManager.stopBgm(time);
-
-        // ★★★ stateManagerの更新は不要 ★★★
-        // SoundManagerが現在のBGMをnullに設定し、
-        // セーブ時にStateManagerがその状態を取得する
-
-        // フェードアウト時間分だけ待機してから完了を通知する
-        manager.scene.time.delayedCall(time, () => {
-            resolve();
-        });
-    });
+    // ★★★ asyncになったstopBgmの完了を、awaitで正しく待つ ★★★
+    await manager.soundManager.stopBgm(fadeOutTime);
 }
