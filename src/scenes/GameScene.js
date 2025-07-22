@@ -404,7 +404,7 @@ async function rebuildScene(manager, state) {
     manager.layers.background.removeAll(true);
     manager.layers.character.removeAll(true);
     scene.characters = {};
-    manager.soundManager.stopBgm(0); // フェードなしで即時停止
+     await manager.soundManager.stopBgm(0);  // フェードなしで即時停止
     manager.messageWindow.reset();
     scene.cameras.main.resetFX(); // カメラエフェクトもリセット
 
@@ -444,7 +444,7 @@ async function rebuildScene(manager, state) {
     if (state.sound && state.sound.bgm) {
         if (manager.soundManager.getCurrentBgmKey() !== state.sound.bgm) {
             // ★★★ 修正箇所: awaitを追加してBGMの再生完了を待つ ★★★
-            await manager.soundManager.playBgm(state.sound.bgm, 0); 
+            await manager.soundManager.playBgm(state.sound.bgm, 0);
         }
     }
     

@@ -37,9 +37,9 @@ export default class SoundManager {
      * @returns {Promise<void>} フェードイン完了時に解決されるPromise
      */
     // ★★★ playBgmをasync/awaitで書き直して安全性を高める ★★★
-    async playBgm(key, fadeInTime = 0) {
+  async playBgm(key, fadeInTime = 0) {
         this.resumeContext();
-        if (!this.configManager) { return; } // configManagerがなければ即時終了
+        if (!this.configManager) { return; }
         if (this.currentBgm && this.currentBgm.isPlaying && this.currentBgmKey === key) {
             return;
         }
@@ -66,14 +66,11 @@ export default class SoundManager {
         } else {
             newBgm.setVolume(targetVolume);
         }
+        // この関数の最後まで到達すれば、Promiseは自動的に解決される
     }
 
-    /**
-     * BGMを停止します。このメソッドはPromiseを返します。
-     * @param {number} fadeOutTime - フェードアウト時間(ms)
-     * @returns {Promise<void>} フェードアウト完了時に解決されるPromise
-     */
-     stopBgm(fadeOutTime = 0) {
+    // ★★★ stopBgmも念のためPromiseを返すことを保証 ★★★
+    stopBgm(fadeOutTime = 0) {
         return new Promise(resolve => {
             if (!this.currentBgm || !this.currentBgm.isPlaying) {
                 resolve(); return;
@@ -86,10 +83,7 @@ export default class SoundManager {
                     targets: bgmToStop,
                     volume: 0,
                     duration: fadeOutTime,
-                    onComplete: () => {
-                        bgmToStop.stop(); bgmToStop.destroy();
-                        resolve();
-                    }
+                    onComplete: () => { bgmToStop.stop(); bgmToStop.destroy(); resolve(); }
                 });
             } else {
                 bgmToStop.stop(); bgmToStop.destroy();
