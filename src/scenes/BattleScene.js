@@ -5,41 +5,23 @@ import { ITEM_DATA } from '../core/ItemData.js';
 export default class BattleScene extends Phaser.Scene {
     constructor() {
         super('BattleScene');
-        // ★★★ constructorの内容はあなたの元のコードのままです ★★★
-        this.receivedParams = null;
-        this.stateManager = null;
-        this.playerHpBar = null;
-        this.enemyHpBar = null;
-        this.coinHud = null;
-        this.soundManager = null;
-        this.backpackGridSize = 6;
-        this.cellSize = 60;
-        this.gridX = 0;
-        this.gridY = 0;
-        this.backpack = null;
-        this.inventoryItems = [];
-        this.backpackGridObjects = [];
-        this.playerStats = { attack: 0, defense: 0, hp: 0 }; 
-        this.enemyStats = { attack: 0, defense: 0, hp: 0 };  
-        this.initialBattleParams = null;
-        this.battleEnded = false;
-        this.battleLogText = null;
-        this.winButton = null;
-        this.loseButton = null;
-        this.retryButton = null;
-        this.titleButton = null;
-        this.gameOverText = null;
-        this.onFVariableChangedListener = null;
-        this.eventEmitted = false;
-        this.playerPlaceholderText = null;
-        this.enemyPlaceholderText = null;
-        this.startBattleButton = null;
+        // constructorは変更なし
+        this.receivedParams = null; this.stateManager = null; this.playerHpBar = null;
+        this.enemyHpBar = null; this.coinHud = null; this.soundManager = null;
+        this.backpackGridSize = 6; this.cellSize = 60; this.gridX = 0;
+        this.gridY = 0; this.backpack = null; this.inventoryItems = [];
+        this.backpackGridObjects = []; this.playerStats = { attack: 0, defense: 0, hp: 0 };
+        this.enemyStats = { attack: 0, defense: 0, hp: 0 }; this.initialBattleParams = null;
+        this.battleEnded = false; this.battleLogText = null; this.winButton = null;
+        this.loseButton = null; this.retryButton = null; this.titleButton = null;
+        this.gameOverText = null; this.onFVariableChangedListener = null;
+        this.eventEmitted = false; this.playerPlaceholderText = null;
+        this.enemyPlaceholderText = null; this.startBattleButton = null;
     }
 
     init(data) {
-        // ★★★ initの内容はあなたの元のコードのままです ★★★
+        // initは変更なし
         this.receivedParams = data.transitionParams || {}; 
-        console.log("BattleScene: init 完了。受け取ったパラメータ:", this.receivedParams);
         this.initialBattleParams = {
             playerLevel: this.receivedParams.player_level || 1,
             playerName: this.receivedParams.player_name || 'プレイヤー',
@@ -51,7 +33,6 @@ export default class BattleScene extends Phaser.Scene {
         this.eventEmitted = false;
     }
 
-    // ★★★ 修正点①: createメソッドをasyncにする ★★★
     async create() {
         console.log("BattleScene: create 開始");
         this.cameras.main.setBackgroundColor('#8a2be2');
@@ -60,33 +41,20 @@ export default class BattleScene extends Phaser.Scene {
         this.soundManager = this.sys.registry.get('soundManager');
 
         if (!this.stateManager || !this.soundManager) {
-            console.error("BattleScene: StateManagerまたはSoundManagerが取得できませんでした。");
-            return;
+            console.error("BattleScene: StateManagerまたはSoundManagerが取得できませんでした。"); return;
         }
 
-        // ★★★ 修正点②: BGMの再生処理をawaitで正しく待つ ★★★
         await this.soundManager.stopBgm(500); 
         await this.soundManager.playBgm('bgm_battle', 500); 
         console.log("戦闘bgm開始！");
         
-        // --- ここから下のコードは、あなたの元のコードを完全に尊重します ---
-        this.playerPlaceholderText = this.add.text(100, 360, 'PLAYER', { fontSize: '48px', fill: '#fff' }).setOrigin(0.5);
-        this.enemyPlaceholderText = this.add.text(this.scale.width - 100, 360, 'ENEMY', { fontSize: '48px', fill: '#fff' }).setOrigin(0.5);
-
+        // ★★★ 修正点①: createで生成するオブジェクトを、すべてローカル変数にする ★★★
+        const playerPlaceholderText = this.add.text(100, 360, 'PLAYER', { fontSize: '48px', fill: '#fff' }).setOrigin(0.5);
+        const enemyPlaceholderText = this.add.text(this.scale.width - 100, 360, 'ENEMY', { fontSize: '48px', fill: '#fff' }).setOrigin(0.5);
         this.playerHpBar = new HpBar(this, { x: 20, y: 20, width: 250, height: 30, type: 'player', stateManager: this.stateManager });
         this.enemyHpBar = new HpBar(this, { x: this.scale.width - 20, y: 20, width: 250, height: 30, type: 'enemy', stateManager: this.stateManager });
         this.enemyHpBar.x -= this.enemyHpBar.barWidth;
         this.coinHud = new CoinHud(this, { x: 100, y: 50, stateManager: this.stateManager });
-
-        this.stateManager.f.player_max_hp = this.initialBattleParams.initialPlayerMaxHp; 
-        this.stateManager.f.player_hp = this.initialBattleParams.initialPlayerHp;
-        this.playerHpBar.setHp(this.stateManager.f.player_hp, this.stateManager.f.player_max_hp);
-
-        this.stateManager.f.enemy_max_hp = 500; 
-        this.stateManager.f.enemy_hp = 500; 
-        this.enemyHpBar.setHp(this.stateManager.f.enemy_hp, this.stateManager.f.enemy_max_hp);
-
-        this.coinHud.setCoin(this.initialBattleParams.initialCoin);
 
         this.onFVariableChangedListener = this.onFVariableChanged.bind(this);
         this.stateManager.on('f-variable-changed', this.onFVariableChangedListener);
