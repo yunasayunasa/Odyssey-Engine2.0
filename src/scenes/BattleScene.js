@@ -93,8 +93,9 @@ export default class BattleScene extends Phaser.Scene {
         this.startBattleButton.on('pointerdown', () => {
             this.startBattleButton.disableInteractive(); 
             this.input.enabled = false;
-            this.startBattle();
+            this.startBattle(playerPlaceholderText, enemyPlaceholderText);
         });
+    
         
         this.battleLogText = this.add.text(this.scale.width / 2, 150, '', { fontSize: '24px', fill: '#fff', backgroundColor: 'rgba(0,0,0,0.5)', padding: { x: 10, y: 10 }, align: 'center', wordWrap: { width: 400 } }).setOrigin(0.5).setDepth(200);
 
