@@ -36,42 +36,36 @@ export default class SoundManager {
      * @param {number} fadeInTime - フェードイン時間(ms)
      * @returns {Promise<void>} フェードイン完了時に解決されるPromise
      */
-    playBgm(key, fadeInTime = 0) {
-        return new Promise(resolve => {
-            this.resumeContext();
+    // ★★★ playBgmをasync/awaitで書き直して安全性を高める ★★★
+    async playBgm(key, fadeInTime = 0) {
+        this.resumeContext();
+        if (!this.configManager) { return; } // configManagerがなければ即時終了
+        if (this.currentBgm && this.currentBgm.isPlaying && this.currentBgmKey === key) {
+            return;
+        }
 
-            // 既に同じBGMが再生中の場合は、何もせずに即座に解決
-            if (this.currentBgm && this.currentBgm.isPlaying && this.currentBgmKey === key) {
-                console.log(`BGM '${key}' は既に再生中のためスキップします。`);
-                resolve();
-                return;
-            }
+        // 以前のBGMを停止し、完了を待つ
+        await this.stopBgm(fadeInTime > 0 ? fadeInTime / 2 : 0);
 
-            // 現在のBGMがあれば停止処理を行う
-            this.stopBgm(fadeInTime > 0 ? fadeInTime / 2 : 0).then(() => {
-                const newBgm = this.sound.add(key, { loop: true, volume: 0 });
-                newBgm.play();
+        const newBgm = this.sound.add(key, { loop: true, volume: 0 });
+        newBgm.play();
+        this.currentBgm = newBgm;
+        this.currentBgmKey = key;
+        const targetVolume = this.configManager.getValue('bgmVolume');
 
-                this.currentBgm = newBgm;
-                this.currentBgmKey = key;
-                 const targetVolume = this.configManager.getValue('bgmVolume');
-
-                // Game Eventsを使って、シーンから独立したTween（フェード）を実現
-                if (fadeInTime > 0) {
-                    this.game.tweens.add({
-                        targets: newBgm,
-                        volume: targetVolume,
-                        duration: fadeInTime,
-                        onComplete: () => {
-                            resolve();
-                        }
-                    });
-                } else {
-                    newBgm.setVolume(targetVolume);
-                    resolve();
-                }
+        if (fadeInTime > 0) {
+            // Promiseを返すTweenを作成し、完了を待つ
+            await new Promise(resolve => {
+                this.game.tweens.add({
+                    targets: newBgm,
+                    volume: targetVolume,
+                    duration: fadeInTime,
+                    onComplete: resolve // tween完了時にPromiseを解決
+                });
             });
-        });
+        } else {
+            newBgm.setVolume(targetVolume);
+        }
     }
 
     /**
@@ -79,16 +73,13 @@ export default class SoundManager {
      * @param {number} fadeOutTime - フェードアウト時間(ms)
      * @returns {Promise<void>} フェードアウト完了時に解決されるPromise
      */
-    stopBgm(fadeOutTime = 0) {
+     stopBgm(fadeOutTime = 0) {
         return new Promise(resolve => {
             if (!this.currentBgm || !this.currentBgm.isPlaying) {
-                resolve();
-                return;
+                resolve(); return;
             }
-
             const bgmToStop = this.currentBgm;
-            this.currentBgm = null;
-            this.currentBgmKey = null;
+            this.currentBgm = null; this.currentBgmKey = null;
 
             if (fadeOutTime > 0) {
                 this.game.tweens.add({
@@ -96,14 +87,12 @@ export default class SoundManager {
                     volume: 0,
                     duration: fadeOutTime,
                     onComplete: () => {
-                        bgmToStop.stop();
-                        bgmToStop.destroy();
+                        bgmToStop.stop(); bgmToStop.destroy();
                         resolve();
                     }
                 });
             } else {
-                bgmToStop.stop();
-                bgmToStop.destroy();
+                bgmToStop.stop(); bgmToStop.destroy();
                 resolve();
             }
         });
