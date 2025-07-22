@@ -139,23 +139,7 @@ export default class BattleScene extends Phaser.Scene {
         console.log("BattleScene: create 完了");
     }
 
-    // ★★★ 修正点③: endBattleメソッドをasyncにする ★★★
-    async endBattle(result) {
-        if (this.battleEnded) return;
-        this.battleEnded = true;
-
-        console.log(`BattleScene: バトル終了。結果: ${result}`);
-        
-        if (this.winButton) this.winButton.disableInteractive();
-        if (this.loseButton) this.loseButton.disableInteractive();
-        this.input.enabled = false;
-
-        if (result === 'win') {
-            await this.handleWin();
-        } else { // 'lose'
-            this.handleLose();
-        }
-    }
+ 
     startBattle() {
         console.log("戦闘開始！");
         // アイテムのドラッグ入力を無効化 (戦闘中はアイテムを動かせない)
@@ -482,11 +466,6 @@ export default class BattleScene extends Phaser.Scene {
         });
     }
     
-    // ★★★ stop()はPhaserのライフサイクルに任せるため、中身をシンプルに ★★★
-    stop() {
-        console.log("BattleScene: stop されました。");
-        // リスナー解除はshutdownで行うのがより安全
-    }
 
     shutdown() {
         console.log("BattleScene: shutdown されました。リスナーをクリーンアップします。");
