@@ -246,9 +246,14 @@ export default class GameScene extends Phaser.Scene {
  // ★★★ セーブ処理 ★★★
      // ★★★ セーブ処理 (スロット0をオートセーブスロットとして使う) ★★★
     performSave(slot) {
-        // [jump]や[call]の直前に、現在の状態をオートセーブする
-        if (slot === 0) {
-            console.log("オートセーブを実行します...");
+        if (slot === 0) { // オートセーブの場合のみ
+            // ★★★ 修正点①: セーブ直前に、現在のBGMキーをf変数に保存 ★★★
+            const currentBgmKey = this.soundManager.getCurrentBgmKey();
+            if (currentBgmKey) {
+                this.stateManager.f.tmp_current_bgm = currentBgmKey;
+            } else {
+                delete this.stateManager.f.tmp_current_bgm; // BGMがなければ変数を削除
+            }
         }
         try {
             const gameState = this.stateManager.getState(this.scenarioManager);
@@ -370,7 +375,14 @@ async performLoad(slot, returnParams = null) {
                         console.log("[LOG-BOMB] performLoad: AWAITING rebuildScene..."); // ★
             await rebuildScene(this.scenarioManager, loadedState);
             console.log("[LOG-BOMB] performLoad: ...rebuildScene COMPLETED."); // ★
-        
+          if (this.coinHud) {
+            this.coinHud.setCoin(this.stateManager.f.coin || 0);
+        }
+        if (this.playerHpBar) {
+            const maxHp = this.stateManager.f.player_max_hp || 100;
+            const currentHp = this.stateManager.f.player_hp || maxHp;
+            this.playerHpBar.setHp(currentHp, maxHp);
+        }
             if (loadedState.scenario.isWaitingClick || loadedState.scenario.isWaitingChoice) {
                 console.log("ロード完了: 待機状態のため、ユーザーの入力を待ちます。");
             } else {
@@ -450,13 +462,8 @@ console.log("[LOG-BOMB] rebuildScene: AWAITING stopBgm..."); // ★
     }
 
      // 5. BGMを復元
-    if (state.sound && state.sound.bgm) {
-        if (manager.soundManager.getCurrentBgmKey() !== state.sound.bgm) {
-            // ★★★ 修正箇所: awaitを追加してBGMの再生完了を待つ ★★★
-                 console.log(`[LOG-BOMB] rebuildScene: AWAITING playBgm for [${state.sound.bgm}]...`); // ★
-            await manager.soundManager.playBgm(state.sound.bgm, 0);
-                 console.log(`[LOG-BOMB] rebuildScene: プレイングplayBgm for [${state.sound.bgm}]...`); // ★
-        }
+    if (state.variables.f && state.variables.f.tmp_current_bgm) {
+        await manager.soundManager.playBgm(state.variables.f.tmp_current_bgm, 500);
     }
     
     // 6. メッセージウィンドウを復元 (クリック待ちだった場合)
