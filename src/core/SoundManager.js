@@ -15,8 +15,13 @@ export default class SoundManager {
         // ボリューム変更をリッスン
         this.configManager.on('change:bgmVolume', this.onBgmVolumeChange, this);
         this.configManager.on('change:seVolume', this.onSeVolumeChange, this);
-         this.fadeUpdater = null; // ゲームループに登録する更新関数の参照
+          this.isFading = false;
+        this.fadeUpdater = null;
 
+        if (this.configManager) {
+            this.configManager.on('change:bgmVolume', this.onBgmVolumeChange, this);
+        }
+        
         // ゲームが破棄されるときにリスナーをクリーンアップ
         this.game.events.once(Phaser.Core.Events.DESTROY, this.destroy, this);
 
@@ -31,81 +36,77 @@ export default class SoundManager {
     }
 
    
-      playBgm(key, fadeInTime = 0) {
-        return new Promise(async resolve => {
-            this.resumeContext();
-            if (!this.configManager || (this.currentBgm && this.currentBgmKey === key)) {
-                resolve(); return;
-            }
-            await this.stopBgm(fadeInTime > 0 ? fadeInTime / 2 : 0);
-            const newBgm = this.sound.add(key, { loop: true, volume: 0 });
-            newBgm.play();
-            this.currentBgm = newBgm; this.currentBgmKey = key;
-            const targetVolume = this.configManager.getValue('bgmVolume');
+      async playBgm(key, fadeInTime = 0) {
+        // フェード処理中なら、新しい再生リクエストを無視する（あるいは少し待つなど）
+        if (this.isFading) {
+            console.warn(`[SoundManager] フェード処理中に新しいplayBgmリクエストがありました。無視します。`);
+            return;
+        }
+        this.resumeContext();
+        if (!this.configManager || (this.currentBgm && this.currentBgmKey === key)) {
+            return;
+        }
 
-            if (fadeInTime > 0 && targetVolume > 0) {
-                await this.fadeTo(newBgm, targetVolume, fadeInTime);
-            } else {
-                newBgm.setVolume(targetVolume);
-            }
-            resolve();
-        });
+        await this.stopBgm(fadeInTime > 0 ? fadeInTime / 2 : 0);
+
+        const newBgm = this.sound.add(key, { loop: true, volume: 0 });
+        newBgm.play();
+        this.currentBgm = newBgm; this.currentBgmKey = key;
+        const targetVolume = this.configManager.getValue('bgmVolume');
+
+        if (fadeInTime > 0 && targetVolume > 0) {
+            await this.fadeTo(newBgm, targetVolume, fadeInTime);
+        } else {
+            newBgm.setVolume(targetVolume);
+        }
     }
 
-    stopBgm(fadeOutTime = 0) {
-        return new Promise(resolve => {
-            if (!this.currentBgm || !this.currentBgm.isPlaying) {
-                resolve(); return;
-            }
-            const bgmToStop = this.currentBgm;
-            this.currentBgm = null; this.currentBgmKey = null;
+    async stopBgm(fadeOutTime = 0) {
+        if (this.isFading) {
+            console.warn(`[SoundManager] フェード処理中に新しいstopBgmリクエストがありました。無視します。`);
+            return;
+        }
+        if (!this.currentBgm || !this.currentBgm.isPlaying) {
+            return;
+        }
+        const bgmToStop = this.currentBgm;
+        this.currentBgm = null; this.currentBgmKey = null;
 
-            if (fadeOutTime > 0 && bgmToStop.volume > 0) {
-                this.fadeTo(bgmToStop, 0, fadeOutTime).then(() => {
-                    bgmToStop.stop(); bgmToStop.destroy();
-                    resolve();
-                });
-            } else {
-                bgmToStop.stop(); bgmToStop.destroy();
-                resolve();
-            }
-        });
+        if (fadeOutTime > 0 && bgmToStop.volume > 0) {
+            await this.fadeTo(bgmToStop, 0, fadeOutTime);
+            bgmToStop.stop(); bgmToStop.destroy();
+        } else {
+            bgmToStop.stop(); bgmToStop.destroy();
+        }
     }
 
-    // ★★★ ゲームの心臓部(STEPイベント)に同期する、究極の手動Tween ★★★
+    // ★★★ ロック機構を組み込んだ、究極の手動Tween ★★★
     fadeTo(soundObject, targetVolume, duration) {
         return new Promise(resolve => {
-            // 既存のアップデーターがあれば、まずそれを停止・解除する
-            if (this.fadeUpdater) {
-                this.game.events.off(Phaser.Core.Events.STEP, this.fadeUpdater);
-                this.fadeUpdater = null;
+            if (this.isFading) { // 二重チェック
+                resolve(); return;
             }
-            
+            this.isFading = true; // ★ 処理開始時にロックする
+
             const startVolume = soundObject.volume;
             let startTime = -1;
 
-            // STEPイベントは、Phaserの更新ループごとに呼び出される
             this.fadeUpdater = (time, delta) => {
-                if (startTime === -1) {
-                    startTime = time;
-                }
+                if (startTime === -1) startTime = time;
                 const elapsed = time - startTime;
                 const progress = Math.min(elapsed / duration, 1);
                 
-                // soundObjectが破棄されていないか安全確認
                 if (soundObject.scene) { 
                     soundObject.setVolume(Phaser.Math.Linear(startVolume, targetVolume, progress));
                 }
 
                 if (progress >= 1) {
-                    // 完了したら、自身をSTEPイベントから解除する
                     this.game.events.off(Phaser.Core.Events.STEP, this.fadeUpdater);
                     this.fadeUpdater = null;
+                    this.isFading = false; // ★ 処理完了時にロックを解除する
                     resolve();
                 }
             };
-            
-            // ゲームのグローバルイベントに、このアップデーターを登録
             this.game.events.on(Phaser.Core.Events.STEP, this.fadeUpdater);
         });
     }
