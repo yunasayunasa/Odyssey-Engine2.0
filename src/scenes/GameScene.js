@@ -450,9 +450,13 @@ console.log("[LOG-BOMB] rebuildScene: AWAITING stopBgm..."); // ★
     }
 
      // 5. BGMを復元
-       if (state.sound && state.sound.bgmKey) {
-        // ここで playBgm を呼ぶ
-        await manager.soundManager.playBgm(state.sound.bgmKey, 500); // 500msでフェードイン
+    if (state.sound && state.sound.bgm) {
+        if (manager.soundManager.getCurrentBgmKey() !== state.sound.bgm) {
+            // ★★★ 修正箇所: awaitを追加してBGMの再生完了を待つ ★★★
+                 console.log(`[LOG-BOMB] rebuildScene: AWAITING playBgm for [${state.sound.bgm}]...`); // ★
+            await manager.soundManager.playBgm(state.sound.bgm, 0);
+                 console.log(`[LOG-BOMB] rebuildScene: プレイングplayBgm for [${state.sound.bgm}]...`); // ★
+        }
     }
     
     // 6. メッセージウィンドウを復元 (クリック待ちだった場合)
