@@ -77,8 +77,12 @@ export default class SoundManager {
 
     // ★★★ stopBgmも念のためPromiseを返すことを保証 ★★★
     stopBgm(fadeOutTime = 0) {
+        console.log("[LOG-BOMB] stopBgm: START"); // ★
+   
         return new Promise(resolve => {
             if (!this.currentBgm || !this.currentBgm.isPlaying) {
+              console.log("[LOG-BOMB] stopBgm: 終わり"); // ★
+   
                 resolve(); return;
             }
             const bgmToStop = this.currentBgm;
@@ -93,6 +97,7 @@ export default class SoundManager {
                 });
             } else {
                 bgmToStop.stop(); bgmToStop.destroy();
+                   console.log("[LOG-BOMB] stopBgm: BGM stopped via tween. Resolving."); // ★
                 resolve();
             }
         });
