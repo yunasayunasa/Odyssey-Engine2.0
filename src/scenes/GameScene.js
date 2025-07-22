@@ -255,13 +255,13 @@ export default class GameScene extends Phaser.Scene {
                 delete this.stateManager.f.tmp_current_bgm; // BGMがなければ変数を削除
             }
         }
-        try {
+          try {
             const gameState = this.stateManager.getState(this.scenarioManager);
-            const jsonString = JSON.stringify(gameState, null, 2);
+            const jsonString = JSON.stringify(gameState);
             localStorage.setItem(`save_data_${slot}`, jsonString);
             console.log(`スロット[${slot}]にセーブしました。`);
         } catch (e) {
-            console.error(`セーブに失敗しました: スロット[${slot}]`, e);
+            console.error(`セーブ失敗:`, e);
         }
     }
 
@@ -460,8 +460,8 @@ console.log("[LOG-BOMB] rebuildScene: AWAITING stopBgm..."); // ★
 
      // 5. BGMを復元
        if (state.sound && state.sound.bgmKey) {
-        await manager.soundManager.playBgm(state.sound.bgmKey, 500);
-    
+            await manager.soundManager.playBgm(state.sound.bgmKey, 500);
+        
     // 6. メッセージウィンドウを復元 (クリック待ちだった場合)
     if (state.scenario.isWaitingClick) {
         // ★ 話者情報も渡して復元 ★
