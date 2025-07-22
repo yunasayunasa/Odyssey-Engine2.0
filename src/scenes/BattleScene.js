@@ -135,6 +135,8 @@ export default class BattleScene extends Phaser.Scene {
 
         this.loseButton = this.add.text(this.scale.width - 320, 600, '敗北してゲームオーバー', { fontSize: '32px', fill: '#c00', backgroundColor: '#000' }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setVisible(false);
         this.loseButton.on('pointerdown', () => this.endBattle('lose'));
+        this.events.emit('scene-ready');
+        console.log("BattleScene: 準備完了イベント(scene-ready)を発行しました。");
 
         console.log("BattleScene: create 完了");
     }
