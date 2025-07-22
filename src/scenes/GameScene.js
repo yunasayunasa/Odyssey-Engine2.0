@@ -324,6 +324,7 @@ clearChoiceButtons() {
 
 
 async performLoad(slot, returnParams = null) {
+    console.log("[LOG-BOMB] performLoad: START");
     this.isPerformingLoad = true;
     let success = false; // ロードが成功したかを追跡するフラグ
 
@@ -365,10 +366,11 @@ async performLoad(slot, returnParams = null) {
                 }
             }
 
-            console.log(`スロット[${slot}]からロードしました。`, loadedState);
-
+            console.log(`スロット[${slot}]からロードしました。`,  
+                        console.log("[LOG-BOMB] performLoad: AWAITING rebuildScene..."); // ★
             await rebuildScene(this.scenarioManager, loadedState);
-            
+            console.log("[LOG-BOMB] performLoad: ...rebuildScene COMPLETED."); // ★
+        
             if (loadedState.scenario.isWaitingClick || loadedState.scenario.isWaitingChoice) {
                 console.log("ロード完了: 待機状態のため、ユーザーの入力を待ちます。");
             } else {
@@ -388,10 +390,12 @@ async performLoad(slot, returnParams = null) {
         // ★★★ 修正の核心 ★★★
         // tryまたはcatchの処理が完了した後、"必ず"実行されるブロック
         this.isPerformingLoad = false;
-        
+         console.log("[LOG-BOMB] performLoad: FINALLY block reached."); // ★
         // イベントの発行を次のフレームに遅延させる
         this.time.delayedCall(1, () => {
             this.events.emit('gameScene-load-complete');
+            
+            console.log("[LOG-BOMB] performLoad: Event emitted from finally block."); // ★
             console.log("GameScene: 処理完了。ロード完了イベントを発行しました。(finallyブロック)");
         });
     }
