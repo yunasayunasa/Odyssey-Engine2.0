@@ -501,5 +501,3 @@ export default class BattleScene extends Phaser.Scene {
         this.input.enabled = true;
     }
 }
-
-                                }
