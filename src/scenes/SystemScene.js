@@ -1,4 +1,4 @@
-すimport SoundManager from '../core/SoundManager.js';
+import SoundManager from '../core/SoundManager.js';
 
 export default class SystemScene extends Phaser.Scene {
     constructor() {
