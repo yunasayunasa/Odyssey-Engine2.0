@@ -366,7 +366,7 @@ async performLoad(slot, returnParams = null) {
                 }
             }
 
-            console.log(`スロット[${slot}]からロードしました。`,  
+        
                         console.log("[LOG-BOMB] performLoad: AWAITING rebuildScene..."); // ★
             await rebuildScene(this.scenarioManager, loadedState);
             console.log("[LOG-BOMB] performLoad: ...rebuildScene COMPLETED."); // ★
