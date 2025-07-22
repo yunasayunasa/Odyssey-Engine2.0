@@ -461,11 +461,78 @@ export default class BattleScene extends Phaser.Scene {
                     console.log("BattleScene: タイトルに戻ります。");
                     this.scene.get('SystemScene').events.emit('return-to-novel', {
                         from: this.scene.key,
-                        params: { 'f.battle_result': 'game_over' }
-                    });
-                 
-                }
+                        params: { 'f.battle_result': 'async handleWin() {
+        if (this.eventEmitted) return;
+        this.eventEmitted = true;
+
+        if (this.soundManager) {
+            await this.soundManager.stopBgm(500);
+        }
+
+        if (this.stateManager && this.onFVariableChangedListener) {
+            this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);
+        }
+
+        this.scene.get('SystemScene').events.emit('return-to-novel', {
+            from: this.scene.key,
+            params: { 
+                'f.battle_result': 'win',
+                'f.player_hp': this.playerStats.hp, 
+                'f.coin': this.stateManager.f.coin 
+            }
+        });
+        // ★★★ 修正点⑤: 自分でstop()を呼び出さない！ ★★★
+    }
+    
+    handleLose() {
+        console.log("BattleScene: ゲームオーバー処理を開始します。");
+        this.gameOverText = this.add.text(this.scale.width / 2, this.scale.height / 2 - 50, 'GAME OVER', { fontSize: '64px', fill: '#f00', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setDepth(999);
+        this.retryButton = this.add.text(this.scale.width / 2, this.scale.height / 2 + 50, 'もう一度挑戦', { fontSize: '32px', fill: '#fff', backgroundColor: '#880000', padding: { x: 20, y: 10 } }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(999);
+        this.titleButton = this.add.text(this.scale.width / 2, this.scale.height / 2 + 120, 'タイトルに戻る', { fontSize: '32px', fill: '#fff', backgroundColor: '#444444', padding: { x: 20, y: 10 } }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(999);
+        
+        this.input.enabled = true; // ゲームオーバーボタンを操作できるようにする
+
+        this.retryButton.on('pointerdown', async () => {
+            if (this.eventEmitted) return;
+            this.eventEmitted = true;
+            this.input.enabled = false;
+            
+            if (this.soundManager) await this.soundManager.stopBgm(500);
+            if (this.stateManager) this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);
+
+            this.scene.get('SystemScene').events.emit('request-scene-transition', {
+                to: this.scene.key,
+                from: this.scene.key,
+                params: this.initialBattleParams
             });
+        });
+
+        this.titleButton.on('pointerdown', async () => {
+            if (this.eventEmitted) return;
+            this.eventEmitted = true;
+            this.input.enabled = false;
+            
+            if (this.soundManager) await this.soundManager.stopBgm(500);
+            if (this.stateManager) this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);
+
+            this.scene.get('SystemScene').events.emit('return-to-novel', {
+                from: this.scene.key,
+                params: { 'f.battle_result': 'game_over' }
+            });
+        });
+    }
+    
+    // ★★★ stop()はPhaserのライフサイクルに任せるため、中身をシンプルに ★★★
+    stop() {
+        console.log("BattleScene: stop されました。");
+        // リスナー解除はshutdownで行うのがより安全
+    }
+
+    shutdown() {
+        console.log("BattleScene: shutdown されました。リスナーをクリーンアップします。");
+        if (this.stateManager && this.onFVariableChangedListener) {
+            this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);
+            this.onFVariableChangedListener = null;
         }
     }
 
@@ -474,3 +541,5 @@ export default class BattleScene extends Phaser.Scene {
         this.input.enabled = true;
     }
 }
+
+                                }
