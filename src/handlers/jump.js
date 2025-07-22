@@ -1,47 +1,65 @@
-// src/handlers/jump.js (evalを使う形に戻す)
+// src/handlers/jump.js (最終確定版)
 
+/**
+ * [jump] タグの処理
+ * 他のシーンへの遷移、またはファイル内のラベルへのジャンプを行う。
+ * @param {ScenarioManager} manager
+ * @param {Object} params - { storage, target, params }
+ */
 export function handleJump(manager, params) {
-    const { storage, target } = params;
     
-    let transitionParams = {};
-    if (params.params) {
-        try {
-            // ★★★ 修正箇所: embedVariablesやJSON.parseを使わず、文字列全体をStateManager.eval()に渡す ★★★
-            // StateManager.eval() が f.love_meter などを解決してくれる
-            transitionParams = manager.stateManager.eval(params.params);
-            
-            // evalが失敗した場合(undefined)に備え、空のオブジェクトをデフォルト値とする
-            if (transitionParams === undefined) {
-                transitionParams = {};
+    // --- シーン間遷移の場合 ---
+    if (params.storage) {
+        console.log(`[jump] 別シーン[${params.storage}]へジャンプします。`);
+
+        // 1. オートセーブを実行
+        manager.scene.performSave(0);
+
+        // 2. 遷移パラメータを解決
+        let transitionParams = {};
+        if (params.params) {
+            try {
+                // stateManager.evalはオブジェクトを返さないので、直接代入はしない
+                // evalでf変数を更新し、その結果を新しいオブジェクトに詰める
+                manager.stateManager.eval(params.params);
+
+                // パラメータ文字列からキーを抽出して、現在のf変数の値を集める
+                // 例: "{player_level:f.love_meter, player_name:'&f.player_name'}"
+                const keys = params.params.match(/(\w+):/g).map(k => k.replace(':', ''));
+                for (const key of keys) {
+                    const fkey = key.startsWith('f.') ? key : `f.${key}`;
+                    if (manager.stateManager.f[fkey.substring(2)] !== undefined) {
+                         transitionParams[key] = manager.stateManager.f[fkey.substring(2)];
+                    }
+                }
+            } catch (e) {
+                console.error(`[jump] params属性の解析に失敗しました:`, e);
             }
-        } catch (e) {
-            // StateManager.eval()内でエラーが捕捉されるはずだが、念のため
-            console.error(`[jump] params属性の評価に失敗しました: "${params.params}"`, e);
-            transitionParams = {}; // エラー時は空のオブジェクト
         }
-    }
-
-    if (storage) {
-        console.log(`[jump] 別シーン[${storage}]へジャンプします。`, transitionParams);
         
-        manager.scene.performSave(0); 
-// ★★★ 修正箇所: SystemSceneにリクエストを送る前に、GameScene自身をpauseする ★★★
-        console.log("[jump] GameSceneをpauseします。");
-        manager.scene.scene.pause(); // これでGameSceneが一時停止する
-
+        // 3. SystemSceneに遷移をリクエスト
+        // ★★★ 正しいキーの取得方法 ★★★
+        const fromSceneKey = manager.scene.scene.key; 
         manager.scene.scene.get('SystemScene').events.emit('request-scene-transition', {
-            to: storage,
-            from: manager.scene.key,
+            to: params.storage,
+            from: fromSceneKey,
             params: transitionParams
         });
 
-    } else if (target && target.startsWith('*')) {
-        console.log(`[jump] ラベル[${target}]へジャンプします。`);
-        manager.jumpTo(target);
+        // 4. ★★★ 最重要：シナリオループを完全に停止させる ★★★
+        manager.stop();
+        
+        // ★★★ pause()は絶対に呼び出さない！ ★★★
+
+    // --- ファイル内ジャンプの場合 ---
+    } else if (params.target && params.target.startsWith('*')) {
+        console.log(`[jump] ラベル[${params.target}]へジャンプします。`);
+        manager.jumpTo(params.target);
         
     } else {
         console.warn('[jump] 有効なstorage属性またはtarget属性が指定されていません。');
     }
     
-    return Promise.resolve();
+    // ★★★ Promiseを返さない ★★★
+    // manager.stop()が呼ばれるので、ループはここで終了する
 }
