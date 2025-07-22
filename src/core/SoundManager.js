@@ -15,7 +15,8 @@ export default class SoundManager {
         // ボリューム変更をリッスン
         this.configManager.on('change:bgmVolume', this.onBgmVolumeChange, this);
         this.configManager.on('change:seVolume', this.onSeVolumeChange, this);
-        
+         this.fadeUpdater = null; // ゲームループに登録する更新関数の参照
+
         // ゲームが破棄されるときにリスナーをクリーンアップ
         this.game.events.once(Phaser.Core.Events.DESTROY, this.destroy, this);
 
@@ -30,43 +31,83 @@ export default class SoundManager {
     }
 
    
-      // ★★★ playBgmを安全な手動Tweenで復活 ★★★
-   playBgm(key, fadeInTime = 0) {
-        console.log(`[DEBUG] playBgm (instant): START with key [${key}]`);
-        this.resumeContext();
-        if (!this.configManager) { return; }
-        if (this.currentBgm && this.currentBgm.isPlaying && this.currentBgmKey === key) {
-            return;
-        }
+      playBgm(key, fadeInTime = 0) {
+        return new Promise(async resolve => {
+            this.resumeContext();
+            if (!this.configManager || (this.currentBgm && this.currentBgmKey === key)) {
+                resolve(); return;
+            }
+            await this.stopBgm(fadeInTime > 0 ? fadeInTime / 2 : 0);
+            const newBgm = this.sound.add(key, { loop: true, volume: 0 });
+            newBgm.play();
+            this.currentBgm = newBgm; this.currentBgmKey = key;
+            const targetVolume = this.configManager.getValue('bgmVolume');
 
-        // 以前のBGMを即座に停止
-        this.stopBgm(0);
-
-        const newBgm = this.sound.add(key, { loop: true });
-        const targetVolume = this.configManager.getValue('bgmVolume');
-        newBgm.setVolume(targetVolume);
-        newBgm.play();
-        
-        this.currentBgm = newBgm;
-        this.currentBgmKey = key;
-        console.log(`[DEBUG] playBgm (instant): END. Volume set to ${targetVolume}`);
-        
-        // Promiseを返す必要がないので、asyncも不要
+            if (fadeInTime > 0 && targetVolume > 0) {
+                await this.fadeTo(newBgm, targetVolume, fadeInTime);
+            } else {
+                newBgm.setVolume(targetVolume);
+            }
+            resolve();
+        });
     }
 
-    // ★★★ Tween を完全に削除 ★★★
     stopBgm(fadeOutTime = 0) {
-        console.log(`[DEBUG] stopBgm (instant): START`);
-        if (!this.currentBgm || !this.currentBgm.isPlaying) {
-            console.log(`[DEBUG] stopBgm (instant): No BGM to stop.`);
-            return;
-        }
-        
-        this.currentBgm.stop();
-        this.currentBgm.destroy();
-        this.currentBgm = null;
-        this.currentBgmKey = null;
-        console.log(`[DEBUG] stopBgm (instant): END`);
+        return new Promise(resolve => {
+            if (!this.currentBgm || !this.currentBgm.isPlaying) {
+                resolve(); return;
+            }
+            const bgmToStop = this.currentBgm;
+            this.currentBgm = null; this.currentBgmKey = null;
+
+            if (fadeOutTime > 0 && bgmToStop.volume > 0) {
+                this.fadeTo(bgmToStop, 0, fadeOutTime).then(() => {
+                    bgmToStop.stop(); bgmToStop.destroy();
+                    resolve();
+                });
+            } else {
+                bgmToStop.stop(); bgmToStop.destroy();
+                resolve();
+            }
+        });
+    }
+
+    // ★★★ ゲームの心臓部(STEPイベント)に同期する、究極の手動Tween ★★★
+    fadeTo(soundObject, targetVolume, duration) {
+        return new Promise(resolve => {
+            // 既存のアップデーターがあれば、まずそれを停止・解除する
+            if (this.fadeUpdater) {
+                this.game.events.off(Phaser.Core.Events.STEP, this.fadeUpdater);
+                this.fadeUpdater = null;
+            }
+            
+            const startVolume = soundObject.volume;
+            let startTime = -1;
+
+            // STEPイベントは、Phaserの更新ループごとに呼び出される
+            this.fadeUpdater = (time, delta) => {
+                if (startTime === -1) {
+                    startTime = time;
+                }
+                const elapsed = time - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // soundObjectが破棄されていないか安全確認
+                if (soundObject.scene) { 
+                    soundObject.setVolume(Phaser.Math.Linear(startVolume, targetVolume, progress));
+                }
+
+                if (progress >= 1) {
+                    // 完了したら、自身をSTEPイベントから解除する
+                    this.game.events.off(Phaser.Core.Events.STEP, this.fadeUpdater);
+                    this.fadeUpdater = null;
+                    resolve();
+                }
+            };
+            
+            // ゲームのグローバルイベントに、このアップデーターを登録
+            this.game.events.on(Phaser.Core.Events.STEP, this.fadeUpdater);
+        });
     }
   // ★ playSe も同様に修正
     playSe(key) {
