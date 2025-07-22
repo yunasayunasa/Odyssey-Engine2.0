@@ -409,6 +409,41 @@ export default class ScenarioManager {
             });
         }
     }
+  /**
+     * 現在のシナリオの進行状況をオブジェクトとして返す
+     * @returns {object}
+     */
+    getScenarioState() {
+        return {
+            fileName: this.currentFile,
+            line: this.currentLine,
+            ifStack: this.ifStack,
+            callStack: this.callStack,
+            isWaitingClick: this.isWaitingClick,
+            isWaitingChoice: this.isWaitingChoice,
+            // ...その他シナリオ進行に必要な情報...
+        };
+    }
+
+    /**
+     * 現在のレイヤー（背景・キャラクター）の状態をオブジェクトとして返す
+     * @returns {object}
+     */
+    getLayerState() {
+        const state = { characters: {}, background: null };
+        // キャラクターの状態を保存
+        for (const name in this.scene.characters) {
+            const chara = this.scene.characters[name];
+            if (chara && chara.visible) {
+                state.characters[name] = { storage: chara.texture.key, x: chara.x, y: chara.y, alpha: chara.alpha /* ... */ };
+            }
+        }
+        // 背景の状態を保存
+        if (this.layers.background.list.length > 0) {
+            state.layers.background = this.layers.background.list[0].texture.key;
+        }
+        return state;
+    }
 
     // ★★★ スキップ時にUIを非表示にする（推奨） ★★★
     hideInterfaceForSkip() {

@@ -1,148 +1,80 @@
-// src/core/StateManager.js (最終版)
-
 export default class StateManager extends Phaser.Events.EventEmitter {
     constructor() {
-        super(); // ★★★ 追加: 親クラスのコンストラクタを呼び出す ★★★
-        this.f = {};
-        this.sf = this.loadSystemVariables(); 
-        if (!this.sf.history) this.sf.history = [];
+        super();
+        this.f = {};  // ゲーム変数 (f.hoge)
+        this.sf = {}; // システム変数 (sf.hoge)
     }
-     // ★★★ 追加: f変数を設定し、イベントを発行するメソッド ★★★
+
+    /**
+     * f変数を設定し、変更があった場合にイベントを発行する
+     * @param {string} key - 'f.'を含まない変数名 (例: 'player_hp')
+     * @param {*} value - 設定する値
+     */
     setF(key, value) {
         if (this.f[key] !== value) {
             this.f[key] = value;
-            this.emit('f-variable-changed', key, value);
+            this.emit('f-variable-changed', key, value, this.f); // 第3引数として更新後のfオブジェクト全体を渡す
         }
     }
 
     /**
-     * ゲームの現在の状態をすべて収集して返す
-     * @param {ScenarioManager} scenarioManager - 現在のシナリオの状態を取得するための参照
-     * @returns {Object} 現在のゲーム状態のスナップショット
-     */
-    getState(scenarioManager) {
-        const scene = scenarioManager.scene;
-        
-        const characterStates = {};
-        for (const name in scene.characters) {
-            const chara = scene.characters[name];
-            if (chara && chara.visible && chara.alpha > 0) {
-                characterStates[name] = {
-                    storage: chara.texture.key,
-                    x: chara.x, y: chara.y,
-                    scaleX: chara.scaleX, scaleY: chara.scaleY,
-                    alpha: chara.alpha, flipX: chara.flipX,
-                    tint: chara.tintTopLeft,
-                };
-            }
-        }
-        
-        const backgroundState = scenarioManager.layers.background.list.length > 0
-            ? scenarioManager.layers.background.list[0].texture.key
-            : null;
-
-        const scenarioState = {
-            fileName: scenarioManager.currentFile,
-            line: scenarioManager.currentLine,
-            ifStack: scenarioManager.ifStack,
-            callStack: scenarioManager.callStack,
-            isWaitingClick: scenarioManager.isWaitingClick,
-            isWaitingChoice: scenarioManager.isWaitingChoice,
-            pendingChoices: scene.pendingChoices,
-            currentText: scenarioManager.messageWindow.currentText,
-            speakerName: scenarioManager.messageWindow.currentSpeaker,
-        };
-        
-        return {
-            saveDate: new Date().toLocaleString('ja-JP'),
-            variables: { f: this.f }, 
-            scenario: scenarioState,
-            layers: {
-                background: backgroundState,
-                characters: characterStates,
-            },
-            sound: {
-                bgm: scenarioManager.soundManager.getCurrentBgmKey(),
-            }
-        };
-    }
-
-    /**
-     * ロードした状態から変数を復元する
-     * @param {Object} loadedState - localStorageから読み込んだ状態オブジェクト
-     */
-    setState(loadedState) {
-        this.f = loadedState.variables.f || {};
-    }
-
-         /**
-     * 文字列のJavaScript式を安全に評価・実行し、変更を通知する。
-     * @param {string} exp - 実行する式 (例: "f.hoge = 10")
-     * @returns {*} 評価結果
+     * 文字列のJavaScript式を安全に評価・実行し、変更を通知する
+     * @param {string} exp - 実行する式 (例: "f.player_hp = 100")
      */
     eval(exp) {
         try {
-            const f = this.f || {};
-            const sf = this.sf || {};
-            
-            // ★★★ 修正箇所: 変更前のf変数の状態をコピーして保持 ★★★
-            // JSON.parse(JSON.stringify(f)) は確実だが、パフォーマンスが懸念される場合はシャローコピーで試す
-            const f_before = { ...f };
+            const f_before = { ...this.f };
+            const sf_before = { ...this.sf };
 
-            const result = new Function('f', 'sf', `'use strict'; return (${exp});`)(f, sf);
-            
-            // 変更後のfの参照をthis.fに再代入
-            this.f = f;
+            // new Functionを使って安全に実行
+            new Function('f', 'sf', `'use strict'; ${exp}`)(this.f, this.sf);
 
-            // ★★★ 修正箇所: 変更前と変更後のf変数を比較し、変更があればイベントを発行 ★★★
-            // 新旧両方のキーのセットを作成し、変更がないかチェックする
-            const allKeys = new Set([...Object.keys(f_before), ...Object.keys(this.f)]);
-            allKeys.forEach(key => {
-                // 値が変更された、またはキーが新しく追加/削除された場合
+            // 変更があったf変数をチェックしてイベントを発行
+            const allFKeys = new Set([...Object.keys(f_before), ...Object.keys(this.f)]);
+            allFKeys.forEach(key => {
                 if (f_before[key] !== this.f[key]) {
-                    console.log(`[StateManager.eval] f.${key} が変更されました: ${f_before[key]} -> ${this.f[key]}`);
-                    this.emit('f-variable-changed', key, this.f[key]);
+                    console.log(`[StateManager.eval] f.${key} が変更: ${f_before[key]} -> ${this.f[key]}`);
+                    this.emit('f-variable-changed', key, this.f[key], this.f);
                 }
             });
 
-            this.saveSystemVariables(); 
-            return result;
+            // sf変数の変更も同様にチェック可能 (必要であれば)
+
         } catch (e) {
-            console.warn(`[StateManager.eval] 式の評価中にエラーが発生しました: "${exp}"`, e);
-            return undefined; 
+            console.warn(`[StateManager.eval] 式の評価エラー: "${exp}"`, e);
         }
     }
 
+    /**
+     * ゲーム状態のスナップショットを生成する
+     * @param {ScenarioManager} scenarioManager
+     * @returns {object} セーブ用データ
+     */
+    getState(scenarioManager) {
+        const state = {
+            f: { ...this.f },
+            sf: { ...this.sf },
+            scenario: scenarioManager.getScenarioState(),
+            sound: {
+                bgmKey: scenarioManager.soundManager.getCurrentBgmKey()
+            },
+            layers: scenarioManager.getLayerState()
+        };
+        return state;
+    }
 
-    // システム変数のセーブ/ロード、履歴の追加 (変更なし)
-    saveSystemVariables() {
-        try {
-            localStorage.setItem('my_novel_engine_system', JSON.stringify(this.sf));
-        } catch (e) { console.error("システム変数の保存に失敗しました。", e); }
-    }
-    loadSystemVariables() {
-        try {
-            const data = localStorage.getItem('my_novel_engine_system');
-            return data ? JSON.parse(data) : {};
-        } catch (e) { console.error("システム変数の読み込みに失敗しました。", e); return {}; }
-    }
-    addHistory(speaker, dialogue) {
-        this.sf.history.push({ speaker, dialogue });
-        if (this.sf.history.length > 100) this.sf.history.shift();
-        this.saveSystemVariables();
-    }
-      // ★★★ 追加: f/sf変数の値を安全に取得するメソッド ★★★
-    getValue(exp) {
-        try {
-            const f = this.f;
-            const sf = this.sf;
-            // new Functionを使って、より安全に値を取得
-            return new Function('f', 'sf', `return ${exp}`)(f, sf);
-        } catch (e) {
-            // 式が不正な場合や、存在しないプロパティにアクセスしようとした場合はundefinedを返す
-            console.warn(`[StateManager.getValue] 式の評価に失敗しました: "${exp}"`, e);
-            return undefined;
+    /**
+     * ロードした状態を復元する
+     * @param {object} loadedState
+     */
+    setState(loadedState) {
+        this.f = {}; // 一旦リセット
+        if (loadedState.f) {
+            for (const key in loadedState.f) {
+                // setF経由で値をセットし、イベントを強制発行する
+                this.setF(key, loadedState.f[key]);
+            }
         }
+        this.sf = loadedState.sf || {};
     }
-
 }
