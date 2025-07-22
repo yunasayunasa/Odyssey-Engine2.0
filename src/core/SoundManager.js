@@ -38,6 +38,7 @@ export default class SoundManager {
      */
     // ★★★ playBgmをasync/awaitで書き直して安全性を高める ★★★
   async playBgm(key, fadeInTime = 0) {
+      console.log(`[LOG-BOMB] playBgm: START with key: ${key}`);
         this.resumeContext();
         if (!this.configManager) { return; }
         if (this.currentBgm && this.currentBgm.isPlaying && this.currentBgmKey === key) {
@@ -45,7 +46,9 @@ export default class SoundManager {
         }
 
         // 以前のBGMを停止し、完了を待つ
+      console.log("[LOG-BOMB] playBgm: AWAITING inner stopBgm..."); // ★
         await this.stopBgm(fadeInTime > 0 ? fadeInTime / 2 : 0);
+      console.log("[LOG-BOMB] playBgm: ゴーイングinner stopBgm..."); // ★
 
         const newBgm = this.sound.add(key, { loop: true, volume: 0 });
         newBgm.play();
@@ -56,14 +59,17 @@ export default class SoundManager {
         if (fadeInTime > 0) {
             // Promiseを返すTweenを作成し、完了を待つ
             await new Promise(resolve => {
+                   console.log("[LOG-BOMB] playBgm: AWAITING tween..."); // ★
                 this.game.tweens.add({
                     targets: newBgm,
                     volume: targetVolume,
                     duration: fadeInTime,
                     onComplete: resolve // tween完了時にPromiseを解決
+                       console.log("[LOG-BOMB] playBgm: コンプリートtween..."); // ★
                 });
             });
         } else {
+                console.log("[LOG-BOMB] playBgm: END"); // ★
             newBgm.setVolume(targetVolume);
         }
         // この関数の最後まで到達すれば、Promiseは自動的に解決される
