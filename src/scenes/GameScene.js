@@ -375,14 +375,11 @@ async performLoad(slot, returnParams = null) {
                         console.log("[LOG-BOMB] performLoad: AWAITING rebuildScene..."); // ★
             await rebuildScene(this.scenarioManager, loadedState);
             console.log("[LOG-BOMB] performLoad: ...rebuildScene COMPLETED."); // ★
-          if (this.coinHud) {
-            this.coinHud.setCoin(this.stateManager.f.coin || 0);
-        }
-        if (this.playerHpBar) {
-            const maxHp = this.stateManager.f.player_max_hp || 100;
-            const currentHp = this.stateManager.f.player_hp || maxHp;
-            this.playerHpBar.setHp(currentHp, maxHp);
-        }
+          // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ これが新しい解決策：汎用的な更新イベントを発行 ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        this.events.emit('force-hud-update');
+        console.log("GameScene: すべてのHUDに強制更新リクエストを発行しました。");
             if (loadedState.scenario.isWaitingClick || loadedState.scenario.isWaitingChoice) {
                 console.log("ロード完了: 待機状態のため、ユーザーの入力を待ちます。");
             } else {
@@ -462,9 +459,8 @@ console.log("[LOG-BOMB] rebuildScene: AWAITING stopBgm..."); // ★
     }
 
      // 5. BGMを復元
-    if (state.variables.f && state.variables.f.tmp_current_bgm) {
-        await manager.soundManager.playBgm(state.variables.f.tmp_current_bgm, 500);
-    }
+       if (state.sound && state.sound.bgmKey) {
+        await manager.soundManager.playBgm(state.sound.bgmKey, 500);
     
     // 6. メッセージウィンドウを復元 (クリック待ちだった場合)
     if (state.scenario.isWaitingClick) {
