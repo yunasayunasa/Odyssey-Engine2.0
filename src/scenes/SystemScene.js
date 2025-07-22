@@ -168,10 +168,19 @@ this.tweens.killAll();
                 this._onTransitionComplete(sceneKey);
             });
         }
+     // ★★★ run() を start() に変更 ★★★
+        this.scene.start(sceneKey, params);
 
-        // リスナーを登録した後に、シーンの起動をスケジュールする
-        this.scene.run(sceneKey, params);
+        // ★★★ start() に合わせ、リスナーの登録方法をより安全な形に ★★★
+        this.scene.get(sceneKey).events.once(Phaser.Scenes.Events.CREATE, (newScene) => {
+            if (sceneKey === 'GameScene') {
+                newScene.events.once('gameScene-load-complete', () => this._onTransitionComplete(sceneKey));
+            } else {
+                newScene.events.once('scene-ready', () => this._onTransitionComplete(sceneKey));
+            }
+        });
     }
+    
     /**
      * シーン遷移が完全に完了したときの処理
      * @param {string} sceneKey - 完了したシーンのキー

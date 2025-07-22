@@ -409,6 +409,24 @@ export default class ScenarioManager {
             });
         }
     }
+ // ★★★ この2つのメソッドを追加 ★★★
+    getCurrentBgmKey() {
+        return this.soundManager.getCurrentBgmKey();
+    }
+    
+    getLayerState() {
+        const state = { characters: {}, background: null };
+        // キャラクターの状態を保存 (簡略版)
+        for (const name in this.scene.characters) {
+            const chara = this.scene.characters[name];
+            state.characters[name] = { storage: chara.texture.key, x: chara.x, y: chara.y };
+        }
+        // 背景の状態を保存
+        if (this.layers.background.list[0]) {
+            state.layers.background = this.layers.background.list[0].texture.key;
+        }
+        return state;
+    }
 
     // ★★★ スキップ時にUIを非表示にする（推奨） ★★★
     hideInterfaceForSkip() {

@@ -65,15 +65,35 @@ export default class StateManager extends Phaser.Events.EventEmitter {
                 bgm: scenarioManager.soundManager.getCurrentBgmKey(),
             }
         };
+     const state = {
+            scenario: scenarioManager.getScenarioState(),
+            f: { ...this.f },
+            sf: { ...this.sf },
+            // ★★★ 修正点①: 現在のBGMのキーを保存する ★★★
+            sound: {
+                bgmKey: scenarioManager.soundManager.getCurrentBgmKey()
+            },
+            // ★★★ 背景やキャラクターの状態もここに保存するとより完璧 ★★★
+            layers: scenarioManager.getLayerState()
+        };
+        return state;
     }
 
-    /**
-     * ロードした状態から変数を復元する
-     * @param {Object} loadedState - localStorageから読み込んだ状態オブジェクト
+       /**
+     * ロードした状態を復元する
+     * @param {object} loadedState
      */
     setState(loadedState) {
-        this.f = loadedState.variables.f || {};
+        this.f = {}; // 一旦リセット
+        // ★★★ 修正点②: setF経由で値をセットし、イベントを強制発行する ★★★
+        if (loadedState.f) {
+            for (const key in loadedState.f) {
+                this.setF(key, loadedState.f[key]);
+            }
+        }
+        this.sf = loadedState.sf || {};
     }
+
 
          /**
      * 文字列のJavaScript式を安全に評価・実行し、変更を通知する。

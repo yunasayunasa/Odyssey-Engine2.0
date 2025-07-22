@@ -72,13 +72,15 @@ export default class SoundManager {
         const bgmToStop = this.currentBgm;
         this.currentBgm = null; this.currentBgmKey = null;
 
-        if (fadeOutTime > 0 && bgmToStop.volume > 0) {
+         if (fadeOutTime > 0 && bgmToStop.volume > 0) {
             await this.fadeTo(bgmToStop, 0, fadeOutTime);
-            bgmToStop.stop(); bgmToStop.destroy();
-        } else {
-            bgmToStop.stop(); bgmToStop.destroy();
+            // ★★★ 50ms待機する処理を追加 ★★★
+            await new Promise(r => setTimeout(r, 50));
         }
+        bgmToStop.stop();
+        bgmToStop.destroy();
     }
+    
 
     // ★★★ ロック機構を組み込んだ、究極の手動Tween ★★★
     fadeTo(soundObject, targetVolume, duration) {
