@@ -2,16 +2,19 @@ export default class SoundManager {
     constructor(game) {
         this.game = game;
         this.sound = game.sound;
-        this.configManager = game.registry.get('configManager');
+        this.configManager = this.game.registry.get('configManager');
+        if (!this.configManager) {
+            console.error("SoundManager: ConfigManagerが見つかりません！");
+        }
         this.currentBgm = null; // Phaser.Sound.BaseSoundオブジェクト
         
         // ★★★ 状態管理用のプロパティを追加 ★★★
         this.isStopping = false; // 停止処理中フラグ
         this.isStarting = false; // 再生処理中フラグ
 
-        if (this.configManager) {
-            this.configManager.on('change:bgmVolume', this.onBgmVolumeChange, this);
-        }
+         // ★★★ 音量変更イベントのリスナーを設定 ★★★
+        // これがコンフィグ画面からの操作を反映させる部分
+        this.configManager.on('change:bgmVolume', this.onBgmVolumeChange, this);
         this.game.events.once(Phaser.Core.Events.DESTROY, this.destroy, this);
     }
     // AudioContextを安全に再開
@@ -20,7 +23,15 @@ export default class SoundManager {
             this.sound.context.resume().then(() => console.log("SoundManager: AudioContextが再開されました。"));
         }
     }
-
+   // ★★★ コンフィグ変更時に再生中のBGM音量を更新するメソッド ★★★
+    onBgmVolumeChange(newVolume) {
+        if (this.currentBgm && this.currentBgm.isPlaying) {
+            // isFading中はTweenと競合する可能性があるので避ける
+            if (!this.isFading) {
+                this.currentBgm.setVolume(newVolume);
+            }
+        }
+    }
    
        /**
      * BGMを再生する (最終修正版)
@@ -31,60 +42,49 @@ export default class SoundManager {
        /**
      * BGMを再生する (非同期競合対策版)
      */
-    async playBgm(key, fadeTime = 500) {
+     // playBgm から async を削除し、音量設定を確実に行う
+    playBgm(key, fadeTime = 500) {
         this.resumeContext();
 
-        if (this.currentBgm && this.currentBgm.isPlaying && this.currentBgmKey === key) {
+        if (this.isFading || (this.currentBgm && this.currentBgmKey === key)) {
             return;
         }
-        
-        if (this.isFading) {
-            console.warn(`[SoundManager] フェード処理中に新しいplayBgmリクエスト '${key}' がありました。無視します。`);
-            return;
-        }
-        
-        // ★ 処理開始時にロック
-        this.isFading = true;
 
-        // 1. 古いBGMがあれば、停止処理を完了させる
+        // 古いBGMがあれば停止命令を出す (既存のロジックのまま)
         if (this.currentBgm && this.currentBgm.isPlaying) {
-            const oldBgm = this.currentBgm;
-            console.log(`[SoundManager] 古いBGM '${this.currentBgmKey}' を停止します。`);
-            
-            // フェードアウト
-            if (fadeTime > 0 && oldBgm.volume > 0) {
-                await this.fadeTo(oldBgm, 0, fadeTime);
-            }
-
-            // ★ 完全に停止・破棄してから、状態をnullにする
-            if (oldBgm.isPlaying) oldBgm.stop();
-            oldBgm.destroy();
-            this.currentBgm = null;
-            this.currentBgmKey = null;
-            console.log(`[SoundManager] 古いBGMを完全に停止しました。`);
+            this.stopBgm(fadeTime);
         }
 
-        // 2. 新しいBGMを再生する
-        console.log(`[SoundManager] 新しいBGM '${key}' を再生します。`);
-        
-        const targetVolume = 1.0; // ★ デバッグのためボリュームは1で固定
-        const newBgm = this.sound.add(key, { loop: true, volume: 0 });
-        
-        // ★ 再生を開始する直前に、状態をセットする
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ これが今回の修正の核心 ★★★
+        // ★★★ 再生する瞬間に、ConfigManagerから最新の音量を取得 ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        const targetVolume = this.configManager.getValue('bgmVolume');
+        console.log(`[SoundManager] playBgm: '${key}' を再生します。Configからの目標音量: ${targetVolume}`);
+
+        const newBgm = this.sound.add(key, { 
+            loop: true, 
+            // ★ 初期音量をここで設定する（フェードインしない場合のため）
+            volume: targetVolume 
+        });
+
         this.currentBgm = newBgm;
         this.currentBgmKey = key;
+        
+        // ★★★ フェードインする場合、初期音量を0にリセットしてから再生 ★★★
+        if (fadeTime > 0) {
+            newBgm.setVolume(0);
+        }
+        
         newBgm.play();
 
-        // フェードイン
+        // フェードイン処理
         if (fadeTime > 0) {
-            await this.fadeTo(newBgm, targetVolume, fadeTime);
-        } else {
-            newBgm.setVolume(targetVolume);
+            this.isFading = true;
+            this.fadeTo(newBgm, targetVolume, fadeTime, () => {
+                this.isFading = false;
+            });
         }
-
-        // ★ 全ての処理が終わったらロックを解除
-        this.isFading = false;
-        console.log(`[SoundManager] BGM '${key}' の再生が安定しました。`);
     }
 
     /**
