@@ -36,78 +36,42 @@ export default class SoundManager {
      * @param {number} fadeInTime - フェードイン時間(ms)
      * @returns {Promise<void>} フェードイン完了時に解決されるPromise
      */
-async playBgm(key, fadeInTime = 0) {
-        console.log(`[LOG-BOMB] playBgm: START with key [${key}]`);
+playBgm(key, fadeInTime = 0) {
+        console.log(`[DEBUG] playBgm (instant): START with key [${key}]`);
         this.resumeContext();
         if (!this.configManager) { return; }
         if (this.currentBgm && this.currentBgm.isPlaying && this.currentBgmKey === key) {
-            console.log(`[LOG-BOMB] playBgm: Same BGM. Skipping.`);
             return;
         }
 
-        console.log(`[LOG-BOMB] playBgm: Awaiting stopBgm...`);
-        await this.stopBgm(fadeInTime > 0 ? fadeInTime / 2 : 0);
-        console.log(`[LOG-BOMB] playBgm: ...stopBgm completed.`);
+        // 以前のBGMを即座に停止
+        this.stopBgm(0);
 
-        const newBgm = this.sound.add(key, { loop: true, volume: 0 });
+        const newBgm = this.sound.add(key, { loop: true });
+        const targetVolume = this.configManager.getValue('bgmVolume');
+        newBgm.setVolume(targetVolume);
         newBgm.play();
+        
         this.currentBgm = newBgm;
         this.currentBgmKey = key;
-        const targetVolume = this.configManager.getValue('bgmVolume');
-
-        if (fadeInTime > 0) {
-            // ★★★ これがPromiseの正しい使い方 ★★★
-            console.log(`[LOG-BOMB] playBgm: Awaiting tween to volume ${targetVolume}...`);
-            await new Promise(resolve => {
-                this.game.tweens.add({
-                    targets: newBgm,
-                    volume: targetVolume,
-                    duration: fadeInTime,
-                    onComplete: () => {
-                        console.log(`[LOG-BOMB] playBgm: ...tween completed.`);
-                        resolve(); // Tween完了時にPromiseを解決
-                    }
-                });
-                // Promiseのコールバック内では、これ以外の処理は行わない
-            });
-        } else {
-            newBgm.setVolume(targetVolume);
-        }
-        console.log(`[LOG-BOMB] playBgm: END for key [${key}]`);
+        console.log(`[DEBUG] playBgm (instant): END. Volume set to ${targetVolume}`);
+        
+        // Promiseを返す必要がないので、asyncも不要
     }
 
+    // ★★★ Tween を完全に削除 ★★★
     stopBgm(fadeOutTime = 0) {
-        return new Promise(resolve => {
-            console.log(`[LOG-BOMB] stopBgm: START`);
-            if (!this.currentBgm || !this.currentBgm.isPlaying) {
-                console.log(`[LOG-BOMB] stopBgm: No BGM playing. END`);
-                resolve();
-                return;
-            }
-            const bgmToStop = this.currentBgm;
-            this.currentBgm = null;
-            this.currentBgmKey = null;
-
-            if (fadeOutTime > 0) {
-                console.log(`[LOG-BOMB] stopBgm: Awaiting fade out tween...`);
-                this.game.tweens.add({
-                    targets: bgmToStop,
-                    volume: 0,
-                    duration: fadeOutTime,
-                    onComplete: () => {
-                        bgmToStop.stop();
-                        bgmToStop.destroy();
-                        console.log(`[LOG-BOMB] stopBgm: ...fade out tween completed. END`);
-                        resolve();
-                    }
-                });
-            } else {
-                bgmToStop.stop();
-                bgmToStop.destroy();
-                console.log(`[LOG-BOMB] stopBgm: Stopped immediately. END`);
-                resolve();
-            }
-        });
+        console.log(`[DEBUG] stopBgm (instant): START`);
+        if (!this.currentBgm || !this.currentBgm.isPlaying) {
+            console.log(`[DEBUG] stopBgm (instant): No BGM to stop.`);
+            return;
+        }
+        
+        this.currentBgm.stop();
+        this.currentBgm.destroy();
+        this.currentBgm = null;
+        this.currentBgmKey = null;
+        console.log(`[DEBUG] stopBgm (instant): END`);
     }
 
   // ★ playSe も同様に修正
