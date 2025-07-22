@@ -275,21 +275,6 @@ export default class BattleScene extends Phaser.Scene {
         console.log("現在のバックパック:", this.backpack);
     }
 
-   // ★★★ stop()メソッドは、Phaserのライフサイクルで呼ばれることを期待して残す ★★★
-    stop() {
-        super.stop();
-        console.log("BattleScene: stop されました。UI要素とイベントリスナーを破棄します。");
-
-        // stop()が呼ばれる前にendBattleでリスナーは解除されているはずだが、念のためここでも解除
-        if (this.stateManager && this.onFVariableChangedListener) {
-            this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);
-            this.onFVariableChangedListener = null;
-            console.log("BattleScene: stop()内でStateManagerのイベントリスナーを解除しました。");
-        }
-        
-        // このシーンが作成した全ての表示オブジェクトを破棄
-        this.children.removeAll(true);
-    }
 
    
     onFVariableChanged(key, value) {
@@ -440,7 +425,9 @@ export default class BattleScene extends Phaser.Scene {
             this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);
             this.onFVariableChangedListener = null;
         }
+        // ここで this.children.removeAll() を呼び出してはいけない
     }
+    
 
     resume() {
         console.log("ActionScene (as BattleScene): resume されました。入力を再有効化します。");
