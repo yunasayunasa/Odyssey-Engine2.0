@@ -10,7 +10,5 @@
 export async function handlePlayBgm(manager, params) {
     const key = params.storage;
     const fadeInTime = params.fadein ? parseInt(params.fadein, 10) : 0;
-    
-    // SoundManagerのplayBgmはPromiseを返すので、awaitで待つだけ
     await manager.soundManager.playBgm(key, fadeInTime);
 }
