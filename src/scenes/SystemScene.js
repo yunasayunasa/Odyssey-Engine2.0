@@ -150,7 +150,7 @@ export default class SystemScene extends Phaser.Scene {
         this.isProcessingTransition = true;
         this.game.input.enabled = false;
         console.log(`[SystemScene] シーン[${sceneKey}]の起動を開始。ゲーム全体の入力を無効化。`);
-this.game.tweens.killAll();
+this.tweens.killAll();
         console.log("[SystemScene] すべての既存Tweenを強制終了しました。");
 
         // ★★★ 修正の核心 ★★★
