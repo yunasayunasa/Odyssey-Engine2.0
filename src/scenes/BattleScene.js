@@ -64,7 +64,7 @@ export default class BattleScene extends Phaser.Scene {
         }
 
         // ★★★ 修正点②: BGMの再生処理をawaitで正しく待つ ★★★
-        await this.soundManager.stopBgm(500); 
+        await this.soundManager.stopBgm(1500); 
         await this.soundManager.playBgm('bgm_battle', 500); 
         console.log("戦闘bgm開始！");
         
