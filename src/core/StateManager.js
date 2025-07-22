@@ -52,6 +52,26 @@ export default class StateManager extends Phaser.Events.EventEmitter {
             currentText: scenarioManager.messageWindow.currentText,
             speakerName: scenarioManager.messageWindow.currentSpeaker,
         };
+          // ★★★ 1. デバッグしたい値をまず変数に格納する ★★★
+        const currentBgmKey = scenarioManager.soundManager.getCurrentBgmKey();
+
+        // ★★★ 2. 変数を使ってコンソールに出力する ★★★
+        console.log(`[StateManager.getState] Saving BGM key: '${currentBgmKey}'`);
+
+        return {
+            saveDate: new Date().toLocaleString('ja-JP'),
+            variables: { f: this.f }, 
+            scenario: scenarioState,
+            layers: {
+                background: backgroundState,
+                characters: characterStates,
+            },
+            sound: {
+                // ★★★ 3. 変数をオブジェクトのプロパティとして設定する ★★★
+                bgm: currentBgmKey
+            }
+        };
+    
         
         return {
             saveDate: new Date().toLocaleString('ja-JP'),
@@ -63,6 +83,7 @@ export default class StateManager extends Phaser.Events.EventEmitter {
             },
             sound: {
                 bgm: scenarioManager.soundManager.getCurrentBgmKey(),
+                
             }
         };
     }
