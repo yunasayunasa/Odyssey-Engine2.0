@@ -111,14 +111,10 @@ export default class BattleScene extends Phaser.Scene {
     }
 
  
-    startBattle() {
+ startBattle(playerPlaceholder, enemyPlaceholder) {
         console.log("戦闘開始！");
-        // アイテムのドラッグ入力を無効化 (戦闘中はアイテムを動かせない)
-        // this.input.setDraggable(this.inventoryItems, false); // これは個々のアイテムにリスナーがあるので、全体無効化でOK
-
-        // プレースホルダーテキストやグリッド、アイテムを非表示にする（UX向上）
-        if(this.playerPlaceholderText) this.playerPlaceholderText.setVisible(false);
-        if(this.enemyPlaceholderText) this.enemyPlaceholderText.setVisible(false);
+        if(playerPlaceholder) playerPlaceholder.setVisible(false);
+        if(enemyPlaceholder) enemyPlaceholder.setVisible(false);
         this.backpackGridObjects.forEach(obj => obj.setVisible(false));
         this.inventoryItems.forEach(item => item.setVisible(false));
         if(this.startBattleButton) this.startBattleButton.setVisible(false);
