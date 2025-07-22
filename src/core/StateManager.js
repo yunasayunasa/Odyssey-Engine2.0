@@ -53,58 +53,48 @@ export default class StateManager extends Phaser.Events.EventEmitter {
             speakerName: scenarioManager.messageWindow.currentSpeaker,
         };
         
-        return {
+           return {
             saveDate: new Date().toLocaleString('ja-JP'),
-            variables: { f: this.f }, 
+            f: { ...this.f }, // シャローコピーで安全に
+            sf: { ...this.sf },
             scenario: scenarioState,
-            layers: {
-                background: backgroundState,
-                characters: characterStates,
-            },
-            sound: {
-                bgm: scenarioManager.soundManager.getCurrentBgmKey(),
-            }
+            layers: { background: backgroundState, characters: characterStates },
+            sound: { bgmKey: scenarioManager.soundManager.getCurrentBgmKey() }
         };
     }
-
-    /**
-     * ロードした状態から変数を復元する
-     * @param {Object} loadedState - localStorageから読み込んだ状態オブジェクト
+       /**
+     * ロードした状態から変数を復元し、HUDに通知する
+     * @param {Object} loadedState
      */
     setState(loadedState) {
-        this.f = loadedState.variables.f || {};
+        this.f = {}; // 一旦リセット
+        // ★★★ 修正点②: setF経由で値をセットし、イベントを強制発行する ★★★
+        if (loadedState.f) {
+            for (const key in loadedState.f) {
+                this.setF(key, loadedState.f[key]);
+            }
+        }
+        // sf変数も同様に復元 (こちらは通知不要)
+        this.sf = loadedState.sf || this.loadSystemVariables();
     }
+
 
          /**
      * 文字列のJavaScript式を安全に評価・実行し、変更を通知する。
      * @param {string} exp - 実行する式 (例: "f.hoge = 10")
      * @returns {*} 評価結果
      */
-    eval(exp) {
+   eval(exp) {
         try {
-            const f = this.f || {};
-            const sf = this.sf || {};
-            
-            // ★★★ 修正箇所: 変更前のf変数の状態をコピーして保持 ★★★
-            // JSON.parse(JSON.stringify(f)) は確実だが、パフォーマンスが懸念される場合はシャローコピーで試す
-            const f_before = { ...f };
-
-            const result = new Function('f', 'sf', `'use strict'; return (${exp});`)(f, sf);
-            
-            // 変更後のfの参照をthis.fに再代入
-            this.f = f;
-
-            // ★★★ 修正箇所: 変更前と変更後のf変数を比較し、変更があればイベントを発行 ★★★
-            // 新旧両方のキーのセットを作成し、変更がないかチェックする
+            const f_before = { ...this.f };
+            const result = new Function('f', 'sf', `'use strict'; return (${exp});`)(this.f, this.sf);
             const allKeys = new Set([...Object.keys(f_before), ...Object.keys(this.f)]);
             allKeys.forEach(key => {
-                // 値が変更された、またはキーが新しく追加/削除された場合
                 if (f_before[key] !== this.f[key]) {
-                    console.log(`[StateManager.eval] f.${key} が変更されました: ${f_before[key]} -> ${this.f[key]}`);
-                    this.emit('f-variable-changed', key, this.f[key]);
+                    // ★★★ 修正点③: setFを呼ぶことで、イベント発行ロジックを一本化 ★★★
+                    this.setF(key, this.f[key]);
                 }
             });
-
             this.saveSystemVariables(); 
             return result;
         } catch (e) {
@@ -112,6 +102,7 @@ export default class StateManager extends Phaser.Events.EventEmitter {
             return undefined; 
         }
     }
+
 
 
     // システム変数のセーブ/ロード、履歴の追加 (変更なし)
