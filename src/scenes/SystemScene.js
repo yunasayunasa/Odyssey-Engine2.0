@@ -1,4 +1,4 @@
-import SoundManager from '../core/SoundManager.js';
+すimport SoundManager from '../core/SoundManager.js';
 
 export default class SystemScene extends Phaser.Scene {
     constructor() {
@@ -136,9 +136,14 @@ export default class SystemScene extends Phaser.Scene {
      * @param {string} sceneKey - 起動するシーンのキー
      * @param {object} params - シーンに渡すデータ
      */
+     /**
+     * ★★★ 新しいシーンを起動し、完了まで監視するコアメソッド (真・最終確定版) ★★★
+     * @param {string} sceneKey - 起動するシーンのキー
+     * @param {object} params - シーンに渡すデータ
+     */
     _startAndMonitorScene(sceneKey, params) {
         if (this.isProcessingTransition) {
-            console.warn(`[SystemScene] 遷移処理中に新たな遷移リクエスト(${sceneKey})がありましたが、無視されました。`);
+            console.warn(`[SystemScene] 遷移処理中に新たな遷移リクエスト(${sceneKey})が、無視されました。`);
             return;
         }
 
@@ -147,28 +152,24 @@ export default class SystemScene extends Phaser.Scene {
         console.log(`[SystemScene] シーン[${sceneKey}]の起動を開始。ゲーム全体の入力を無効化。`);
 
         // ★★★ 修正の核心 ★★★
-        // シーンをrun(またはstart)で起動する前に、
-        // ターゲットシーンのCREATEイベントを待機するリスナーを登録する
-        // これにより、どのタイミングでシーンが作られても確実に捕捉できる
-        this.scene.get(sceneKey).events.once(Phaser.Scenes.Events.CREATE, (newlyCreatedScene) => {
-            console.log(`[SystemScene] ターゲットシーン[${sceneKey}]のCREATEイベントをキャッチ。`);
-
-            if (sceneKey === 'GameScene') {
-                // GameSceneの場合は、新しく作られたシーンインスタンス(newlyCreatedScene)の
-                // イベントを待つ
-                newlyCreatedScene.events.once('gameScene-load-complete', () => {
-                    this._onTransitionComplete(sceneKey);
-                });
-            } else {
-                // GameScene以外はCREATE完了で遷移完了とみなす
+        // 起動するシーンの「準備完了」を知らせるカスタムイベントを待つ
+        const targetScene = this.scene.get(sceneKey);
+        
+        // GameSceneは 'gameScene-load-complete' を待つ
+        if (sceneKey === 'GameScene') {
+            targetScene.events.once('gameScene-load-complete', () => {
                 this._onTransitionComplete(sceneKey);
-            }
-        });
+            });
+        } else {
+            // GameScene以外は、'scene-ready' という共通イベントを待つ
+            targetScene.events.once('scene-ready', () => {
+                this._onTransitionComplete(sceneKey);
+            });
+        }
 
         // リスナーを登録した後に、シーンの起動をスケジュールする
         this.scene.run(sceneKey, params);
     }
-
     /**
      * シーン遷移が完全に完了したときの処理
      * @param {string} sceneKey - 完了したシーンのキー
