@@ -403,6 +403,7 @@ async performLoad(slot, returnParams = null) {
 }
 // ★★★ rebuildScene ヘルパー関数 (最終版) ★★★
 async function rebuildScene(manager, state) {
+    console.log("[LOG-BOMB] rebuildScene: START"); // ★
     console.log("--- rebuildScene 開始 ---", state);
     const scene = manager.scene;
 
@@ -411,10 +412,11 @@ async function rebuildScene(manager, state) {
     manager.layers.background.removeAll(true);
     manager.layers.character.removeAll(true);
     scene.characters = {};
+    console.log("[LOG-BOMB] rebuildScene: AWAITING stopBgm..."); // ★
      await manager.soundManager.stopBgm(0);  // フェードなしで即時停止
     manager.messageWindow.reset();
     scene.cameras.main.resetFX(); // カメラエフェクトもリセット
-
+console.log("[LOG-BOMB] rebuildScene: AWAITING stopBgm..."); // ★
     // 2. シナリオの「論理的な状態」を復元
     manager.currentFile = state.scenario.fileName;
     manager.currentLine = state.scenario.line;
@@ -451,7 +453,9 @@ async function rebuildScene(manager, state) {
     if (state.sound && state.sound.bgm) {
         if (manager.soundManager.getCurrentBgmKey() !== state.sound.bgm) {
             // ★★★ 修正箇所: awaitを追加してBGMの再生完了を待つ ★★★
+                 console.log(`[LOG-BOMB] rebuildScene: AWAITING playBgm for [${state.sound.bgm}]...`); // ★
             await manager.soundManager.playBgm(state.sound.bgm, 0);
+                 console.log(`[LOG-BOMB] rebuildScene: プレイングplayBgm for [${state.sound.bgm}]...`); // ★
         }
     }
     
