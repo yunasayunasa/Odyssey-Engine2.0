@@ -64,8 +64,8 @@ export default class SoundManager {
                     targets: newBgm,
                     volume: targetVolume,
                     duration: fadeInTime,
-                    onComplete: resolve,// tween完了時にPromiseを解決
-                       console.log("[LOG-BOMB] playBgm: コンプリートtween..."); // ★
+                    onComplete: resolve// tween完了時にPromiseを解決
+                      // console.log("[LOG-BOMB] playBgm: コンプリートtween..."); // ★
                 });
             });
         } else {
