@@ -1,33 +1,19 @@
-// src/core/SoundManager.js (全面改訂版)
-
 export default class SoundManager {
-    /**
-     * @param {Phaser.Game} game - Phaser.Gameのインスタンス
-     */
     constructor(game) {
-        // 特定のシーンではなく、PhaserのGameインスタンスを保持
         this.game = game;
         this.sound = game.sound;
         this.configManager = game.registry.get('configManager');
-
-        this.currentBgm = null;
-        this.currentBgmKey = null;
-        // ボリューム変更をリッスン
-        this.configManager.on('change:bgmVolume', this.onBgmVolumeChange, this);
-        this.configManager.on('change:seVolume', this.onSeVolumeChange, this);
-          this.isFading = false;
-        this.fadeUpdater = null;
+        this.currentBgm = null; // Phaser.Sound.BaseSoundオブジェクト
+        
+        // ★★★ 状態管理用のプロパティを追加 ★★★
+        this.isStopping = false; // 停止処理中フラグ
+        this.isStarting = false; // 再生処理中フラグ
 
         if (this.configManager) {
             this.configManager.on('change:bgmVolume', this.onBgmVolumeChange, this);
         }
-        
-        // ゲームが破棄されるときにリスナーをクリーンアップ
         this.game.events.once(Phaser.Core.Events.DESTROY, this.destroy, this);
-
-        console.log("SoundManager: グローバルサービスとして正常に初期化されました。");
     }
-
     // AudioContextを安全に再開
     resumeContext() {
         if (this.sound.context.state === 'suspended') {
@@ -36,48 +22,58 @@ export default class SoundManager {
     }
 
    
-      async playBgm(key, fadeInTime = 0) {
-        // フェード処理中なら、新しい再生リクエストを無視する（あるいは少し待つなど）
-        if (this.isFading) {
-            console.warn(`[SoundManager] フェード処理中に新しいplayBgmリクエストがありました。無視します。`);
-            return;
-        }
-        this.resumeContext();
-        if (!this.configManager || (this.currentBgm && this.currentBgmKey === key)) {
-            return;
-        }
+     async playBgm(key, fadeInTime = 0) {
+        if (this.isStarting || this.isStopping) return; // 処理中なら何もしない
+        if (this.currentBgm && this.currentBgm.texture.key === key && this.currentBgm.isPlaying) return;
+
+        this.isStarting = true;
 
         await this.stopBgm(fadeInTime > 0 ? fadeInTime / 2 : 0);
 
         const newBgm = this.sound.add(key, { loop: true, volume: 0 });
-        newBgm.play();
-        this.currentBgm = newBgm; this.currentBgmKey = key;
         const targetVolume = this.configManager.getValue('bgmVolume');
+        newBgm.play();
+
+        // ★★★ 新しいBGMをセットするのは、再生開始後 ★★★
+        this.currentBgm = newBgm;
 
         if (fadeInTime > 0 && targetVolume > 0) {
-            await this.fadeTo(newBgm, targetVolume, fadeInTime);
+            await new Promise(resolve => this.game.tweens.add({
+                targets: newBgm, volume: targetVolume, duration: fadeInTime, onComplete: resolve
+            }));
         } else {
             newBgm.setVolume(targetVolume);
         }
+        
+        this.isStarting = false;
     }
 
     async stopBgm(fadeOutTime = 0) {
-        if (this.isFading) {
-            console.warn(`[SoundManager] フェード処理中に新しいstopBgmリクエストがありました。無視します。`);
+        if (this.isStopping || !this.currentBgm || !this.currentBgm.isPlaying) {
             return;
         }
-        if (!this.currentBgm || !this.currentBgm.isPlaying) {
-            return;
-        }
+        this.isStopping = true;
+
         const bgmToStop = this.currentBgm;
-        this.currentBgm = null; this.currentBgmKey = null;
 
         if (fadeOutTime > 0 && bgmToStop.volume > 0) {
-            await this.fadeTo(bgmToStop, 0, fadeOutTime);
-            bgmToStop.stop(); bgmToStop.destroy();
-        } else {
-            bgmToStop.stop(); bgmToStop.destroy();
+            await new Promise(resolve => this.game.tweens.add({
+                targets: bgmToStop, volume: 0, duration: fadeOutTime, onComplete: resolve
+            }));
         }
+        
+        // ★★★ フェード完了後、または即時にインスタンスを破棄 ★★★
+        if (bgmToStop.isPlaying) {
+            bgmToStop.stop();
+        }
+        bgmToStop.destroy();
+        
+        // ★★★ 破棄処理が終わった後に、currentBgmをnullにする ★★★
+        if (this.currentBgm === bgmToStop) {
+            this.currentBgm = null;
+        }
+
+        this.isStopping = false;
     }
 
     // ★★★ ロック機構を組み込んだ、究極の手動Tween ★★★
@@ -118,8 +114,12 @@ export default class SoundManager {
         this.sound.play(key, { volume: seVolume });
     }
 
-    getCurrentBgmKey() {
-        return (this.currentBgm && this.currentBgm.isPlaying) ? this.currentBgmKey : null;
+     getCurrentBgmKey() {
+        if (this.currentBgm && this.currentBgm.isPlaying) {
+            // Phaser3.60以降、キーはtexture.keyで取得するのが最も安全
+            return this.currentBgm.texture.key;
+        }
+        return null;
     }
 
       onBgmVolumeChange(newVolume) {
