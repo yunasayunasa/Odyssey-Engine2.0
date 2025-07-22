@@ -12,7 +12,7 @@ export default class SoundManager {
 
         this.currentBgm = null;
         this.currentBgmKey = null;
-
+this.fadeTween = null;
         // ボリューム変更をリッスン
         this.configManager.on('change:bgmVolume', this.onBgmVolumeChange, this);
         this.configManager.on('change:seVolume', this.onSeVolumeChange, this);
@@ -30,50 +30,79 @@ export default class SoundManager {
         }
     }
 
-    /**
-     * BGMを再生します。このメソッドはPromiseを返します。
-     * @param {string} key - 再生するBGMのアセットキー
-     * @param {number} fadeInTime - フェードイン時間(ms)
-     * @returns {Promise<void>} フェードイン完了時に解決されるPromise
-     */
-playBgm(key, fadeInTime = 0) {
-        console.log(`[DEBUG] playBgm (instant): START with key [${key}]`);
-        this.resumeContext();
-        if (!this.configManager) { return; }
-        if (this.currentBgm && this.currentBgm.isPlaying && this.currentBgmKey === key) {
-            return;
-        }
+   
+      // ★★★ playBgmを安全な手動Tweenで復活 ★★★
+    playBgm(key, fadeInTime = 0) {
+        return new Promise(async resolve => {
+            this.resumeContext();
+            if (!this.configManager || (this.currentBgm && this.currentBgmKey === key)) {
+                resolve(); return;
+            }
 
-        // 以前のBGMを即座に停止
-        this.stopBgm(0);
+            await this.stopBgm(fadeInTime > 0 ? fadeInTime / 2 : 0);
 
-        const newBgm = this.sound.add(key, { loop: true });
-        const targetVolume = this.configManager.getValue('bgmVolume');
-        newBgm.setVolume(targetVolume);
-        newBgm.play();
-        
-        this.currentBgm = newBgm;
-        this.currentBgmKey = key;
-        console.log(`[DEBUG] playBgm (instant): END. Volume set to ${targetVolume}`);
-        
-        // Promiseを返す必要がないので、asyncも不要
+            const newBgm = this.sound.add(key, { loop: true, volume: 0 });
+            newBgm.play();
+            this.currentBgm = newBgm;
+            this.currentBgmKey = key;
+            const targetVolume = this.configManager.getValue('bgmVolume');
+
+            if (fadeInTime > 0) {
+                this.fadeTo(newBgm, targetVolume, fadeInTime).then(resolve);
+            } else {
+                newBgm.setVolume(targetVolume);
+                resolve();
+            }
+        });
     }
 
-    // ★★★ Tween を完全に削除 ★★★
+    // ★★★ stopBgmを安全な手動Tweenで復活 ★★★
     stopBgm(fadeOutTime = 0) {
-        console.log(`[DEBUG] stopBgm (instant): START`);
-        if (!this.currentBgm || !this.currentBgm.isPlaying) {
-            console.log(`[DEBUG] stopBgm (instant): No BGM to stop.`);
-            return;
-        }
-        
-        this.currentBgm.stop();
-        this.currentBgm.destroy();
-        this.currentBgm = null;
-        this.currentBgmKey = null;
-        console.log(`[DEBUG] stopBgm (instant): END`);
+        return new Promise(resolve => {
+            if (!this.currentBgm || !this.currentBgm.isPlaying) {
+                resolve(); return;
+            }
+            const bgmToStop = this.currentBgm;
+            this.currentBgm = null; this.currentBgmKey = null;
+
+            if (fadeOutTime > 0) {
+                this.fadeTo(bgmToStop, 0, fadeOutTime).then(() => {
+                    bgmToStop.stop(); bgmToStop.destroy();
+                    resolve();
+                });
+            } else {
+                bgmToStop.stop(); bgmToStop.destroy();
+                resolve();
+            }
+        });
     }
 
+    // ★★★ 手動Tweenを実装するヘルパーメソッド ★★★
+    fadeTo(soundObject, targetVolume, duration) {
+        return new Promise(resolve => {
+            if (this.fadeTween) this.fadeTween.destroy(); // 既存のタイマーを破棄
+            
+            const startVolume = soundObject.volume;
+            const startTime = this.game.loop.time;
+
+            this.fadeTween = this.game.scene.scenes[0].time.addEvent({
+                delay: 16, // 約60fps
+                loop: true,
+                callback: () => {
+                    const elapsed = this.game.loop.time - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const newVolume = Phaser.Math.Linear(startVolume, targetVolume, progress);
+                    soundObject.setVolume(newVolume);
+
+                    if (progress >= 1) {
+                        if (this.fadeTween) this.fadeTween.destroy();
+                        this.fadeTween = null;
+                        resolve();
+                    }
+                }
+            });
+        });
+    }
   // ★ playSe も同様に修正
     playSe(key) {
         this.resumeContext();
