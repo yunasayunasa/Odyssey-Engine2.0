@@ -1,5 +1,10 @@
-
-
+import ScenarioManager from '../core/ScenarioManager.js';
+import SoundManager from '../core/SoundManager.js';
+import CoinHud from '../ui/CoinHud.js';
+import HpBar from '../ui/HpBar.js';
+import StateManager from '../core/StateManager.js';
+import MessageWindow from '../ui/MessageWindow.js';
+import ConfigManager from '../core/ConfigManager.js';
 import { tagHandlers } from '../handlers/index.js';
 
 
@@ -50,7 +55,7 @@ export default class GameScene extends Phaser.Scene {
    // src/scenes/GameScene.js の create() メソッドの正しい形
 
         async create() { 
-            debugger; 
+            
             console.log("GameScene: クリエイト処理を開始します。");
         this.cameras.main.setBackgroundColor('#000000');
         
