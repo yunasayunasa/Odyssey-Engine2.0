@@ -80,6 +80,7 @@ export default class GameScene extends Phaser.Scene {
             console.log(`[GameScene.init] 復帰BGMキーを受け取りました: ${this.restoredBgmKey}`);
         this.isSceneFullyReady = false; // init時にリセット
     }
+    }
 
     preload() {
         this.load.text('test.ks', 'assets/test.ks'); 
