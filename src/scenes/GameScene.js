@@ -1,5 +1,8 @@
 
 
+import { tagHandlers } from '../handlers/index.js';
+
+
 export default class GameScene extends Phaser.Scene {
     constructor() {
         super({key:'GameScene', active :false});
@@ -47,6 +50,7 @@ export default class GameScene extends Phaser.Scene {
    // src/scenes/GameScene.js の create() メソッドの正しい形
 
         async create() { 
+            debugger; 
             console.log("GameScene: クリエイト処理を開始します。");
         this.cameras.main.setBackgroundColor('#000000');
         
@@ -101,11 +105,7 @@ export default class GameScene extends Phaser.Scene {
             if (this.soundManager) {
                 this.soundManager.resumeContext();
             }
-        }, this);   
-            
-            const { tagHandlers } = await import('../handlers/index.js');
-
-            // --- タグハンドラの登録 ---
+        }, this);    // --- タグハンドラの登録 ---
         console.log("タグハンドラの一括登録を開始します...");
         for (const tagName in tagHandlers) {
             this.scenarioManager.registerTag(tagName, tagHandlers[tagName]);
