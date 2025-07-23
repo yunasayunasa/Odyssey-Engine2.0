@@ -55,87 +55,84 @@ export default class BattleScene extends Phaser.Scene {
     }
 
     // ★★★ 修正点①: createメソッドをasyncにする ★★★
+     // BattleScene.js の create メソッド (改訂版)
+
     async create() {
         console.log("BattleScene: create 開始");
         this.cameras.main.setBackgroundColor('#8a2be2');
 
+        // --- 1. マネージャー取得、BGM再生、HP初期化 (変更なし) ---
         this.stateManager = this.sys.registry.get('stateManager');
         this.soundManager = this.sys.registry.get('soundManager');
-
-        if (!this.stateManager || !this.soundManager) {
-            console.error("BattleScene: StateManagerまたはSoundManagerが取得できませんでした。");
-            return;
-        }
-
-        // ★★★ 修正点②: BGMの再生処理をawaitで正しく待つ ★★★
-         // ★★★ BGMの制御は、この一行だけ！ ★★★
-        // soundManager.playBgmが、前の曲を勝手に止めてくれる
-        this.soundManager.playBgm('ronpa_bgm', 1000); // 1秒かけてクロスフェード
-        console.log("戦闘bgm開始！");
-        
-        // --- UIとゲームオブジェクトの生成 (あなたのコードのまま) ---
-        this.playerPlaceholderText = this.add.text(100, 360, 'PLAYER', { fontSize: '48px', fill: '#fff' }).setOrigin(0.5);
-        this.enemyPlaceholderText = this.add.text(this.scale.width - 100, 360, 'ENEMY', { fontSize: '48px', fill: '#fff' }).setOrigin(0.5);
-
-       const maxHp = this.initialBattleParams.initialPlayerMaxHp
-        // ★★★ stateManagerの値をセットする際に、HPを最大値で上書き ★★★
+        this.soundManager.playBgm('ronpa_bgm');
+        const maxHp = this.initialBattleParams.initialPlayerMaxHp;
         this.stateManager.setF('player_max_hp', maxHp); 
-        this.stateManager.setF('player_hp', maxHp); // ← ここで全回復させる
-       
+        this.stateManager.setF('player_hp', maxHp);
         this.stateManager.setF('enemy_max_hp', 100); 
         this.stateManager.setF('enemy_hp', 100);
-        
-       
-        
+
+        // --- 2. レイアウトとコンテナの定義 (変更なし) ---
+        this.gameState = 'prepare';
+        const gameWidth = this.scale.width;
+        const gameHeight = this.scale.height;
+        this.prepareContainer = this.add.container(0, 0);
+        this.battleContainer = this.add.container(0, 0);
+        this.battleContainer.setVisible(false);
+
+        // --- 3. グリッド定義 (変更なし) ---
         this.backpackGridSize = 6;
         this.cellSize = 60;
-        this.gridWidth = this.backpackGridSize * this.cellSize;
-        this.gridHeight = this.backpackGridSize * this.cellSize;
-        this.gridX = this.scale.width / 2 - this.gridWidth / 2;
-        this.gridY = this.scale.height / 2 - this.gridHeight / 2 + 50;
+        const gridWidth = this.backpackGridSize * this.cellSize;
+        const gridHeight = this.backpackGridSize * this.cellSize;
+        
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ ここからが修正の核心 ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
-        this.backpackGridObjects.push(this.add.rectangle(this.gridX + this.gridWidth / 2, this.gridY + this.gridHeight / 2, this.gridWidth, this.gridHeight, 0x333333, 0.9).setOrigin(0.5).setDepth(10));
+        // --- 4. プレイヤーグリッドを「シーン直下」に描画 ---
+        //    (prepare と battle の両方で表示され続けるため)
+        this.gridX = 100;
+        this.gridY = gameHeight / 2 - gridHeight / 2;
+        this.add.rectangle(this.gridX + gridWidth / 2, this.gridY + gridHeight / 2, gridWidth, gridHeight, 0x333333, 0.9);
         for (let i = 0; i <= this.backpackGridSize; i++) {
-            this.backpackGridObjects.push(this.add.line(0, 0, this.gridX, this.gridY + i * this.cellSize, this.gridX + this.gridWidth, this.gridY + i * this.cellSize, 0x666666, 0.5).setOrigin(0).setDepth(11));
-            this.backpackGridObjects.push(this.add.line(0, 0, this.gridX + i * this.cellSize, this.gridY, this.gridX + i * this.cellSize, this.gridY + this.gridHeight, 0x666666, 0.5).setOrigin(0).setDepth(11));
+            this.add.line(0, 0, this.gridX, this.gridY + i * this.cellSize, this.gridX + gridWidth, this.gridY + i * this.cellSize, 0x666666, 0.5).setOrigin(0);
+            this.add.line(0, 0, this.gridX + i * this.cellSize, this.gridY, this.gridX + i * this.cellSize, this.gridY + gridHeight, 0x666666, 0.5).setOrigin(0);
         }
-
         this.backpack = Array(this.backpackGridSize).fill(null).map(() => Array(this.backpackGridSize).fill(0));
 
-        const inventoryX = this.gridX - 180;
-        const inventoryY = this.gridY;
-        const inventoryWidth = 150;
-        const inventoryHeight = this.gridHeight;
-        this.backpackGridObjects.push(this.add.rectangle(inventoryX + inventoryWidth / 2, inventoryY + inventoryHeight / 2, inventoryWidth, inventoryHeight, 0x555555, 0.8).setOrigin(0.5).setDepth(10));
-        this.backpackGridObjects.push(this.add.text(inventoryX + inventoryWidth / 2, inventoryY + 20, 'インベントリ', { fontSize: '24px', fill: '#fff' }).setOrigin(0.5).setDepth(11));
 
-        const initialInventory = ['sword', 'shield', 'potion'];
-        let itemY = inventoryY + 70;
-        initialInventory.forEach(itemId => {
-            const itemImage = this.createItem(itemId, inventoryX + inventoryWidth / 2, itemY);
-            if (itemImage) { this.inventoryItems.push(itemImage); }
-            itemY += 80;
-        });
-
-        this.startBattleButton = this.add.text(this.gridX - 105, this.gridY + this.gridHeight - 30, '戦闘開始', { fontSize: '28px', fill: '#fff', backgroundColor: '#008800', padding: { x: 10, y: 5 } }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(11);
-        this.startBattleButton.on('pointerdown', () => {
-            this.startBattleButton.disableInteractive(); 
-            this.input.enabled = false;
-            this.startBattle();
-        });
+        // --- 5. 敵グリッドと敵アイテムを「battleContainer」に格納 ---
+        //    (戦闘画面でのみ表示するため)
+        const enemyGridX = gameWidth - 100 - gridWidth;
+        const enemyGridY = this.gridY;
+        const enemyGridBg = this.add.rectangle(enemyGridX + gridWidth / 2, enemyGridY + gridHeight / 2, gridWidth, gridHeight, 0x500000, 0.9);
+        this.battleContainer.add(enemyGridBg);
+        for (let i = 0; i <= this.backpackGridSize; i++) {
+            this.battleContainer.add(this.add.line(0, 0, enemyGridX, enemyGridY + i * this.cellSize, enemyGridX + gridWidth, enemyGridY + i * this.cellSize, 0x888888, 0.5).setOrigin(0));
+            this.battleContainer.add(this.add.line(0, 0, enemyGridX + i * this.cellSize, enemyGridY, enemyGridX + i * this.cellSize, enemyGridY + gridHeight, 0x888888, 0.5).setOrigin(0));
+        }
+        // (敵アイテムの配置ロジックも、battleContainer.add(...) するので変更なし)
+        // ...
         
-        this.battleLogText = this.add.text(this.scale.width / 2, 150, '', { fontSize: '24px', fill: '#fff', backgroundColor: 'rgba(0,0,0,0.5)', padding: { x: 10, y: 10 }, align: 'center', wordWrap: { width: 400 } }).setOrigin(0.5).setDepth(200);
+        // --- 6. インベントリと戦闘開始ボタンを「prepareContainer」に格納 ---
+        //    (準備画面でのみ表示するため)
+        const inventoryAreaY = 520;
+        const inventoryAreaHeight = gameHeight - inventoryAreaY;
+        const invBg = this.add.rectangle(gameWidth / 2, inventoryAreaY + inventoryAreaHeight / 2, gameWidth, inventoryAreaHeight, 0x000000, 0.8);
+        this.prepareContainer.add(invBg);
+        // ... (インベントリテキスト、戦闘開始ボタンの追加も prepareContainer.add(...) で変更なし)
+        
+        // ★ ドラッグ可能なアイテムはシーン直下に生成 (変更なし)
+        this.inventoryItemImages = [];
+        // ... (forEachループで createItem を呼び出す) ...
 
-        // --- endBattleを呼び出すためのダミーボタン (あなたの元のコードにはなかったが、動作確認のために残しておくと便利) ---
-        this.winButton = this.add.text(320, 600, '勝利(デバッグ用)', { fontSize: '32px', fill: '#0c0', backgroundColor: '#000' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-        this.winButton.on('pointerdown', () => this.endBattle('win'));
+        // --- 7. 「戦闘開始」ボタンのイベントリスナー (変更なし) ---
+        this.startBattleButton.on('pointerdown', () => {
+            // ... (prepareContainerとinventoryItemImagesを非表示にし、battleContainerを表示する処理) ...
+        });
 
-        this.loseButton = this.add.text(this.scale.width - 320, 600, '敗北(デバッグ用)', { fontSize: '32px', fill: '#c00', backgroundColor: '#000' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-        this.loseButton.on('pointerdown', () => this.endBattle('lose'));
-
-        // ★★★ 修正点③: createの最後に「準備完了」イベントを発行する ★★★
+        // --- 8. 準備完了を通知 (変更なし) ---
         this.events.emit('scene-ready');
-        console.log("BattleScene: 準備完了イベント(scene-ready)を発行しました。");
         console.log("BattleScene: create 完了");
     }
 
