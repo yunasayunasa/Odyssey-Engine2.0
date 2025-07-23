@@ -43,56 +43,48 @@ export default class SoundManager {
      * BGMを再生する (非同期競合対策版)
      */
      // playBgm から async を削除し、音量設定を確実に行う
-      playBgm(key, fadeTime = 500) {
+       playBgm(key) {
         this.resumeContext();
-
-        if (this.isFading || (this.currentBgm && this.currentBgmKey === key)) {
-            return;
-        }
-
-        if (this.currentBgm && this.currentBgm.isPlaying) {
-            this.stopBgm(fadeTime);
-        }
-
         const targetVolume = this.configManager.getValue('bgmVolume');
-        console.log(`[SoundManager] playBgm: '${key}' を再生。目標音量: ${targetVolume}`);
         
-        const newBgm = this.sound.add(key, { loop: true });
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ これが画竜点睛の修正 ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
+        // 1. 再生しようとしている曲が、現在再生中の曲と「同じキー」の場合
+        if (this.currentBgm && this.currentBgmKey === key) {
+            
+            // 1a. かつ、Soundオブジェクトがまだ有効な（生きている）場合
+            // → 何もしない（二重再生を防ぐ）
+            if (this.currentBgm.isPlaying) {
+                 console.log(`[SoundManager] BGM '${key}' は既に再生中です。処理をスキップします。`);
+                 return;
+            }
+            
+            // 1b. キーは同じだが、オブジェクトが死んでいる（前のシーンの残骸）場合
+            // → 古いオブジェクトを明示的に破棄する
+            console.log(`[SoundManager] BGM '${key}' の古いインスタンスが残っていたため、破棄します。`);
+            this.stopBgm(); // これで古い参照がクリーンナップされる
+        }
+
+        // 2. 現在、別の曲が再生中の場合
+        else if (this.currentBgm && this.currentBgm.isPlaying) {
+            console.log(`[SoundManager] BGMを '${this.currentBgmKey}' から '${key}' に切り替えます。`);
+            this.stopBgm(); // 古い曲を停止・破棄する
+        }
+        
+        // 3. 新しいBGMを再生する（ここは変更なし）
+        console.log(`[SoundManager] 新しいBGM '${key}' を再生します。音量: ${targetVolume}`);
+        const newBgm = this.sound.add(key, { loop: true });
         this.currentBgm = newBgm;
         this.currentBgmKey = key;
         
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ これが最後の策：「発破コード」 ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        
-        // 1. まず現在の音量で一度設定する（これで叩き起こす）
-        console.log(`[SoundManager] 発破#1: 現在の音量(${targetVolume})でsetVolumeを実行`);
         newBgm.setVolume(targetVolume);
-        
-        // 2. 再生を開始する
         newBgm.play();
-
-     /*   // 3. フェードインする場合、音量を0に戻してからTweenを開始する
-        if (fadeTime > 0) {
-            console.log(`[SoundManager] 発破#2: フェードインのため音量を0に設定`);
-            newBgm.setVolume(0);
-            this.isFading = true;
-            this.fadeTo(newBgm, targetVolume, fadeTime, () => {
-                this.isFading = false;
-                // フェード完了後にも念のため再設定
-                if(newBgm.isPlaying) newBgm.setVolume(targetVolume); 
-            });
-        }
-        
-        // ★★★ フェードしない場合でも、再生後にもう一度設定（念押し）
-        else {
-             console.log(`[SoundManager] 発破#3: フェードなし。音量を再設定`);
-             newBgm.setVolume(targetVolume);
-        }*/
-
-        console.log(`[SoundManager] 再生後の状態: isPlaying=${newBgm.isPlaying}, volume=${newBgm.volume}`);
     }
+
+    // stopBgmは変更なし
+    
 
 
     /**
