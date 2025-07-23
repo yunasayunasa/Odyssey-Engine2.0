@@ -93,7 +93,7 @@ export default class BattleScene extends Phaser.Scene {
         this.gridX = 100;
         this.gridY = gameHeight / 2 - gridHeight / 2 - 50;
         this.add.rectangle(this.gridX + gridWidth / 2, this.gridY + gridHeight / 2, gridWidth, gridHeight, 0x333333, 0.9)
-            .setDepth(1); // ★★★ 奥行きを1に設定 ★★★
+            .setDepth(999); // ★★★ 奥行きを1に設定 ★★★
         for (let i = 0; i <= this.backpackGridSize; i++) {
             this.add.line(0, 0, this.gridX, this.gridY + i * this.cellSize, this.gridX + gridWidth, this.gridY + i * this.cellSize, 0x666666, 0.5).setOrigin(0)
                 .setDepth(2); // ★★★ 線は背景より手前なので2 ★★★
