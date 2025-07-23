@@ -17,20 +17,39 @@ export default class ActionScene extends Phaser.Scene {
         this.eventEmitted = false;
     }
 
+   // src/scenes/ActionScene.js
+
     create() {
         console.log("ActionScene: create 開始");
         this.cameras.main.setBackgroundColor('#4a86e8');
-        const player = this.add.text(100, 360, 'PLAYER', { fontSize: '48px', fill: '#fff' }).setOrigin(0.5);
-        this.tweens.add({ targets: player, x: 1180, duration: 4000, ease: 'Sine.easeInOut', yoyo: true, repeat: -1 });
         
-         // --- オーバーレイ表示リクエスト ---
-        this.time.delayedCall(3000, () => {
-            console.log("ActionScene: request-overlay を発行");
-            this.scene.get('SystemScene').events.emit('request-overlay', { 
-                from: this.scene.key,
-                scenario: 'overlay_test.ks'
+        // --- チュートリアル用のボタン ---
+        this.add.text(300, 300, 'チュートリアル開始 (背景は操作可能)', { fontSize: '24px', backgroundColor: '#080', padding:{x:10, y:5} })
+            .setOrigin(0.5).setInteractive()
+            .on('pointerdown', () => {
+                // ★ 入力をブロックしないオーバーレイをリクエスト
+                this.scene.get('SystemScene').events.emit('request-overlay', { 
+                    from: this.scene.key,
+                    scenario: 'overlay_test.ks', // 表示したいシナリオ
+                    block_input: false // ★ falseを指定
+                });
             });
-        });
+
+        // --- ボス登場イベント用のボタン ---
+        this.add.text(900, 300, 'ボスと会話 (背景は操作不能)', { fontSize: '24px', backgroundColor: '#800', padding:{x:10, y:5} })
+            .setOrigin(0.5).setInteractive()
+            .on('pointerdown', () => {
+                // ★ 入力をブロックするオーバーレイをリクエスト
+                this.scene.get('SystemScene').events.emit('request-overlay', { 
+                    from: this.scene.key,
+                    scenario: 'overlay_test.ks', // 表示したいシナリオ
+                    // block_inputは指定しない (デフォルトでtrueになる)
+                });
+            });
+
+        this.events.emit('scene-ready');
+        console.log("ActionScene: create 完了。scene-readyイベントを発行しました。");
+    
 
         // --- ★★★ 勝利ボタン ★★★ ---
         this.winButton = this.add.text(320, 600, 'ボスに勝利してノベルパートに戻る', { fontSize: '32px', fill: '#0c0', backgroundColor: '#000' })

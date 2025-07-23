@@ -31,7 +31,7 @@ export default class NovelOverlayScene extends Phaser.Scene {
         this.startScenario = data.scenario;
         this.charaDefs = data.charaDefs;
         this.returnTo = data.returnTo; // ★ SystemSceneから渡された戻り先シーンキー
-        
+         this.inputWasBlocked = data.inputWasBlocked;
         // プロパティをリセット
         this.characters = {};
         this.choiceButtons = [];
