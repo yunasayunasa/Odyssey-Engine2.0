@@ -1,4 +1,3 @@
-import { tagHandlers } from '../handlers/index.js';
 
 
 export default class GameScene extends Phaser.Scene {
@@ -102,7 +101,11 @@ export default class GameScene extends Phaser.Scene {
             if (this.soundManager) {
                 this.soundManager.resumeContext();
             }
-        }, this);    // --- タグハンドラの登録 ---
+        }, this);   
+            
+            const { tagHandlers } = await import('../handlers/index.js');
+
+            // --- タグハンドラの登録 ---
         console.log("タグハンドラの一括登録を開始します...");
         for (const tagName in tagHandlers) {
             this.scenarioManager.registerTag(tagName, tagHandlers[tagName]);
