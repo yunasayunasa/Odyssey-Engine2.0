@@ -348,6 +348,8 @@ clearChoiceButtons() {
 
 
 
+// GameScene.js 内の performLoad メソッド (省略なし)
+
 async performLoad(slot, returnParams = null) {
     console.log("[LOG-BOMB] performLoad: START");
     this.isPerformingLoad = true;
@@ -379,11 +381,11 @@ async performLoad(slot, returnParams = null) {
                             const stringifiedValue = JSON.stringify(value).replace(/`/g, '\\`'); 
                             evalExp = `${key} = JSON.parse(\`${stringifiedValue}\`)`;
                         } catch (e) {
-                            console.warn(`[GameScene] returnParamsでJSONシリアライズできないオブジェクトが検出されました。スキップします: ${key} =`, value, e);
+                            console.warn(`[GameScene] returnParamsでJSONシリアライズできないオブジェクトが検出されました。スキップします： ${key} =`, value, e);
                             continue; 
                         }
                     } else {
-                        console.warn(`[GameScene] 未知の型のreturnParams値が検出されました。スキップします: ${key} =`, value);
+                        console.warn(`[GameScene] 未知の型のreturnParams値が検出されました。スキップします： ${key} =`, value);
                         continue; 
                     }
 
@@ -392,14 +394,22 @@ async performLoad(slot, returnParams = null) {
             }
 
         
-                        console.log("[LOG-BOMB] performLoad: AWAITING rebuildScene..."); // ★
-            await rebuildScene(this.scenarioManager, loadedState);
+            console.log("[LOG-BOMB] performLoad: AWAITING rebuildScene..."); // ★
+            
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+            // ★★★ ここが唯一の変更点です ★★★
+            // ★★★ rebuildSceneに this.restoredBgmKey を渡します ★★★
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+            await rebuildScene(this.scenarioManager, loadedState, this.restoredBgmKey);
+
             console.log("[LOG-BOMB] performLoad: ...rebuildScene COMPLETED."); // ★
-          // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ これが新しい解決策：汎用的な更新イベントを発行 ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        this.events.emit('force-hud-update');
-        console.log("GameScene: すべてのHUDに強制更新リクエストを発行しました。");
+          
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+            // ★★★ これが新しい解決策：汎用的な更新イベントを発行 ★★★
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+            this.events.emit('force-hud-update');
+            console.log("GameScene: すべてのHUDに強制更新リクエストを発行しました。");
+
             if (loadedState.scenario.isWaitingClick || loadedState.scenario.isWaitingChoice) {
                 console.log("ロード完了: 待機状態のため、ユーザーの入力を待ちます。");
             } else {
@@ -407,9 +417,9 @@ async performLoad(slot, returnParams = null) {
                 this.time.delayedCall(10, () => this.scenarioManager.next());
             }
             
-                    this.isSceneFullyReady = true;
-        console.log(`スロット[${slot}]からロードしました。`);
-        success = true; // 成功フラグを立てる
+            this.isSceneFullyReady = true;
+            console.log(`スロット[${slot}]からロードしました。`);
+            success = true; // 成功フラグを立てる
 
     } catch (e) {
         console.error(`ロード処理でエラーが発生しました。`, e);
@@ -428,10 +438,11 @@ async performLoad(slot, returnParams = null) {
             console.log("GameScene: 処理完了。ロード完了イベントを発行しました。(finallyブロック)");
         });
     }
-}
-}
+}}
 // ★★★ rebuildScene ヘルパー関数 (最終版) ★★★
-async function rebuildScene(manager, state) {
+// GameScene.js のファイル末尾などにある rebuildScene 関数 (省略なし)
+
+async function rebuildScene(manager, state, restoredBgmKey) {
     console.log("[LOG-BOMB] rebuildScene: START"); // ★
     console.log("--- rebuildScene 開始 ---", state);
     const scene = manager.scene;
@@ -441,11 +452,10 @@ async function rebuildScene(manager, state) {
     manager.layers.background.removeAll(true);
     manager.layers.character.removeAll(true);
     scene.characters = {};
-    console.log("[LOG-BOMB] rebuildScene: AWAITING stopBgm..."); // ★
     
     manager.messageWindow.reset();
     scene.cameras.main.resetFX(); // カメラエフェクトもリセット
-console.log("[LOG-BOMB] rebuildScene: AWAITING stopBgm..."); // ★
+
     // 2. シナリオの「論理的な状態」を復元
     manager.currentFile = state.scenario.fileName;
     manager.currentLine = state.scenario.line;
@@ -478,23 +488,28 @@ console.log("[LOG-BOMB] rebuildScene: AWAITING stopBgm..."); // ★
         }
     }
 
-     // ★★★ 5. BGMを復元 (最終確定版) ★★★
-    const soundManager = manager.soundManager;
-    const targetBgmKey = state.sound.bgm; // `bgmKey` ではなく `bgm`
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    // ★★★ ここが唯一の変更点です ★★★
+    // ★★★ BGMの復元ロジック ★★★
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    console.log(`[rebuildScene] BGM復元開始。復帰キー: ${restoredBgmKey}, セーブデータキー: ${state.sound.bgm}`);
+    
+    // 別シーンからの復帰キー(restoredBgmKey)を最優先で使います。
+    // それがなければ(nullなら)、セーブデータ内のキー(state.sound.bgm)を使います。
+    const targetBgmKey = restoredBgmKey || state.sound.bgm;
 
     if (targetBgmKey) {
-        // 再生すべきBGMがある場合、再生を命令するだけ
-        // (SoundManagerが現在の曲と違う場合のみ処理してくれる)
-        await soundManager.playBgm(targetBgmKey, 500);
+        console.log(`[rebuildScene] BGM '${targetBgmKey}' の再生を試みます。`);
+        manager.soundManager.playBgm(targetBgmKey);
     } else {
-        // 再生すべきBGMがない場合、停止を命令する
-        await soundManager.stopBgm(500);
+        console.log(`[rebuildScene] BGMを停止します。`);
+        manager.soundManager.stopBgm();
     }
 
 
     // 6. メッセージウィンドウを復元 (クリック待ちだった場合)
     if (state.scenario.isWaitingClick) {
-        // ★ 話者情報も渡して復元 ★
+        // 話者情報も渡して復元
         manager.messageWindow.setText(state.scenario.currentText, false, () => {
             manager.messageWindow.showNextArrow();
         }, state.scenario.speakerName);
@@ -513,5 +528,4 @@ console.log("[LOG-BOMB] rebuildScene: AWAITING stopBgm..."); // ★
     }
     
     console.log("--- rebuildScene 正常終了 ---");
-    
 }
