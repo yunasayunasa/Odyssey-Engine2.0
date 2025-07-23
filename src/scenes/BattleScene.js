@@ -245,7 +245,22 @@ export default class BattleScene extends Phaser.Scene {
                     params: this.receivedParams // 最初のinitで受け取ったパラメータを再度渡す
                 });
             });
+// createメソッドの一番最後、events.emit('scene-ready')の直前に追加
 
+        // --- ★★★ 最後のデバッグコード ★★★ ---
+        const debugGraphics = this.add.graphics().setDepth(999);
+        
+        // プレイヤーグリッドのデバッグ
+        const playerGridBounds = new Phaser.Geom.Rectangle(this.gridX, this.gridY, gridWidth, gridHeight);
+        debugGraphics.lineStyle(4, 0xff0000, 1.0); // 赤い線
+        debugGraphics.strokeRectShape(playerGridBounds);
+        this.add.text(this.gridX, this.gridY - 20, 'PLAYER GRID HERE', { color: '#ff0000' }).setDepth(999);
+        
+        // 敵グリッドのデバッグ
+        const enemyGridBounds = new Phaser.Geom.Rectangle(enemyGridX, enemyGridY, gridWidth, gridHeight);
+        debugGraphics.lineStyle(4, 0x00ff00, 1.0); // 緑の線
+        debugGraphics.strokeRectShape(enemyGridBounds);
+        this.add.text(enemyGridX, enemyGridY - 20, 'ENEMY GRID HERE', { color: '#00ff00' }).setDepth(999);
             this.titleButton.on('pointerdown', () => {
                 if (this.eventEmitted) return;
                 this.eventEmitted = true;
