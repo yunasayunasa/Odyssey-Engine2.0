@@ -102,46 +102,13 @@ export default class GameScene extends Phaser.Scene {
             if (this.soundManager) {
                 this.soundManager.resumeContext();
             }
-        }, this);
-        // --- タグハンドラの登録 ---
-        this.scenarioManager.registerTag('chara_show', handleCharaShow);
-        this.scenarioManager.registerTag('chara_hide', handleCharaHide);
-        this.scenarioManager.registerTag('chara_mod', handleCharaMod);
-        this.scenarioManager.registerTag('p', handlePageBreak);
-        this.scenarioManager.registerTag('wait', handleWait);
-        this.scenarioManager.registerTag('bg', handleBg);
-        this.scenarioManager.registerTag('playse', handlePlaySe);
-        this.scenarioManager.registerTag('playbgm', handlePlayBgm);
-        this.scenarioManager.registerTag('stopbgm', handleStopBgm);
-        this.scenarioManager.registerTag('link', handleLink);
-        this.scenarioManager.registerTag('jump', handleJump);
-        this.scenarioManager.registerTag('move', handleMove);
-        this.scenarioManager.registerTag('walk', handleWalk);
-        this.scenarioManager.registerTag('shake', handleShake);
-        this.scenarioManager.registerTag('vibrate', handleVibrate);
-        this.scenarioManager.registerTag('flip', handleFlip);
-        this.scenarioManager.registerTag('chara_jump', handleCharaJump);
-        this.scenarioManager.registerTag('eval', handleEval);
-        this.scenarioManager.registerTag('log', handleLog);
-        this.scenarioManager.registerTag('if', handleIf);
-        this.scenarioManager.registerTag('elsif', handleElsif);
-        this.scenarioManager.registerTag('else', handleElse);
-        this.scenarioManager.registerTag('endif', handleEndif);
-        this.scenarioManager.registerTag('s', handleStop);
-        this.scenarioManager.registerTag('cm', handleClearMessage);
-        this.scenarioManager.registerTag('er', handleErase);
-        this.scenarioManager.registerTag('delay', handleDelay);
-        this.scenarioManager.registerTag('image', handleImage);
-        this.scenarioManager.registerTag('freeimage', handleFreeImage);
-        this.scenarioManager.registerTag('button', handleButton);
-        this.scenarioManager.registerTag('call', handleCall);
-        this.scenarioManager.registerTag('return', handleReturn);
-        this.scenarioManager.registerTag('stop_anim', handleStopAnim);
-        this.scenarioManager.registerTag('fadeout', handleFadeout);
-        this.scenarioManager.registerTag('fadein', handleFadein);
-        this.scenarioManager.registerTag('video', handleVideo);
-        this.scenarioManager.registerTag('stopvideo', handleStopVideo);
-        this.scenarioManager.registerTag('voice', handleVoice);
+        }, this);    // --- タグハンドラの登録 ---
+        console.log("タグハンドラの一括登録を開始します...");
+        for (const tagName in tagHandlers) {
+            this.scenarioManager.registerTag(tagName, tagHandlers[tagName]);
+        }
+        console.log(`${Object.keys(tagHandlers).length}個のタグハンドラを登録しました。`);
+        
      
           // --- ゲーム開始ロジック ---
     if (this.isResuming) {
