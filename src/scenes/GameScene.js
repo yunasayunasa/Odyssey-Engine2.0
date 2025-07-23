@@ -1,7 +1,5 @@
 import ScenarioManager from '../core/ScenarioManager.js';
 import SoundManager from '../core/SoundManager.js';
-import CoinHud from '../ui/CoinHud.js';
-import HpBar from '../ui/HpBar.js';
 import StateManager from '../core/StateManager.js';
 import MessageWindow from '../ui/MessageWindow.js';
 import ConfigManager from '../core/ConfigManager.js';
@@ -23,9 +21,9 @@ export default class GameScene extends Phaser.Scene {
         this.choiceButtons = [];
         this.pendingChoices = [];
         this.uiButtons = [];
-        this.coinHud = null;
+    
         this.restoredBgmKey = null;
-        this.playerHpBar = null;
+        
           this.isPerformingLoad = false; // ★★★ 追加: ロード処理中フラグ ★★★
         this.isSceneFullyReady = false; // シーンが完全に準備完了したかのフラグ
     }
@@ -83,27 +81,6 @@ export default class GameScene extends Phaser.Scene {
         this.scenarioManager = new ScenarioManager(this, this.layer, this.charaDefs, this.messageWindow, this.soundManager, this.stateManager, this.configManager);
   // ★★★ 追加: 最初のクリックで一度だけAudioContextを有効化する ★★★
      
-        // --- HUDのインスタンス化 ---
-        // ★★★ 修正箇所: CoinHudとHpBarにstateManagerを渡してインスタンス化 ★★★
-        // これにより、各HUDが自分自身でStateManagerの変更を監視するようになります。
-           console.log("HpBarを生成する直前のthis.stateManager:", this.stateManager);
-          this.coinHud = new CoinHud(this, {
-            x: 100,
-            y: 50,
-            stateManager: this.stateManager // ★★★ ここでstateManagerを確実に渡す ★★★
-        }); 
-       // ★★★ 修正箇所: HpBarをオブジェクト形式の引数でインスタンス化 ★★★
-        this.playerHpBar = new HpBar(this, {
-            x: 100,
-            y: 100,
-            width: 200,
-            height: 25,
-            type: 'player',
-            stateManager: this.stateManager // ★★★ ここでstateManagerを確実に渡す ★★★
-        });
-        this.playerHpBar.setVisible(false);
-     // ★★★ 修正箇所: StateManagerのイベントリスナーをここで登録 ★★★
-        this.stateManager.on('f-variable-changed', this.onFVariableChanged, this);
 
         // ★★★ 追加: 最初のクリックで一度だけAudioContextを有効化する ★★★
         this.input.once('pointerdown', () => {
@@ -155,14 +132,13 @@ export default class GameScene extends Phaser.Scene {
     // 2. StateManagerのイベントリスナーを解除
     if (this.stateManager) {
         // ★★★ 修正: GameSceneが独自に購読しているリスナーを全て解除 ★★★
-        this.stateManager.off('f-variable-changed', this.onFVariableChanged, this);
+        
         this.events.off('force-hud-update'); // もし使っていれば
     }
     
     // 3. 全てのPhaserオブジェクト（HUD、MessageWindowなど）を破棄
     // この部分は既存のままでOK
-    if (this.coinHud) { this.coinHud.destroy(); this.coinHud = null; }
-    if (this.playerHpBar) { this.playerHpBar.destroy(); this.playerHpBar = null; }
+   
     if (this.messageWindow) { this.messageWindow.destroy(); this.messageWindow = null; }
     // ... 他のUI要素も同様にdestroy ...
     this.clearChoiceButtons();

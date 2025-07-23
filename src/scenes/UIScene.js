@@ -1,18 +1,25 @@
+import CoinHud from '../ui/CoinHud.js';
+import HpBar from '../ui/HpBar.js';
+
 export default class UIScene extends Phaser.Scene {
     
     constructor() {
-        console.log("PreloadScene: 起動。...");
-        super({ key: 'UIScene', active:false});
-
-        // --- UI要素と状態を、すべてプロパティとして初期化 ---
+        super({ key: 'UIScene', active: false });
         this.menuButton = null;
         this.panel = null;
         this.isPanelOpen = false;
+        
+        // 管理するHUDをプロパティとして初期化
+        this.coinHud = null;
+        this.playerHpBar = null;
+        this.enemyHpBar = null; // バトルシーン用に敵HPバーも管理
     }
 
     create() {
         console.log("UIScene: 作成・初期化");
         this.scene.bringToTop();
+        
+        const stateManager = this.sys.registry.get('stateManager');
         const gameWidth = 1280;
         const gameHeight = 720;
 
@@ -79,11 +86,36 @@ export default class UIScene extends Phaser.Scene {
             this.toggleGameMode('skip');
             event.stopPropagation();
         });
+        
+        // --- HUDのインスタンスを生成 ---
+        this.coinHud = new CoinHud(this, { x: 100, y: 50, stateManager: stateManager });
+        this.playerHpBar = new HpBar(this, { x: 100, y: 100, width: 200, height: 25, type: 'player', stateManager: stateManager });
+        // BattleSceneにしか出てこない敵HPバーもここで作ってしまう
+        this.enemyHpBar = new HpBar(this, { x: this.scale.width - 100 - 250, y: 100, width: 250, height: 25, type: 'enemy', stateManager: stateManager });
+
+        // --- SystemSceneからの通知を受け取るリスナー ---
+        const systemScene = this.scene.get('SystemScene');
+        systemScene.events.on('transition-complete', this.onSceneTransition, this);
+        
+        // ★★★ 最初に一度、現在のシーンに合わせて表示を更新 ★★★
+        const initialScene = this.scene.manager.getScenes(true)[0];
+        this.onSceneTransition(initialScene.scene.key);
+    
         console.log("UI作成");
     }
 
     // --- 以下、このクラスが持つメソッド群 ---
+  onSceneTransition(newSceneKey) {
+        console.log(`[UIScene] シーン遷移を検知。HUD表示を更新します。新しいシーン: ${newSceneKey}`);
 
+        const isGameScene = (newSceneKey === 'GameScene');
+        const isBattleScene = (newSceneKey === 'BattleScene');
+
+        // シーンに応じてHUDの表示/非表示を切り替える
+        if (this.coinHud) this.coinHud.setVisible(isGameScene || isBattleScene);
+        if (this.playerHpBar) this.playerHpBar.setVisible(isGameScene || isBattleScene);
+        if (this.enemyHpBar) this.enemyHpBar.setVisible(isBattleScene);
+    }
     togglePanel() {
         this.isPanelOpen = !this.isPanelOpen;
         const targetY = this.isPanelOpen ? 720 - 60 : 720 + 120;
@@ -123,6 +155,12 @@ export default class UIScene extends Phaser.Scene {
             this.isPanelOpen = false; // 状態をリセット
             // Tweenなしで即座に隠す
             if (this.panel) this.panel.y = this.scale.height + 120; 
+        }
+    }
+     shutdown() {
+        const systemScene = this.scene.get('SystemScene');
+        if (systemScene) {
+            systemScene.events.off('transition-complete', this.onSceneTransition, this);
         }
     }
 }

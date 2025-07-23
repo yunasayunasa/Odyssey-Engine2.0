@@ -1,5 +1,4 @@
-import HpBar from '../ui/HpBar.js';
-import CoinHud from '../ui/CoinHud.js';
+
 import { ITEM_DATA } from '../core/ItemData.js';
 
 export default class BattleScene extends Phaser.Scene {
@@ -8,9 +7,6 @@ export default class BattleScene extends Phaser.Scene {
         // --- constructor: プロパティの初期化 (あなたのコードのまま) ---
         this.receivedParams = null;
         this.stateManager = null;
-        this.playerHpBar = null;
-        this.enemyHpBar = null;
-        this.coinHud = null;
         this.soundManager = null;
         this.backpackGridSize = 6;
         this.cellSize = 60;
@@ -73,11 +69,7 @@ export default class BattleScene extends Phaser.Scene {
         this.playerPlaceholderText = this.add.text(100, 360, 'PLAYER', { fontSize: '48px', fill: '#fff' }).setOrigin(0.5);
         this.enemyPlaceholderText = this.add.text(this.scale.width - 100, 360, 'ENEMY', { fontSize: '48px', fill: '#fff' }).setOrigin(0.5);
 
-        this.playerHpBar = new HpBar(this, { x: 20, y: 20, width: 250, height: 30, type: 'player', stateManager: this.stateManager });
-        this.enemyHpBar = new HpBar(this, { x: this.scale.width - 20, y: 20, width: 250, height: 30, type: 'enemy', stateManager: this.stateManager });
-        this.enemyHpBar.x -= this.enemyHpBar.barWidth;
-        this.coinHud = new CoinHud(this, { x: 100, y: 50, stateManager: this.stateManager });
-
+       
         this.stateManager.f.player_max_hp = this.initialBattleParams.initialPlayerMaxHp; 
         this.stateManager.f.player_hp = this.initialBattleParams.initialPlayerHp;
         this.playerHpBar.setHp(this.stateManager.f.player_hp, this.stateManager.f.player_max_hp);
@@ -85,9 +77,7 @@ export default class BattleScene extends Phaser.Scene {
         this.stateManager.f.enemy_max_hp = 500; 
         this.stateManager.f.enemy_hp = 500; 
         this.enemyHpBar.setHp(this.stateManager.f.enemy_hp, this.stateManager.f.enemy_max_hp);
-
-        this.coinHud.setCoin(this.initialBattleParams.initialCoin);
-
+ 
         this.onFVariableChangedListener = this.onFVariableChanged.bind(this);
         this.stateManager.on('f-variable-changed', this.onFVariableChangedListener);
         
@@ -362,24 +352,7 @@ export default class BattleScene extends Phaser.Scene {
         itemImage.setData('gridPos', null);
     }
     
-    // --- onFVariableChanged: あなたの元のコードのまま ---
-    onFVariableChanged(key, value) {
-        if (key === 'coin' && this.coinHud && this.coinHud.coinText.text !== value.toString()) {
-            this.coinHud.setCoin(value);
-        } else if (key === 'player_hp' && this.playerHpBar) {
-            const maxHp = this.stateManager.f.player_max_hp || 100;
-            this.playerHpBar.setHp(value, maxHp);
-        } else if (key === 'player_max_hp' && this.playerHpBar) {
-            const currentHp = this.stateManager.f.player_hp || 0;
-            this.playerHpBar.setHp(currentHp, value);
-        } else if (key === 'enemy_hp' && this.enemyHpBar) { 
-            const maxHp = this.stateManager.f.enemy_max_hp || 500;
-            this.enemyHpBar.setHp(value, maxHp);
-        } else if (key === 'enemy_max_hp' && this.enemyHpBar) { 
-            const currentHp = this.stateManager.f.enemy_hp || 0;
-            this.enemyHpBar.setHp(currentHp, value);
-        }
-    }
+  
 
     // ★★★ 修正点⑤: stop()メソッドを完全に削除する ★★★
     // stop()メソッドはシーンの再起動時に問題を引き起こすため、使用しません。
