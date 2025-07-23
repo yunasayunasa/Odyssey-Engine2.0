@@ -102,7 +102,7 @@ export default class UIScene extends Phaser.Scene {
     }
 
     // --- 以下、このクラスが持つメソッド群 ---
-  onSceneTransition(newSceneKey) {
+   onSceneTransition(newSceneKey) {
         console.log(`[UIScene] シーン遷移を検知。HUD表示を更新します。新しいシーン: ${newSceneKey}`);
 
         const isGameScene = (newSceneKey === 'GameScene');
@@ -110,7 +110,13 @@ export default class UIScene extends Phaser.Scene {
 
         // シーンに応じてHUDの表示/非表示を切り替える
         if (this.coinHud) this.coinHud.setVisible(isGameScene || isBattleScene);
-        if (this.playerHpBar) this.playerHpBar.setVisible(isGameScene || isBattleScene);
+        
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ ここを修正 ★★★
+        // ★★★ playerHpBarはBattleSceneの時だけ表示 ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        if (this.playerHpBar) this.playerHpBar.setVisible(isBattleScene); 
+        
         if (this.enemyHpBar) this.enemyHpBar.setVisible(isBattleScene);
     }
     togglePanel() {

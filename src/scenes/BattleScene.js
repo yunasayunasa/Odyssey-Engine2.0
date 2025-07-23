@@ -32,16 +32,24 @@ export default class BattleScene extends Phaser.Scene {
         this.startBattleButton = null;
     }
 
-    init(data) {
-        // --- init: プロパティのリセット (あなたのコードのまま) ---
-        this.receivedParams = data.transitionParams || {}; 
+     init(data) {
+        // --- init: プロパティのリセット ---
+        this.receivedParams = data.params || {}; // jump.jsの修正に合わせる
+        const initialMaxHp = this.receivedParams.player_max_hp || 100;
+
         this.initialBattleParams = {
             playerLevel: this.receivedParams.player_level || 1,
             playerName: this.receivedParams.player_name || 'プレイヤー',
             initialCoin: this.receivedParams.current_coin || 0,
-            initialPlayerMaxHp: this.receivedParams.player_max_hp || 100, 
-            initialPlayerHp: this.receivedParams.player_hp || this.receivedParams.player_max_hp || 100, 
+            
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+            // ★★★ ここを修正 ★★★
+            // ★★★ HPは常に最大値で初期化する ★★★
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+            initialPlayerMaxHp: initialMaxHp, 
+            initialPlayerHp: initialMaxHp, // ← 渡されたHPを使わず、最大HPをそのまま入れる
         };
+
         this.battleEnded = false;
         this.eventEmitted = false;
     }
