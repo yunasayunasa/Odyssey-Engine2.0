@@ -1,48 +1,5 @@
-import ScenarioManager from '../core/ScenarioManager.js';
-import SoundManager from '../core/SoundManager.js';
-import CoinHud from '../ui/CoinHud.js';
-import HpBar from '../ui/HpBar.js';
-import StateManager from '../core/StateManager.js';
-import MessageWindow from '../ui/MessageWindow.js';
-import { handleCharaShow } from '../handlers/chara_show.js';
-import { handleCharaHide } from '../handlers/chara_hide.js';
-import { handleCharaMod } from '../handlers/chara_mod.js';
-import { handlePageBreak } from '../handlers/p.js';
-import { handleWait } from '../handlers/wait.js';
-import { handleBg } from '../handlers/bg.js';
-import { handlePlaySe } from '../handlers/playse.js';
-import { handlePlayBgm } from '../handlers/playbgm.js';
-import { handleStopBgm } from '../handlers/stopbgm.js';
-import ConfigManager from '../core/ConfigManager.js';
-import { handleLink } from '../handlers/link.js';
-import { handleJump } from '../handlers/jump.js';
-import { handleMove } from '../handlers/move.js';
-import { handleWalk } from '../handlers/walk.js';
-import { handleShake } from '../handlers/shake.js';
-import { handleVibrate } from '../handlers/vibrate.js';
-import { handleFlip } from '../handlers/flip.js';
-import { handleCharaJump } from '../handlers/chara_jump.js';
-import { handleEval } from '../handlers/eval.js';
-import { handleLog } from '../handlers/log.js';
-import { handleIf } from '../handlers/if.js';
-import { handleElsif } from '../handlers/elsif.js';
-import { handleElse } from '../handlers/else.js';
-import { handleEndif } from '../handlers/endif.js';
-import { handleStop } from '../handlers/s.js';
-import { handleClearMessage } from '../handlers/cm.js';
-import { handleErase } from '../handlers/er.js';
-import { handleDelay } from '../handlers/delay.js';
-import { handleImage } from '../handlers/image.js';
-import { handleFreeImage } from '../handlers/freeimage.js';
-import { handleButton } from '../handlers/button.js';
-import { handleCall } from '../handlers/call.js';
-import { handleReturn } from '../handlers/return.js';
-import { handleStopAnim } from '../handlers/stop_anim.js';
-import { handleFadeout } from '../handlers/fadeout.js';
-import { handleFadein } from '../handlers/fadein.js';
-import { handleVideo } from '../handlers/video.js';
-import { handleStopVideo } from '../handlers/stopvideo.js';
-import { handleVoice } from '../handlers/voice.js';
+import { tagHandlers } from '../handlers/index.js';
+
 
 export default class GameScene extends Phaser.Scene {
     constructor() {
