@@ -78,11 +78,12 @@ export default class BattleScene extends Phaser.Scene {
         this.enemyPlaceholderText = this.add.text(this.scale.width - 100, 360, 'ENEMY', { fontSize: '48px', fill: '#fff' }).setOrigin(0.5);
 
        
-        this.stateManager.f.player_max_hp = this.initialBattleParams.initialPlayerMaxHp; 
-        this.stateManager.f.player_hp = this.initialBattleParams.initialPlayerHp;
+        // ★★★ stateManagerの値をセットする際に、HPを最大値で上書き ★★★
+        this.stateManager.setF('player_max_hp', maxHp); 
+        this.stateManager.setF('player_hp', maxHp); // ← ここで全回復させる
        
-        this.stateManager.f.enemy_max_hp = 500; 
-        this.stateManager.f.enemy_hp = 500; 
+        this.stateManager.setF('enemy_max_hp', 100); 
+        this.stateManager.setF('enemy_hp', 100);
         
        
         
