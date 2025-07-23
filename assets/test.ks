@@ -32,7 +32,7 @@
 
 [delay speed=80]
 yuna:「ようこそ！これは、あなたと一緒に作ったゲームエンジンのチュートリアルです。」
-yuna:テストテキト最初にバトルシーンテストです！
+yuna:最初にバトルシーンテストです！
 
 [jump storage="BattleScene" params="{player_level:f.love_meter, player_name:'&f.player_name;', start_area:'bridge', current_coin:f.coin, player_max_hp:f.player_max_hp, player_hp:f.player_hp}"]
 [fadein time=500]
