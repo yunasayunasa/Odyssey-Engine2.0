@@ -73,7 +73,7 @@ export default class SoundManager {
         // 2. 再生を開始する
         newBgm.play();
 
-        // 3. フェードインする場合、音量を0に戻してからTweenを開始する
+     /*   // 3. フェードインする場合、音量を0に戻してからTweenを開始する
         if (fadeTime > 0) {
             console.log(`[SoundManager] 発破#2: フェードインのため音量を0に設定`);
             newBgm.setVolume(0);
@@ -89,7 +89,7 @@ export default class SoundManager {
         else {
              console.log(`[SoundManager] 発破#3: フェードなし。音量を再設定`);
              newBgm.setVolume(targetVolume);
-        }
+        }*/
 
         console.log(`[SoundManager] 再生後の状態: isPlaying=${newBgm.isPlaying}, volume=${newBgm.volume}`);
     }
