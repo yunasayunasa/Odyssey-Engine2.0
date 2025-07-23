@@ -15,7 +15,7 @@ yuna:「まず、右へ移動。」
 [move name="yuna" x=1000 alpha=1 time=1000] 
 yuna:「次に、左へ移動。」
 [move name="yuna" x=200 alpha=1 time=1000] 
-[shake time=500]
+[shake name="yuna" time=500]
 yuna:「カメラのシェイクも、このオーバーレイシーンだけに影響します。」
 
 ; --- 3. グローバル変数(f変数)との連携 ---
