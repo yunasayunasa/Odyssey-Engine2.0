@@ -5,16 +5,16 @@ export default class ActionScene extends Phaser.Scene {
     constructor() {
         super('ActionScene');
         this.receivedParams = null; 
-        this.eventEmitted = false; // ★★★ 追加: イベント発行済みフラグ ★★★
-        this.winButton = null; // ボタンへの参照をプロパティとして初期化
-        this.loseButton = null; // ボタンへの参照をプロパティとして初期化
+        this.eventEmitted = false;
+        this.winButton = null;
+        this.loseButton = null;
     }
 
     init(data) {
-        this.receivedParams = data.transitionParams || {}; 
+        this.receivedParams = data.params || {}; // ★ jump.jsの仕様変更に合わせる
         console.log("ActionScene: init 完了。受け取ったパラメータ:", this.receivedParams);
         
-        this.eventEmitted = false; // シーンが再initされる際にリセット
+        this.eventEmitted = false;
     }
 
     create() {
@@ -23,11 +23,9 @@ export default class ActionScene extends Phaser.Scene {
         const player = this.add.text(100, 360, 'PLAYER', { fontSize: '48px', fill: '#fff' }).setOrigin(0.5);
         this.tweens.add({ targets: player, x: 1180, duration: 4000, ease: 'Sine.easeInOut', yoyo: true, repeat: -1 });
         
-        // --- オーバーレイ表示リクエスト ---
+         // --- オーバーレイ表示リクエスト ---
         this.time.delayedCall(3000, () => {
             console.log("ActionScene: request-overlay を発行");
-            // オーバーレイは遷移ではないので、isProcessingTransitionフラグは使わない
-            // ただし、二重発行を防ぎたいなら、オーバーレイ用のフラグを別途持つことも検討
             this.scene.get('SystemScene').events.emit('request-overlay', { 
                 from: this.scene.key,
                 scenario: 'overlay_test.ks'
@@ -78,28 +76,26 @@ export default class ActionScene extends Phaser.Scene {
             }
         });
         console.log("ActionScene: create 完了");
+    
+
+     // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ これが修正の核心 ★★★
+        // ★★★ 5ヶ条のルール1：createの最後にscene-readyを発行 ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        this.events.emit('scene-ready');
+        console.log("ActionScene: create 完了。scene-readyイベントを発行しました。");
+    }
+    
+    // ★★★ 5ヶ条のルール4：shutdownで後片付け ★★★
+    shutdown() {
+        console.log("ActionScene: shutdown されました。");
+        // このシーンは動的なイベントやタイマーを生成していないので、
+        // 現状はコンソールログだけでOK。
+        // もしthis.time.addEventなどを使ったら、ここでdestroyする。
     }
 
-    // SystemSceneがstart/stop/resumeを制御するので、このシーンでは特に処理は不要ですが、
-    // ログのために残しておくのは良いでしょう。
-    start() {
-        super.start();
-        console.log("ActionScene: start されました。");
-    }
-
-    stop() {
-        super.stop();
-        console.log("ActionScene: stop されました。");
-        // シーン停止時にボタンがあれば破棄 (念のため)
-        if (this.winButton) { this.winButton.destroy(); this.winButton = null; }
-        if (this.loseButton) { this.loseButton.destroy(); this.loseButton = null; }
-    }
-
-    resume() {
-        console.log("ActionScene: resume されました。入力を再有効化します。");
-        // SystemSceneが制御するため、ここでの input.enabled = true; は不要。
-        // ただし、ActionSceneが自分で入力有効化を管理したい場合はここに書く。
-        // 現状、SystemSceneが責任を持つ設計なので、ここはコメントアウトするか削除しても良い。
-        // this.input.enabled = true;
-    }
+    // ★★★ 以下のメソッドは不要なので削除 ★★★
+    // start() {}
+    // stop() {}
+    // resume() {}
 }
