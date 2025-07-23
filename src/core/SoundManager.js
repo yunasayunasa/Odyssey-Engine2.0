@@ -43,49 +43,57 @@ export default class SoundManager {
      * BGMを再生する (非同期競合対策版)
      */
      // playBgm から async を削除し、音量設定を確実に行う
-    playBgm(key, fadeTime = 500) {
+      playBgm(key, fadeTime = 500) {
         this.resumeContext();
 
         if (this.isFading || (this.currentBgm && this.currentBgmKey === key)) {
             return;
         }
 
-        // 古いBGMがあれば停止命令を出す (既存のロジックのまま)
         if (this.currentBgm && this.currentBgm.isPlaying) {
             this.stopBgm(fadeTime);
         }
 
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ これが今回の修正の核心 ★★★
-        // ★★★ 再生する瞬間に、ConfigManagerから最新の音量を取得 ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
         const targetVolume = this.configManager.getValue('bgmVolume');
-        console.log(`[SoundManager] playBgm: '${key}' を再生します。Configからの目標音量: ${targetVolume}`);
-
-        const newBgm = this.sound.add(key, { 
-            loop: true, 
-            // ★ 初期音量をここで設定する（フェードインしない場合のため）
-            volume: targetVolume 
-        });
+        console.log(`[SoundManager] playBgm: '${key}' を再生。目標音量: ${targetVolume}`);
+        
+        const newBgm = this.sound.add(key, { loop: true });
 
         this.currentBgm = newBgm;
         this.currentBgmKey = key;
         
-        // ★★★ フェードインする場合、初期音量を0にリセットしてから再生 ★★★
-        if (fadeTime > 0) {
-            newBgm.setVolume(0);
-        }
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ これが最後の策：「発破コード」 ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
         
+        // 1. まず現在の音量で一度設定する（これで叩き起こす）
+        console.log(`[SoundManager] 発破#1: 現在の音量(${targetVolume})でsetVolumeを実行`);
+        newBgm.setVolume(targetVolume);
+        
+        // 2. 再生を開始する
         newBgm.play();
 
-        // フェードイン処理
+        // 3. フェードインする場合、音量を0に戻してからTweenを開始する
         if (fadeTime > 0) {
+            console.log(`[SoundManager] 発破#2: フェードインのため音量を0に設定`);
+            newBgm.setVolume(0);
             this.isFading = true;
             this.fadeTo(newBgm, targetVolume, fadeTime, () => {
                 this.isFading = false;
+                // フェード完了後にも念のため再設定
+                if(newBgm.isPlaying) newBgm.setVolume(targetVolume); 
             });
         }
+        
+        // ★★★ フェードしない場合でも、再生後にもう一度設定（念押し）
+        else {
+             console.log(`[SoundManager] 発破#3: フェードなし。音量を再設定`);
+             newBgm.setVolume(targetVolume);
+        }
+
+        console.log(`[SoundManager] 再生後の状態: isPlaying=${newBgm.isPlaying}, volume=${newBgm.volume}`);
     }
+
 
     /**
      * BGMを停止する (非同期競合対策版)
