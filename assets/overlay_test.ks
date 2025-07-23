@@ -10,14 +10,11 @@ yuna:「背後ではPLAYERの文字が動き続けているはずです。」
 
 ; --- 2. オーバーレイ上での演出 ---
 yuna:「では、こちらのレイヤーだけで演出を行いますね。」
-[chara_mod name="yuna" x=1000 time=1000]
-[playse storage="cursor-ok"]
+
 yuna:「まず、右へ移動。」
-
-[chara_mod name="yuna" x=280 time=1000]
-[playse storage="cursor-cancel"]
+[move name="yuna" x=1000 alpha=1 time=1000] 
 yuna:「次に、左へ移動。」
-
+[move name="yuna" x=200 alpha=1 time=1000] 
 [shake time=500]
 yuna:「カメラのシェイクも、このオーバーレイシーンだけに影響します。」
 
@@ -27,23 +24,6 @@ yuna:「下のシーンが持つべきゲーム内変数も、ここから変更
 yuna:「スコアに100ポイント加算しました。[s]」
 
 ; --- 4. 選択肢のテスト ---
-yuna:「最後に選択肢のテストです。どちらかを選んでください。」
-
-*choice1|選択肢A
-@jump target="*label_A"
-
-*choice2|選択-肢B
-@jump target="*label_B"
-
-[s]
-
-*label_A
-yuna:「Aが選ばれましたね。」
-@jump target="*common_route"
-
-*label_B
-yuna:「Bが選ばれましたね。」
-@jump target="*common_route"
 
 
 *common_route
