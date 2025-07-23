@@ -89,14 +89,16 @@ export default class BattleScene extends Phaser.Scene {
         const gridWidth = this.backpackGridSize * this.cellSize;
         const gridHeight = this.backpackGridSize * this.cellSize;
         
-        // --- 4. プレイヤーグリッドを「シーン直下」に描画 ---
-        // ★★★ この定義を先に持ってくることが最重要 ★★★
+       // --- 4. プレイヤーグリッドを「シーン直下」に描画 ---
         this.gridX = 100;
         this.gridY = gameHeight / 2 - gridHeight / 2 - 50;
-        this.add.rectangle(this.gridX + gridWidth / 2, this.gridY + gridHeight / 2, gridWidth, gridHeight, 0x333333, 0.9);
+        this.add.rectangle(this.gridX + gridWidth / 2, this.gridY + gridHeight / 2, gridWidth, gridHeight, 0x333333, 0.9)
+            .setDepth(1); // ★★★ 奥行きを1に設定 ★★★
         for (let i = 0; i <= this.backpackGridSize; i++) {
-            this.add.line(0, 0, this.gridX, this.gridY + i * this.cellSize, this.gridX + gridWidth, this.gridY + i * this.cellSize, 0x666666, 0.5).setOrigin(0);
-            this.add.line(0, 0, this.gridX + i * this.cellSize, this.gridY, this.gridX + i * this.cellSize, this.gridY + gridHeight, 0x666666, 0.5).setOrigin(0);
+            this.add.line(0, 0, this.gridX, this.gridY + i * this.cellSize, this.gridX + gridWidth, this.gridY + i * this.cellSize, 0x666666, 0.5).setOrigin(0)
+                .setDepth(2); // ★★★ 線は背景より手前なので2 ★★★
+            this.add.line(0, 0, this.gridX + i * this.cellSize, this.gridY, this.gridX + i * this.cellSize, this.gridY + gridHeight, 0x666666, 0.5).setOrigin(0)
+                .setDepth(2); // ★★★ 線は背景より手前なので2 ★★★
         }
         this.backpack = Array(this.backpackGridSize).fill(null).map(() => Array(this.backpackGridSize).fill(0));
 
