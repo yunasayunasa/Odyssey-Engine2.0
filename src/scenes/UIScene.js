@@ -97,10 +97,7 @@ export default class UIScene extends Phaser.Scene {
         const systemScene = this.scene.get('SystemScene');
         systemScene.events.on('transition-complete', this.onSceneTransition, this);
         
-        // ★★★ 最初に一度、現在のシーンに合わせて表示を更新 ★★★
-        const initialScene = this.scene.manager.getScenes(true)[0];
-        this.onSceneTransition(initialScene.scene.key);
-    
+       
         console.log("UI作成");
     }
 

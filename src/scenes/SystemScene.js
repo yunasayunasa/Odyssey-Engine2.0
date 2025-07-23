@@ -195,5 +195,6 @@ this.tweens.killAll();
         this.isProcessingTransition = false;
         this.game.input.enabled = true;
         console.log(`[SystemScene] シーン[${sceneKey}]の遷移が完了。ゲーム全体の入力を再有効化。`);
+        this.events.emit('transition-complete', sceneKey);
     }
 }

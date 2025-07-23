@@ -25,7 +25,7 @@ export default class BattleScene extends Phaser.Scene {
         this.retryButton = null;
         this.titleButton = null;
         this.gameOverText = null;
-        this.onFVariableChangedListener = null;
+       
         this.eventEmitted = false;
         this.playerPlaceholderText = null;
         this.enemyPlaceholderText = null;
@@ -72,14 +72,11 @@ export default class BattleScene extends Phaser.Scene {
        
         this.stateManager.f.player_max_hp = this.initialBattleParams.initialPlayerMaxHp; 
         this.stateManager.f.player_hp = this.initialBattleParams.initialPlayerHp;
-        this.playerHpBar.setHp(this.stateManager.f.player_hp, this.stateManager.f.player_max_hp);
-
+       
         this.stateManager.f.enemy_max_hp = 500; 
         this.stateManager.f.enemy_hp = 500; 
-        this.enemyHpBar.setHp(this.stateManager.f.enemy_hp, this.stateManager.f.enemy_max_hp);
- 
-        this.onFVariableChangedListener = this.onFVariableChanged.bind(this);
-        this.stateManager.on('f-variable-changed', this.onFVariableChangedListener);
+        
+       
         
         this.backpackGridSize = 6;
         this.cellSize = 60;
@@ -150,10 +147,7 @@ export default class BattleScene extends Phaser.Scene {
 
             if (this.soundManager) await this.soundManager.stopBgm(500);
 
-            if (this.stateManager && this.onFVariableChangedListener) {
-                this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);
-                this.onFVariableChangedListener = null;
-            }
+           
 
             this.scene.get('SystemScene').events.emit('return-to-novel', {
                 from: this.scene.key,
@@ -360,10 +354,7 @@ export default class BattleScene extends Phaser.Scene {
     // ★★★ 修正点⑥: shutdown()にクリーンアップ処理を集約する ★★★
      shutdown() {
         console.log("BattleScene: shutdown されました。リスナーをクリーンアップします。");
-        if (this.stateManager && this.onFVariableChangedListener) {
-            this.stateManager.off('f-variable-changed', this.onFVariableChangedListener);
-            this.onFVariableChangedListener = null;
-        }
+       
     }
 
     // --- resume: あなたの元のコードのまま ---
