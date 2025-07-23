@@ -60,6 +60,7 @@ export default class GameScene extends Phaser.Scene {
         this.pendingChoices = [];
         this.uiButtons = [];
         this.coinHud = null;
+        this.restoredBgmKey = null;
         this.playerHpBar = null;
           this.isPerformingLoad = false; // ★★★ 追加: ロード処理中フラグ ★★★
         this.isSceneFullyReady = false; // シーンが完全に準備完了したかのフラグ
@@ -72,6 +73,11 @@ export default class GameScene extends Phaser.Scene {
   this.isPerformingLoad = false; // ★★★ init時にリセット ★★★
         this.isResuming = data.resumedFrom ? true : false;
         this.returnParams = data.returnParams || null;
+               // ★★★ 修正箇所 ★★★
+        // SystemSceneから渡されたBGMキーを受け取り、プロパティに保存する
+        this.restoredBgmKey = data.restoredBgmKey || null;
+        if (this.restoredBgmKey) {
+            console.log(`[GameScene.init] 復帰BGMキーを受け取りました: ${this.restoredBgmKey}`);
         this.isSceneFullyReady = false; // init時にリセット
     }
 
