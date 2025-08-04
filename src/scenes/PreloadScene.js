@@ -50,6 +50,7 @@ export default class PreloadScene extends Phaser.Scene {
         for (const key in assetDefine.images) { this.load.image(key, assetDefine.images[key]); }
         for (const key in assetDefine.sounds) { this.load.audio(key, assetDefine.sounds[key]); }
         for (const key in assetDefine.videos) { this.load.video(key, assetDefine.videos[key]); }
+        for (const key in assetDefine.scenarios) { this.load.text(key, assetDefine.scenarios[key]); }
         
         // ゲームで使う可能性のあるシナリオファイルをすべてロード
         this.load.text('scene1.ks', 'assets/scene1.ks');
