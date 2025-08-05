@@ -116,69 +116,77 @@ export default class ScenarioManager {
  // --- parseメソッドは、状態を変更するだけ ---
     // ScenarioManager.js の parse メソッド (最終版 Ver.2)
 
-    async parse(line) {
-        const trimedLine = this.embedVariables(line.trim());
+    確認お願いします
 
-        const ifState = this.ifStack.length > 0 ? this.ifStack[this.ifStack.length - 1] : null;
+async parse(line) {
+const trimedLine = this.embedVariables(line.trim());
 
-        // --- 1. スキップ処理 ---
-        if (ifState && ifState.skipping) {
-            const { tagName, params } = this.parseTag(trimedLine);
-            if (['if', 'elsif', 'else', 'endif'].includes(tagName)) {
-                const handler = this.tagHandlers.get(tagName);
-                // 同期ハンドラなのでawaitは不要だが、念のため付けても害はない
-                if (handler) await handler(this, params);
-            }
-            // スキップ中は、他のどの処理も行わずに関数を抜ける
-            return;
-        }
+Generated code
+const ifState = this.ifStack.length > 0 ? this.ifStack[this.ifStack.length - 1] : null;
 
-        // --- 2. 通常実行 (if - else if 構造で、二重処理を完全に防ぐ) ---
-        if (trimedLine.startsWith(';') || trimedLine.startsWith('*') || trimedLine.startsWith('@')) {
-            // コメント行、ラベル行、アセット行は何もしない
-        
-        } else if (trimedLine.startsWith('[')) {
-            // --- タグ行 ---
-            const { tagName, params } = this.parseTag(trimedLine);
+    // --- 1. スキップ処理 ---
+    if (ifState && ifState.skipping) {
+        const { tagName, params } = this.parseTag(trimedLine);
+        if (['if', 'elsif', 'else', 'endif'].includes(tagName)) {
             const handler = this.tagHandlers.get(tagName);
-            if (handler) {
-                // すべてのハンドラがPromiseを返すので、常にawaitで待つ
-                await handler(this, params);
-            } else {
-                console.warn(`未定義のタグです: [${tagName}]`);
-            }
-        
-        } else if (trimedLine.length > 0) {
-            // --- セリフまたは地の文 ---
-            let speakerName = null;
-            let dialogue = trimedLine;
-            const speakerMatch = trimedLine.match(/^([a-zA-Z0-9_]+):/);
-            
-            if (speakerMatch) {
-                speakerName = speakerMatch[1];
-                dialogue = trimedLine.substring(speakerName.length + 1).trim();
-            }
-            
-            this.stateManager.addHistory(speakerName, dialogue);
-            this.highlightSpeaker(speakerName);
-            const wrappedLine = this.manualWrap(dialogue);
-            
-            this.messageWindow.setText(wrappedLine, true, () => {
-        // ★★★ 修正箇所 ★★★
-        // オートモードはテキスト表示完了時にトリガーするが、クリック待ちは設定しない
-        if (this.mode === 'auto') this.startAutoMode();
-    }, speakerName);
-
-    // ★★★ isWaitingClick = true; を削除する！ ★★★
-    // これにより、テキストを表示しただけではループは止まらなくなる
-
-        
-        } else {
-            // --- 空行は何もしない ---
+            // 同期ハンドラなのでawaitは不要だが、念のため付けても害はない
+            if (handler) await handler(this, params);
         }
-
-        // parseメソッドは状態を変更するだけで、何もreturnしない
+        // スキップ中は、他のどの処理も行わずに関数を抜ける
+        return;
     }
+
+    // --- 2. 通常実行 (if - else if 構造で、二重処理を完全に防ぐ) ---
+    if (trimedLine.startsWith(';') || trimedLine.startsWith('*') || trimedLine.startsWith('@')) {
+        // コメント行、ラベル行、アセット行は何もしない
+    
+    } else if (trimedLine.startsWith('[')) {
+        // --- タグ行 ---
+        const { tagName, params } = this.parseTag(trimedLine);
+        const handler = this.tagHandlers.get(tagName);
+        if (handler) {
+            // すべてのハンドラがPromiseを返すので、常にawaitで待つ
+            await handler(this, params);
+        } else {
+            console.warn(`未定義のタグです: [${tagName}]`);
+        }
+    
+  // ScenarioManager.js の parse メソッド内のテキスト処理部分を、以下のように書き換えてください
+content_copy
+download
+Use code with caution.
+// ...
+} else if (trimedLine.length > 0) {
+// --- セリフまたは地の文 ---
+let speakerName = null;
+let dialogue = trimedLine;
+const speakerMatch = trimedLine.match(/^([a-zA-Z0-9_]+):/);
+
+Generated code
+if (speakerMatch) {
+    speakerName = speakerMatch[1];
+    dialogue = trimedLine.substring(speakerName.length + 1).trim();
+}
+
+this.stateManager.addHistory(speakerName, dialogue);
+this.highlightSpeaker(speakerName);
+const wrappedLine = this.manualWrap(dialogue);
+
+// ★★★ ここを await に変更し、onCompleteコールバックを削除 ★★★
+// これにより、タイピングが終わるまで次の行に進まなくなる
+await this.messageWindow.setText(wrappedLine, true, speakerName);
+
+// オートモードの処理などは、setTextの完了後に実行される
+if (this.mode === 'auto') {
+    this.startAutoMode();
+}
+content_copy
+download
+Use code with caution.
+} // ...
+} else{
+}
+
  
 
      // ScenarioManager.js の parse メソッド
