@@ -176,11 +176,11 @@ await this.messageWindow.setText(wrappedLine, true, speakerName);
 // オートモードの処理などは、setTextの完了後に実行される
 if (this.mode === 'auto') {
     this.startAutoMode();
-}
 
+}}
 
-} else{
-}
+else{
+}}
 
  
 
