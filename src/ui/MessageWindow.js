@@ -132,11 +132,73 @@ export default class MessageWindow extends Container {
         });
     }
     
+    // MessageWindow.js
+
+    setText(text, useTyping = true, speaker = null) {
+        // ★ Promiseのresolve関数をクラスのプロパティに保持する
+        this.typingResolve = null; 
+
+        return new Promise(resolve => {
+            // ★ resolve関数を保持
+            this.typingResolve = resolve; 
+
+            this.currentText = text;
+            this.currentSpeaker = speaker;
+    
+            if (this.charByCharTimer) {
+                this.charByCharTimer.remove();
+                this.charByCharTimer = null;
+            }
+            this.textObject.setText('');
+    
+            const typeSoundMode = this.configManager.getValue('typeSound');
+    
+            if (!useTyping || text.length === 0 || this.textDelay <= 0) {
+                this.textObject.setText(text);
+                this.isTyping = false;
+                if (this.typingResolve) this.typingResolve(); // 即座に解決
+                return;
+            }
+            
+            this.isTyping = true;
+            this.fullText = text; // fullTextプロパティを確実に設定
+            let index = 0;
+            
+            this.charByCharTimer = this.scene.time.addEvent({
+                delay: this.textDelay,
+                callback: () => {
+                    if (typeSoundMode === 'se') {
+                        this.soundManager.playSe('popopo');
+                    }
+                    this.textObject.text += this.fullText[index];
+                    index++;
+                    if (index === this.fullText.length) {
+                        if(this.charByCharTimer) this.charByCharTimer.remove();
+                        this.charByCharTimer = null;
+                        this.isTyping = false;
+                        if (this.typingResolve) this.typingResolve(); // 完了時に解決
+                    }
+                },
+                callbackScope: this,
+                loop: true
+            });
+        });
+    }
+
     skipTyping() {
-        if (!this.isTyping) return;
-        this.textObject.setText(this.charByCharTimer.fullText);
+        if (!this.isTyping || !this.charByCharTimer) return;
+
+        this.textObject.setText(this.fullText);
+
         this.charByCharTimer.remove();
+        this.charByCharTimer = null;
         this.isTyping = false;
+        
+        // ★ 保持していたresolve関数を呼び出して、Promiseを解決させる
+        if (this.typingResolve) {
+            this.typingResolve();
+            this.typingResolve = null; // 一度使ったらクリア
+        }
     }
 
     // ★★★ ロード時にウィンドウの状態をリセットするためのメソッド ★★★
