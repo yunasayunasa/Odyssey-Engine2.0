@@ -152,17 +152,14 @@ const ifState = this.ifStack.length > 0 ? this.ifStack[this.ifStack.length - 1] 
         }
     
   // ScenarioManager.js の parse メソッド内のテキスト処理部分を、以下のように書き換えてください
-content_copy
-download
-Use code with caution.
-// ...
+
 } else if (trimedLine.length > 0) {
 // --- セリフまたは地の文 ---
 let speakerName = null;
 let dialogue = trimedLine;
 const speakerMatch = trimedLine.match(/^([a-zA-Z0-9_]+):/);
 
-Generated code
+
 if (speakerMatch) {
     speakerName = speakerMatch[1];
     dialogue = trimedLine.substring(speakerName.length + 1).trim();
