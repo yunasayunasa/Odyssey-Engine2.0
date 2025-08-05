@@ -116,12 +116,12 @@ export default class ScenarioManager {
  // --- parseメソッドは、状態を変更するだけ ---
     // ScenarioManager.js の parse メソッド (最終版 Ver.2)
 
-    確認お願いします
+    
 
 async parse(line) {
 const trimedLine = this.embedVariables(line.trim());
 
-Generated code
+
 const ifState = this.ifStack.length > 0 ? this.ifStack[this.ifStack.length - 1] : null;
 
     // --- 1. スキップ処理 ---
@@ -180,9 +180,7 @@ await this.messageWindow.setText(wrappedLine, true, speakerName);
 if (this.mode === 'auto') {
     this.startAutoMode();
 }
-content_copy
-download
-Use code with caution.
+
 } // ...
 } else{
 }
