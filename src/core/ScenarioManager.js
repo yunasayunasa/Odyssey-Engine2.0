@@ -178,7 +178,7 @@ if (this.mode === 'auto') {
     this.startAutoMode();
 }
 
-} // ...
+
 } else{
 }
 
