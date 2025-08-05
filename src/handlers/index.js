@@ -35,7 +35,7 @@ import { handleLog } from './log.js';
 
 // --- フロー制御・待機系 ---
 import { handlePageBreak } from './p.js';
-import { handleReturn } from './r.js'; 
+import { handleRecuest } from './r.js'; 
 import { handleWait } from './wait.js';
 import { handleStop } from './s.js';
 import { handleDelay } from './delay.js';
@@ -89,7 +89,7 @@ export const tagHandlers = {
 
     // フロー制御・待機系
     'p': handlePageBreak, // 改ページ
-    'r': handleReturn,   // 選択肢表示
+    'r': handleRecuest,   // 選択肢表示
     'wait': handleWait,
     's': handleStop,
     'delay': handleDelay,
