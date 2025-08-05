@@ -1,84 +1,167 @@
-Odyssey Engine v2.0 README (最終改訂案)
-Odyssey Engine v2.0
-Odyssey Engineは、Phaser 3の強力なグラフィック表現と柔軟性を備えつつ、ティラノスクリプトのような直感的なスクリプト記述で、ノベルゲームと他のジャンルを融合したハイブリッドゲームを制作できるエンジンです。
-幾多の困難なデバッグを経て、SystemSceneによる中央集権的なシーン管理、StateManagerによるイベント駆動の状態管理、そしてUISceneによるUIの完全な分離を実現。これにより、開発者はコアエンジンを意識することなく、ゲーム固有のロジックとアセットの制作に100%集中できます。
-🚀 主な特徴と機能
-Phaser 3の表現力: キャラクターアニメーション、パーティクル、シェーダーなど、Phaserのパワフルな機能をタグで制御。
-ティラノスクリプト風のシンプル記述: [chara_show], [p], [eval]など、直感的なタグでシナリオを記述。
-完全な状態セーブ＆ロード:
-ゲーム内変数 (f.*)、システム変数 (sf.*) の永続化と復元。
-シナリオの進行状況、背景、キャラクター、BGMの視覚・聴覚状態の完璧な復元。
-堅牢なシーン間連携 (SystemSceneによる中央集権管理):
-[jump storage="SceneKey"]による、Phaserの別シーン（バトルパート、パズルパートなど）へのシームレスな遷移。
-シーン遷移時の自動オートセーブ・ロード機能により、プレイヤー体験を損なわないスムーズな復帰。
-グローバルUIシステム (UIScene司令塔方式):
-HPバーや所持金表示などのHUDは、永続的なUISceneが一元管理。
-ゲームシーンはHUDの存在を意識する必要がなく、StateManagerの変数を更新するだけでUIが自動的に追従。
-安定したゲームループ: タグの実行順序と非同期処理を厳密に管理することで、いかなるシナリオでもフリーズすることなく安定動作。
-🛠️ セットアップ
-(このセクションは変更なしでOK)
-Phaserプロジェクトの準備: Phaser 3 (v3.60.0以降推奨) のプロジェクトをセットアップします。
-エンジンファイルの配置: src/core/, src/handlers/, src/ui/, src/scenes/ ディレクトリ配下のエンジンコアファイルを、あなたのPhaserプロジェクトの対応するパスに配置します。
-アセットの準備: assets/ フォルダに、asset_define.jsonで定義された画像、音声、動画、そして.ksシナリオファイルを配置します。
-main.jsの設定 (重要):
-Phaser.Gameのconfig.sceneリストに、Odyssey Engineの全てのシーンを直接クラス名で登録します。
-**PreloadSceneのconstructorのみactive: true**とし、他のシーンはactive: falseに設定します。
-Generated javascript
-// main.js の例
-import PreloadScene from './scenes/PreloadScene.js';
-import SystemScene from './scenes/SystemScene.js';
-import UIScene from './scenes/UIScene.js';
-import GameScene from './scenes/GameScene.js';
-// ... 他のコアシーン ...
-import BattleScene from './scenes/BattleScene.js'; // あなたが作るゲームシーン
+Odyssey Engine v2.1 - ユーザーマニュアル (再構築・決定版)
+1. はじめに：これは、あなたの物語のためのエンジンです
+Odyssey Engineへようこそ。
+このエンジンは、単なるツールではありません。幾多の困難なデバッグを経て、私達が共にたどり着いた「安定した物語の器」です。Phaser 3が持つパワフルな表現力と、ティラノスクリプトのような直感的な記述法。この二つを融合させ、ノベルゲームと他のジャンルを組み合わせた「ハイブリッドゲーム」を、誰もが創造できる世界を目指して生まれました。
+このマニュアルは、その旅路に立つあなたのための、唯一無二の羅針盤です。
+2. エンジンの設計思想：なぜ、こうなっているのか
+このエンジンは、3つの強力な柱によって支えられています。
+中央集権的なシーン管理 (SystemScene): シーン遷移という、ゲーム開発で最も不安定になりがちな処理を、司令塔であるSystemSceneに一任。あなたは「このシーンへ行け」と命令するだけで、エンジンが安全な遷移を保証します。
+イベント駆動の状態管理 (StateManager): HPが減る、フラグが立つ。そういったゲーム内の「出来事」は、すべてStateManagerという唯一の状態管理者が記録します。UIやゲームロジックは、その変化を「聞く」だけで自動的に更新されるため、あなたはUIの表示を直接操作する必要がありません。
+UIの完全な分離 (UIScene): HPバーやメッセージウィンドウは、UISceneという永続的なレイヤーが一元管理します。ゲームシーンはUIの存在を意識する必要がなく、物語のロジックに100%集中できます。
+この設計により、あなたはコアエンジンを意識することなく、安心してゲーム固有のロジックとアセットの制作に没頭できるのです。
+3. セットアップ
+(内容は変更なし)
+4. シナリオ入門：物語を記述する (.ksファイル)
+ゲームの物語、演出、キャラクターの動きは、すべて.ksという拡張子のテキストファイルに記述します。
+4.1. シナリオの基本構造
+要素	書き方	役割
+テキスト	テキストをそのまま記述	メッセージウィンドウに文章を表示（地の文）
+セリフ	キャラクター名: テキスト	話者付きでセリフを表示
+タグ	[タグ名 パラメータ=値]	演出、分岐、シーン遷移などの特殊な命令
+ラベル	*ラベル名	[jump]や[link]のジャンプ先となる目印
+コメント	; で始まる行	実行時に無視されるメモ
+アセット宣言	@asset type=image key=... path=...	このシナリオで使うアセットを、シナリオ開始時に動的に読み込む
+シナリオの例:
+Generated text
+; これはゲームに影響しないコメントです
 
-const config = {
-    // ...
-    scene: [
-        PreloadScene, SystemScene, UIScene, GameScene, 
-        /* 他コアシーン */, BattleScene // 開発するシーンを追加
-    ]
-};
-const game = new Phaser.Game(config);
+; ▼ このシナリオで使うアセットを宣言します
+@asset type=image key=bg_school path=backgrounds/school_day.png
+@asset type=image key=yuko_smile path=characters/yuko_smile.png
+
+*start
+; 背景とキャラクターを表示
+[bg storage=bg_school]
+[chara_show name=yuko storage=yuko_smile pos=center]
+
+yuko:「こんにちは、世界！」
+
+; [p]タグで、クリックを待って改ページします
+[p]
+
+yuko:「これがOdyssey Engineよ！」
+
+; [br]タグは、メッセージウィンドウの中で改行します
+yuko:「とっても簡単でしょ？[br]さあ、始めましょう！」
+[p]
+[s]
 Use code with caution.
-JavaScript
-✍️ エンジンのカスタマイズと拡張
-Odyssey Engineは、**「コアエンジン」と「ゲーム固有コンテンツ」**が明確に分離されています。安定性を保ち、開発を効率化するため、以下のガイドラインに従ってください。
-✅ 安全にカスタマイズできる部分 (推奨される拡張ポイント)
-あなたが主に触るのはここだけです。
-シナリオファイル (.ks): ゲームの物語を自由に記述・変更してください。
-アセット (assets/): 画像、音声、動画、フォントなど、ゲームに必要なアセットを追加・変更してください。
-asset_define.json: 使用するアセットのパスとキーを定義してください。
-新規タグの追加:
-src/handlers/にnew_tag.jsのようなハンドラファイルを作成します。
-src/handlers/index.jsを開き、作成したファイルをimportし、tagHandlersオブジェクトに'new_tag': handleNewTagのように1行追加します。
-これだけで、エンジンは新しいタグを自動的に認識します。 GameScene.jsを触る必要はありません。
-HUDの追加・変更:
-HPバーやスコア表示など、新しいHUDコンポーネントを作成します。HpBar.jsを参考に、StateManagerを購読する形で実装するのがベストです。
-UIScene.jsのcreateメソッドで新しいHUDをインスタンス化し、onSceneTransitionメソッドで、どのシーンの時に表示するかを制御します。
-新規ゲームシーンの追加 (例: PuzzleScene.js):
-これがこのエンジンの醍醐味です。以下の**【新規ゲームシーン開発の5ヶ条】**を守るだけで、安全に新しいゲームパートを追加できます。BattleScene.jsが完璧なテンプレートになります。
-⭐【重要】新規ゲームシーン開発の5ヶ条⭐
-新しいゲームシーン（BattleSceneやPuzzleSceneなど）を作る際は、以下のルールを必ず守ってください。
-createの最後にscene-readyを発行する
-シーンの準備が全て完了した最後に、必ずthis.events.emit('scene-ready');を記述します。これが遷移完了の合図です。
-BGMはcreateで再生する
+Text
+4.2. テキストと改ページ・改行のルール
+Odyssey Engineのテキスト制御は、非常にシンプルで強力なルールに基づいています。
+タグ	役割	実行後の状態
+[br]	文中改行 (Break)	同じメッセージ内で改行。シナリオは停止せず、処理を続行。
+[p]	改ページ (Page Break / Pause)	クリック待ちになる。クリックされるとウィンドウがクリアされ、次の行へ。
+(テキスト行)	文字表示	メッセージウィンドウに文字を表示するだけ。シナリオは停止しない。
+このルールにより、**「演出タグを連続で実行し、最後に[p]で待つ」**といった、テンポの良いシナリオ記述が可能になります。
+5. タグ・リファレンス
+タグはエンジンの力の源です。パラメータは 属性=値 の形式で、半角スペースで区切って複数指定できます。値にスペースを含みたい場合は " (ダブルクォート) で囲ってください。
+<details>
+<summary><strong>フロー制御タグ (クリックで展開)</strong></summary>
+選択肢
+プレイヤーに選択を促す最も基本的なフローです。[link], [r], [s]の3つはセットで使います。
+[link text="ボタンの文字" target="*ジャンプ先"]: 選択肢を定義します。この時点では画面に表示されません。
+[r] (Render): [link]で定義された選択肢を画面に表示します。
+[s] (Stop): シナリオの進行を停止し、プレイヤーが選択肢をクリックするのを待ちます。
+使用例:
+Generated text
+yuko:「今日はどこへ行く？」[p]
+
+; 選択肢を定義
+[link text="公園" target="*park"]
+[link text="図書館" target="*library"]
+
+; [r]で選択肢を表示する
+[r]
+; [s]でプレイヤーの選択を待つ。必須！
+[s]
+
+*park
+; 公園のシナリオ...
+[jump target="*common_route"]
+
+*library
+; 図書館のシナリオ...
+[jump target="*common_route"]
+
+*common_route
+;...
+Use code with caution.
+Text
+条件分岐
+変数の値に応じて、シナリオの実行内容を分岐させます。
+[if exp="条件式"]: 条件式が真(true)の場合に実行。
+[elsif exp="条件式"]: 前の条件が偽で、この条件が真の場合に実行。
+[else]: すべての条件が偽の場合に実行。
+[endif]: 分岐の終わりを示します。必ず必要です。
+使用例:
+Generated text
+[if exp="f.love >= 50"]
+    yuko:「大好き！」
+[elsif exp="f.love >= 20"]
+    yuko:「ありがとう。」
+[else]
+    yuko:「ふーん……」
+[endif]
+[p]
+Use code with caution.
+Text
+シナリオ/シーン遷移
+[jump]: 戻ってこないジャンプ。現在のシナリオを終了し、別の場所へ移動します。
+target="*ラベル名": 同じファイル内のラベルへ移動。
+storage="SceneKey": 別のPhaserシーン（バトル、パズルなど）へ遷移。
+params="{...}": storage指定時、遷移先のシーンに変数を渡せます。
+[call]: サブルーチン呼び出し。一時的に別の場所へ移動し、[return]で戻ってきます。
+target="*ラベル名": ファイル内の共通処理を呼び出す。
+storage="ファイル名.ks": 別のシナリオファイルをサブルーチンとして呼び出す。
+[return]: [call]で呼び出されたサブルーチンの最後に置き、呼び出し元へ戻ります。
+</details>
+<details>
+<summary><strong>キャラクター・画像タグ (クリックで展開)</strong></summary>
+[chara_show]: キャラクターを表示します。
+name (必須): キャラクターの管理名。セリフの話者名と一致させます。
+storage (必須): asset_define.json等で定義した画像キー。
+pos: left, center, rightから選択。x, yでの座標指定も可能。
+time: フェードイン時間（ミリ秒）。
+nowait="true": アニメーションの完了を待たずに次の処理へ進みます。
+[chara_mod]: 表示中のキャラクターの画像を差し替えます。（表情差分など）
+name (必須): 対象キャラクターのname。
+storage (必須): 新しい画像キー。
+time: クロスフェードの時間（ミリ秒）。
+[chara_hide]: キャラクターを消去します。
+name (必須): 対象キャラクターのname。
+time: フェードアウト時間（ミリ秒）。
+[bg]: 背景を表示します。
+storage (必須): 画像キー。
+time: フェードイン/クロスフェードの時間（ミリ秒）。
+(ここに、[image], [freeimage], [move], [walk]など、他の画像系タグの説明が続きます)
+</details>
+<details>
+<summary><strong>変数操作・その他タグ (クリックで展開)</strong></summary>
+[eval]: ゲーム変数(f.)やシステム変数(sf.)の値を直接操作する、非常に強力なタグです。
+exp (必須): 実行するJavaScript式を記述します。
+例: [eval exp="f.love = f.love + 10"]
+[wait]: 指定時間、処理を待ちます。
+time (必須): 待機する時間（ミリ秒）。1000で1秒。
+(ここに、[playbgm], [shake], [hidewindow]など、他の全カテゴリのタグの説明が続きます)
+</details>
+6. ゲームの拡張（プログラマー向け）
+このセクションは、エンジンに新しい機能を追加したい開発者向けの技術情報です。
+6.1. 新規タグの追加
+src/handlers/にハンドラファイル (new_tag.jsなど) を作成します。
+src/handlers/index.jsを開き、作成したファイルをimportし、tagHandlersオブジェクトに1行追加します。
+これだけで、エンジンは新しいタグを自動的に認識します。GameScene.jsを触る必要はありません。
+6.2. ⭐【最重要】新規ゲームシーン開発の5ヶ条⭐
+ノベルパートから遷移する、新しいゲームシーン（バトルシーン、パズルシーンなど）を作る際は、以下のルールを必ず守ってください。これは、エンジン全体の安定性を保つための契約です。
+create()の最後にscene-readyを発行する
+シーンの準備がすべて完了した最後に、必ずthis.events.emit('scene-ready');を記述します。これがSystemSceneへの「準備完了」の合図です。
+BGMはcreate()で再生する
 シーンが始まったら、this.soundManager.playBgm('曲名');でBGMの再生を「命令」するだけです。SoundManagerが前の曲を賢く止めてくれます。
 ノベルシーンへの復帰はSystemSceneに依頼する
 シーンを終了する際は、必ずthis.scene.get('SystemScene').events.emit('return-to-novel', ...)を発行します。自身のstop()は絶対に呼ばないでください。
-shutdownで後片付けをする
-shutdown()メソッドを実装し、そのシーンでthis.time.addEventやthis.events.onなど、シーンに紐づくタイマーやイベントリスナーを生成した場合は、必ずここで破棄・解除してください。
+shutdown()で後片付けをする
+shutdown()メソッドを実装し、そのシーンのcreate()で生成したタイマー (this.time.addEvent) やイベントリスナー (this.events.on) は、必ずここで破棄・解除してください。
 HUDは操作しない
-シーンの中からHPバーやコイン表示を直接操作しようとしないでください。代わりにthis.stateManager.setF('player_hp', 50);のように状態変数を変更します。UIの更新はUISceneとHUD自身が自動的に行います。
-⚠️ 変更には注意が必要な部分 (コアエンジン)
-原則として、以下のファイルは触らないでください。 ここのロジックは、数々のデバッグを経て現在の安定した形になっています。
-src/core/ディレクトリ以下のファイル:
-特にStateManager.jsはゲーム状態管理の心臓部です。
-src/scenes/SystemScene.js:
-シーン遷移、入力制御、グローバルイベント通知の司令塔です。ここのロジックを変更すると、ゲーム全体が容易に破綻します。
-src/scenes/PreloadScene.js:
-ゲームの起動シーケンスを担っています。マネージャーの初期化順序は非常に重要です。
-src/scenes/GameScene.js:
-ノベルパートの実行とセーブ＆ロード機能の心臓部です。タグ登録はhandlers/index.jsで行うため、このファイルを編集する必要はほとんどありません。
-src/scenes/UIScene.js:
-HUDの追加や表示ルールの変更は安全ですが、SystemSceneとのイベント連携部分を不用意に変更すると、UI全体の動作がおかしくなる可能性があります。
+シーンの中からHPバーを直接操作しようとしないでください。代わりにthis.stateManager.setF('player_hp', 50);のように状態変数を変更します。UIの更新はUISceneとHUD自身が自動的に行います。
+このマニュアルが、あなたの創造の旅の信頼できる羅針盤となることを願っています。
+さあ、あなただけの物語を始めましょう！

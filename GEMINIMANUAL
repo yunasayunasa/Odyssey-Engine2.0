@@ -1,99 +1,94 @@
-AI向け内部仕様書 (GEMINI INTERNAL SPECIFICATION) - Odyssey Engine v2.1
-目的: このドキュメントは、Odyssey Engineの内部アーキテクチャ、データフロー、およびコンポーネント間の相互作用を、AIが最大限に理解し、将来的な機能拡張やデバッグ、特にノベル以外のゲームジャンルとのシームレスな連携を効率的に支援するためのものである。人間が読むことよりも、AIによる機械的・論理的解釈の最適化を優先する。
-バージョン: 2.1
-最終更新日: 2023-07-24
-変更ログ:
-v2.0 -> v2.1: デバッグプロセスを経て確定した最終アーキテクチャを反映。
-3.0: シーン遷移プロトコルを、scene-readyとgameScene-load-completeを待つ汎用的な_startAndMonitorSceneに更新。
-5.0: HUD管理プロトコルをUIScene司令塔方式として新規定義。
-6.0: BGM制御プロトコルを「新シーン責任制」として新規定義。
-7.0: タグハンドラ登録の動的インポート方式を新規定義。
-1.0 Core Architecture & System Lifecycle
-VIEWPORT: 1280x720, Phaser.Scale.FIT.
-GLOBAL SINGLETONS (CRITICAL): Phaser.Registryを唯一のサービスロケータとして使用。
-stateManager: (StateManager) ゲームの状態 (f, sf変数) を保持する唯一のソース。Phaser.Events.EventEmitterを継承。PreloadSceneで生成・登録。
-configManager: (ConfigManager) ゲームの設定を保持する唯一のソース。PreloadSceneで生成・登録。
-soundManager: (SoundManager) ゲーム全体のサウンドを制御する唯一のソース。PreloadSceneで生成・登録。
-SCENE LIFECYCLE MANAGEMENT (CRITICAL - CENTRALIZED VIA SystemScene):
-BOOTSTRAP SEQUENCE:
-main.js: PreloadSceneのみactive: trueで起動。他は全てactive: false。
-PreloadScene: 全アセットをロード。StateManager, ConfigManager, SoundManagerを生成し、Registryに登録。charaDefsを生成。
-PreloadScene create(): this.scene.launch('SystemScene', { initialGameData: {...} })を呼び出し、SystemSceneに初期ゲーム起動を委譲。自身はstop()する。
-SystemScene create(): UISceneをlaunchし、_startAndMonitorScene('GameScene', ...)で初期シーンを起動。
-KEY SCENE ROLES:
-PreloadScene: Bootstrap. 責務はアセットロードとグローバルサービス登録のみ。
-SystemScene: Global Mediator & Scene Traffic Controller. 全てのシーン遷移(stop/run)と、それに伴うグローバルな入力制御(game.input.enabled)を管理。他のシーンからの直接的なscene.start/stop呼び出しは禁止。
-UIScene: Persistent UI Layer & HUD Controller. SystemSceneからlaunchされ、永続的に存在する。HUDの生成・表示/非表示を一元管理する。
-GameScene: Novel Core. ノベルシナリオの実行、セーブ/ロード処理の起点。
-Custom Game Scenes (BattleScene, PuzzleScene): SystemSceneから起動される独立したゲームパート。
-SHUTDOWN PROTOCOL (CRITICAL): 全てのシーンはshutdown()メソッドを実装し、自身がcreate()で生成したPhaserオブジェクトとイベントリスナー（特にthis.time.addEventやthis.events.onで登録したもの）を完全に破棄する責務を持つ。
-2.0 State Management (StateManager.js)
-INHERITANCE: extends Phaser.Events.EventEmitter.
-PROPERTIES: this.f (ゲーム変数), this.sf (システム変数).
-KEY METHODS:
-setF(key, value): 変数を設定し、this.emit('f-variable-changed', key, value)を呼び出す。HUD更新の主要トリガー。
-eval(exp): 式を実行し、変更があったf変数に対してf-variable-changedイベントを発行する。
-getState(scenarioManager): 永続化用のスナップショットを生成。sound.bgmキーも含む。
-setState(loadedState): スナップショットからthis.fとthis.sfを復元し、全てのf変数に対してf-variable-changedを発行してUIを強制更新する。
-3.0 Scene Transition Protocol (SystemScene.js)
-MECHANISM: イベント駆動。isProcessingTransitionフラグによる二重遷移防止。
-INPUT CONTROL (CRITICAL):
-遷移開始時: this.isProcessingTransition = true; this.game.input.enabled = false;
-遷移完了時: this.isProcessingTransition = false; this.game.input.enabled = true;
-TRANSITION FLOW (GameScene -> BattleScene):
-[jump storage="BattleScene"] -> handleJump -> SystemScene.events.emit('request-scene-transition', { to: 'BattleScene', from: 'GameScene', novelBgmKey: '...' })
-SystemSceneがイベント受信 (_handleRequestSceneTransition):
-入力無効化。
-novelBgmKeyをthis.novelBgmKeyに退避。
-this.scene.stop('GameScene').
-_startAndMonitorScene('BattleScene', ...)を呼び出し。
-RETURN FLOW (BattleScene -> GameScene):
-BattleScene -> SystemScene.events.emit('return-to-novel', ...)
-SystemSceneがイベント受信 (_handleReturnToNovel):
-入力無効化。
-this.scene.stop('BattleScene').
-_startAndMonitorScene('GameScene', { ..., restoredBgmKey: this.novelBgmKey })を呼び出し。
-COMPLETION DETECTION (_startAndMonitorScene / _onTransitionComplete):
-_startAndMonitorSceneは、対象シーンが発行する完了イベントをonceで待つ。
-GameSceneの場合: 'gameScene-load-complete'
-その他のシーン (BattleSceneなど) の場合: 'scene-ready'
-完了イベント受信後、_onTransitionCompleteが呼ばれ、入力が再有効化され、UISceneにtransition-completeイベントが発行される。
-4.0 Save/Load Protocol (GameScene.js)
-MECHANISM: GameSceneがperformSave/performLoadを担当。
-performSave(slot): stateManager.getState()を呼び出し、localStorageに保存。
-performLoad(slot, returnParams):
-localStorageからロード。
-stateManager.setState()で変数を復元。
-returnParamsをstateManager.eval()で適用。
-rebuildScene(manager, state, this.restoredBgmKey)を呼び出し、視覚・論理状態を再構築。
-CRITICAL: performLoadは処理完了後、finallyブロックでthis.events.emit('gameScene-load-complete')を呼び出し、SystemSceneに遷移完了を通知する。
-5.0 HUD & UI Protocol (UIScene.js)
-ARCHITECTURE: UIScene司令塔方式。
-RESPONSIBILITY:
-UIScene.create(): 全てのHUDコンポーネント（CoinHud, HpBar等）を自身でインスタンス化する。この時stateManagerを渡す。初期状態はsetVisible(false)。
-UIScene.create(): SystemSceneの'transition-complete'イベントを購読する。
-onSceneTransition(newSceneKey): transition-completeイベント受信時に呼ばれる。newSceneKeyに応じて、各HUDのsetVisible(true/false)を呼び出し、表示を制御する。
-DATA FLOW:
-GameScene/BattleSceneはstateManager.setF('player_hp', 50)を実行するのみ。
-StateManagerが'f-variable-changed'を発行。
-UIScene上のHpBarインスタンスがイベントを直接受信し、自身の表示を更新する。
-CONCLUSION: GameScene/BattleSceneはHUDコンポーネントの存在を一切知らない。UIとゲームロジックの完全な分離が達成されている。
-6.0 BGM Control Protocol (SoundManager.js)
-ARCHITECTURE: 新シーン責任制 (New Scene Responsibility). async/awaitは使用しない。
-RESPONSIBILITY:
-SoundManager.playBgm(key):
-現在再生中のBGMがあれば、それを無条件にstop()しdestroy()する。
-その後、新しいBGMの再生を開始する。
-これにより、二重再生は構造的に発生しない。
-GameScene.rebuildScene():
-SystemSceneから渡されたrestoredBgmKeyまたはセーブデータのstate.sound.bgmを元に、soundManager.playBgm(key)またはsoundManager.stopBgm()を呼び出す。
-BattleScene.create():
-自身のBGMをsoundManager.playBgm('battle_music')で再生するだけ。
-CONCLUSION: シーンは「この曲を流せ」と命令するだけでよく、止めることを意識する必要はない。
-7.0 Tag Handler Protocol (handlers/index.js)
-ARCHITECTURE: 動的インポートによる一括登録。
-FLOW:
-src/handlers/index.js: 全てのハンドラ関数をimportし、tagHandlersオブジェクトとしてexportする。
-GameScene.create(): const { tagHandlers } = await import('../handlers/index.js');で動的に読み込む。（循環参照回避のためCRITICAL）
-forループでtagHandlersをscenarioManager.registerTag()に一括登録する。
-EXTENSION: 新規タグ追加時はhandlers/にファイルを作成し、index.jsを1行修正するだけで完了する。GameScene.jsの変更は不要。
+Odyssey Engine v2.1 - Internal Architecture Specification (RECONSTRUCTED-FINAL)
+Document ID: OE-IAS-2.1-FINAL-R3
+Version: 2.1 Revision 3 (Reconstruction)
+Classification: GEMINI_INTERNAL_SPEC_COMPLETE
+Objective: To provide a definitive, logically-structured, and comprehensive model of the Odyssey Engine's architecture, data flow, and core protocols. This document supersedes all previous versions and serves as the absolute ground truth for any future AI-driven analysis, debugging, or extension tasks. Architectural integrity is paramount.
+SECTION 1: SYSTEM ARCHITECTURE & LIFECYCLE
+1.1. Core Principle: Centralized Mediation & Decoupled Components
+The system is architected around a Mediator pattern (SystemScene) orchestrating loosely-coupled, highly-specialized components. Direct inter-component communication is minimized; state changes and service requests are brokered through the StateManager (for data) and SystemScene (for scene lifecycle).
+1.2. Service Locator & Instantiation Locus
+A Service Locator pattern is implemented via Phaser.Registry. This is the canonical method for accessing global singleton services.
+Service	Class	Initialization Locus	Registry Key	Criticality
+State Manager	StateManager	PreloadScene.create	stateManager	MAXIMUM
+Config Manager	ConfigManager	PreloadScene.create	configManager	High
+Sound Manager	SoundManager	SystemScene.create	soundManager	High
+1.3. Scene Roles & Responsibilities (Definitive)
+PreloadScene: System Bootstrapper.
+Responsibilities: (1) Initial asset manifest load (asset_define.json). (2) Instantiation and registration of StateManager, ConfigManager. (3) Generation of charaDefs object from asset keys. (4) Execution of a 2-stage asset load based on the manifest. (5) On load.complete, launch SystemScene with initialGameData. (6) Self-terminate via this.scene.stop().
+Configuration: Must be the only scene with active: true in main.js.
+SystemScene: Global Mediator & Scene Transition Controller.
+Responsibilities: (1) Instantiate and register SoundManager. (2) Listen for request-scene-transition and return-to-novel events. (3) Execute the Scene Transition Protocol (see Section 3.0). (4) Manage global input state (game.input.enabled) during transitions. (5) Launch and manage persistent overlay scenes (UIScene).
+Protocol: All scene lifecycle changes (run, stop) must be routed through this scene's event interface.
+UIScene: Persistent UI Layer & HUD Orchestrator.
+Responsibilities: (1) Instantiate all potential HUD components (HpBar, CoinHud, etc.) in create() and pass the StateManager instance to them. (2) Subscribe to SystemScene's transition-complete event. (3) In the onSceneTransition callback, manage HUD visibility (.setVisible(true/false)) based on the new active scene's key.
+Architecture: UIScene is a passive orchestrator. The HUD components themselves subscribe to StateManager events and update their own state. This is the "UIScene Command" architecture.
+GameScene: Novel-Part Executor & Persistence Context.
+Responsibilities: (1) Host the ScenarioManager instance. (2) Maintain the characters object, which serves as the canonical list of on-screen character GameObjects for the save/load system. (3) Maintain the pendingChoices array for the [link]->[r]->[s] workflow. (4) Implement performSave/performLoad logic. (5) Emit gameScene-load-complete to signal readiness after a load/resume operation.
+SECTION 2: SCENARIO EXECUTION ENGINE (ScenarioManager.js)
+2.1. Core Principle: Explicit-Control, Asynchronous Game Loop
+The engine's execution model is designed for explicit authorial control. Implicit wait states are eliminated.
+2.2. The Game Loop (gameLoop method)
+Mechanism: An async while loop.
+Continuation Condition: !this.isEnd && !this.isWaitingClick && !this.isWaitingChoice && !this.isStopped.
+Operation: In each iteration, it fetches the next line and calls await this.parse(line). The await is critical as tag handlers can be asynchronous. The loop only terminates if a tag handler explicitly sets one of the wait-state flags.
+2.3. Line Type Processing in parse(line)
+Text Line ("dialogue"):
+Action: Calls this.messageWindow.setText().
+Loop Impact: NONE. Does not set any wait-state flags. The gameLoop continues immediately.
+Tag Line ([...]):
+Action: Invokes the corresponding tag handler from the tagHandlers map.
+Loop Impact: Determined entirely by the invoked handler's type and return value (see 2.4).
+2.4. Tag Handler Protocol (Strict Definition)
+All tag handlers are functions of the form (manager, params) and MUST return a Promise. The type of handler dictates its internal logic and its effect on the gameLoop.
+Type 1: Asynchronous Action Handler (e.g., chara_show time>0, wait, chara_jump without nowait)
+Purpose: To perform a time-consuming action.
+Implementation: Must return a new Promise(resolve => { ... onComplete: resolve }).
+Effect: The await in gameLoop pauses execution until the Promise resolves.
+Type 2: Synchronous Action Handler (e.g., eval, if, link, chara_mod time=0)
+Purpose: To perform an instantaneous state or scene graph mutation.
+Implementation: Must return Promise.resolve().
+Effect: The await in gameLoop resolves immediately, proceeding to the next line with no delay.
+Type 3: Wait-State Handler (e.g., [p], [s])
+Purpose: To explicitly halt the gameLoop pending external input.
+Implementation: Sets a manager wait-state flag (manager.isWaitingClick = true). It must still return Promise.resolve().
+Effect: The handler itself completes instantly. The gameLoop's while condition then re-evaluates to false, terminating the loop.
+2.5. Canonical Flow-Control Tag Definitions
+Tag	Name	Handler Type	Primary Responsibility
+[p]	Page Break / Pause	Wait-State	Sets manager.isWaitingClick = true;.
+[r]	Render Choices	Synchronous	Calls manager.scene.displayChoiceButtons();. Does not wait.
+[s]	Stop / Wait Choice	Wait-State	Sets manager.isWaitingChoice = true; or isStopped.
+SECTION 3: SCENE TRANSITION & PERSISTENCE PROTOCOL
+3.1. Scene Transition Protocol (SystemScene mediated)
+Initiation: A request-scene-transition event is emitted to SystemScene.
+Execution:
+SystemScene sets isProcessingTransition = true (mutex lock) and game.input.enabled = false (global input lock).
+SystemScene stops the from scene.
+SystemScene calls _startAndMonitorScene for the to scene.
+_startAndMonitorScene registers a once listener for the target scene's "ready" event (scene-ready for custom scenes, gameScene-load-complete for GameScene).
+_startAndMonitorScene calls this.scene.run() on the target scene.
+Completion:
+The target scene, at the end of its setup, emits its "ready" event.
+The once listener in SystemScene fires, calling _onTransitionComplete.
+_onTransitionComplete unsets the mutex and input lock, and emits transition-complete for UIScene.
+3.2. Save/Load Protocol (GameScene methods)
+performSave(slot):
+Delegates state collection to StateManager.getState(this.scenarioManager). This method is responsible for creating a complete snapshot JSON object.
+Serializes the object to JSON and writes to localStorage.
+performLoad(slot):
+Reads and parses the JSON from localStorage.
+Delegates state restoration to StateManager.setState(loadedState). setState is responsible for re-hydrating f and sf variables and emitting f-variable-changed for all f variables to force-update HUDs.
+Calls _rebuildScene(loadedState) to reconstruct the visual state (backgrounds, characters) from the loaded data.
+Crucially, it emits gameScene-load-complete from within a finally block to guarantee the signal is sent to SystemScene, preventing a system-wide freeze on load error.
+SECTION 4: DEVELOPMENT & EXTENSION CONTRACTS
+4.1. Contract: Adding a New Game Scene
+Any new, non-novel scene (e.g., BattleScene, PuzzleScene) integrated into the engine MUST adhere to the following 5-point contract to ensure system stability.
+Emit scene-ready on Completion: The create() method must conclude by emitting this.events.emit('scene-ready');. This is the non-negotiable handshake with SystemScene.
+Delegate BGM Control: Request BGM playback via this.soundManager.playBgm('key'); in create(). Do not manually stop BGM.
+Delegate Scene Termination: To return to the novel, emit this.scene.get('SystemScene').events.emit('return-to-novel', ...);. NEVER call this.scene.stop() on the scene itself.
+Implement shutdown() for Cleanup: The shutdown() method must be implemented to destroy all objects, timers (this.time.addEvent), and event listeners (this.events.on) created within the scene to prevent memory leaks.
+Isolate from HUD: State modification must be performed via this.stateManager.setF(...). Direct manipulation of HUD elements is forbidden.
+4.2. Contract: Adding a New Tag Handler
+The handler function must be placed in src/handlers/ and registered in src/handlers/index.js.
+The function must adhere to one of the three handler types defined in Section 2.4 and MUST return a Promise.
+END OF DOCUMENT
+
