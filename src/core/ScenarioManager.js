@@ -172,12 +172,12 @@ const wrappedLine = this.manualWrap(dialogue);
 // ★★★ ここを await に変更し、onCompleteコールバックを削除 ★★★
 // これにより、タイピングが終わるまで次の行に進まなくなる
 await this.messageWindow.setText(wrappedLine, true, speakerName);
-
+const isSkipping = (this.mode === 'skip');
+    
+    // スキップ中はタイピングしない (useTyping = false)
+    await this.messageWindow.setText(wrappedLine, !isSkipping, speakerName);
 // オートモードの処理などは、setTextの完了後に実行される
-if (this.mode === 'auto') {
-    this.startAutoMode();
-
-}}
+}
 
 else{
 }}
@@ -399,21 +399,21 @@ else{
         setTimeout(() => this.skipLoop(), 0);
     }
     // ★★★ オートモードのタイマーを開始するメソッド ★★★
-    startAutoMode() {
-        if (this.isWaitingClick) {
-            // 現在クリック待ち状態なら、オートモードを開始
-            const autoDelay = 2000; // 2秒後に次に進む (コンフィグで変更できるようにすると尚良い)
-            this.autoTimer = this.scene.time.addEvent({
-                delay: autoDelay,
-                callback: () => {
-                    // isWaitingClickをfalseにして、次の行へ
-                    this.isWaitingClick = false;
-                    this.next();
-                },
-                callbackScope: this
-            });
-        }
+    // ScenarioManager.js の startAutoMode メソッド
+startAutoMode() {
+    // isWaitingClick状態の時だけタイマーを開始
+    if (this.mode === 'auto' && this.isWaitingClick) {
+        const autoDelay = this.configManager.getValue('autoDelay') || 2000;
+        this.autoTimer = this.scene.time.addEvent({
+            delay: autoDelay,
+            callback: () => {
+                // プレイヤーがクリックしたのと同じ処理を呼び出す
+                this.onClick(); 
+            },
+            callbackScope: this
+        });
     }
+}
   /**
      * 現在のシナリオの進行状況をオブジェクトとして返す
      * @returns {object}
