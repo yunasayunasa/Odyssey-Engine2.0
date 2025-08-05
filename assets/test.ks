@@ -31,24 +31,24 @@
 [wait time=1000]
 
 [delay speed=80]
-yuna:「ようこそ！これは、あなたと一緒に作ったゲームエンジンのチュートリアルです。」
+yuna:「ようこそ！これは、あなたと一緒に作ったゲームエンジンのチュートリアルです。」[p]
 
-yuna:「このゲームを起動するのは、&sf.boot_count 回目ですね。」
+yuna:「このゲームを起動するのは、&sf.boot_count 回目ですね。」[p]
  ; ★ sf.boot_countのテスト
 
 [chara_show name="kaito" pos="right" time=1000]
 [wait time=1000]
 
-kaito:「僕の`[chara_show]`は、`time`属性でフェードインしたよ。」
+kaito:「僕の`[chara_show]`は、`time`属性でフェードインしたよ。」[p]
 
-yuna:「じゃあ、いくつか演出を見せるね。まずは揺れてみる。」
+yuna:「じゃあ、いくつか演出を見せるね。まずは揺れてみる。」[p]
 
 ; --- ２．動的演出タグ ---
 
 [shake name="yuna" time=500 power=10]
 [vibrate time=300 power=0.01]
 [wait time=500]
-kaito:「わっ、びっくりした！」
+kaito:「わっ、びっくりした！」[p]
 
 
 [chara_jump name="kaito" height=50 time=600]
@@ -67,17 +67,17 @@ kaito:「わっ、びっくりした！」
 [stop_anim name="yuna"] 
 ; ジャンプアニメーションを停止
 
-yuna:「じゃあ、私は向こうに歩いていくね。」
+yuna:「じゃあ、私は向こうに歩いていくね。」[p]
 [chara_hide name="yuna"]
 
 ; --- ３．条件分岐と選択肢 ---
 [chara_show name="kaito" pos="right" time=500] 
 ; カイトが消えた後なので再表示
 [wait time=500]
-kaito:「さて、&f.player_name。僕に話しかけてみるかい？」
+kaito:「さて、&f.player_name。僕に話しかけてみるかい？」[p]
 [link target="*talk_to_kaito" text="話しかける"]
 [link target="*ignore_kaito" text="無視する"]
-[p]
+[r]
 [s]
  ; ★★★ 重要: pタグの直後には[s]タグを置く (セーブ/ロード/オート進行対策) ★★★
 
@@ -85,14 +85,14 @@ kaito:「さて、&f.player_name。僕に話しかけてみるかい？」
 [eval exp="f.love_meter += 10"]
 [eval exp="f.coin += 10"] 
 ; ★★★ コインを増やす ★★★
-kaito:「話しかけてくれて嬉しいよ！コインが&f.coin 個になったね！」
+kaito:「話しかけてくれて嬉しいよ！コインが&f.coin 個になったね！」[p]
 [jump target="*choice_end"]
 
 *ignore_kaito
 [eval exp="f.love_meter -= 5"]
 [eval exp="f.coin -= 5"]
 ; ★★★ コインを減らす ★★★
-kaito:「そっか…ちょっと寂しいな。コインは&f.coin 個になっちゃったね。」
+kaito:「そっか…ちょっと寂しいな。コインは&f.coin 個になっちゃったね。」[p]
 [jump target="*choice_end"]
 
 *choice_end
@@ -100,23 +100,23 @@ kaito:「そっか…ちょっと寂しいな。コインは&f.coin 個になっ
 [log exp="f.coin"] 
 ; ★★★ コインの最終確認 ★★★
 [if exp="f.love_meter > 0"]
-  kaito:「君は優しい人だね。」
+  kaito:「君は優しい人だね。」[p]
   [eval exp="f.test_flag = 'love_positive'"] 
   ; ★ IF分岐テスト用変数名をより明確に
 [else]
-  kaito:「次は話しかけてくれると嬉しいな。」
+  kaito:「次は話しかけてくれると嬉しいな。」[p]
   [eval exp="f.test_flag = 'love_negative'"] 
   ; ★ IF分岐テスト用変数名をより明確に
 [endif]
 [log exp="f.test_flag"] 
 ; ★ IF分岐結果ログ
-kaito:「この[if]分岐の直後で、セーブ＆ロードしても変数は正しい状態を保つはずです。」
+kaito:「この[if]分岐の直後で、セーブ＆ロードしても変数は正しい状態を保つはずです。」[p]
 
 
 
 
 ; --- ４．画像とレイヤー操作 ---
-kaito:「ここで、思い出の一枚絵を表示してみよう。」
+kaito:「ここで、思い出の一枚絵を表示してみよう。」[p]
 [image storage="cg01" layer="cg" time=1000]
 [wait time=1500]
 
@@ -131,11 +131,11 @@ kaito:「ここで、思い出の一枚絵を表示してみよう。」
 
 ; --- ５．セーブ＆ロードとファイル呼び出し ---
 [er layer="character"]
-yuna:「この状態でセーブができます。メニューから試してみてね。」
+yuna:「この状態でセーブができます。メニューから試してみてね。」[p]
 
 
 
-yuna:「次に、`scene2.ks`をサブルーチンとして呼び出します。」
+yuna:「次に、`scene2.ks`をサブルーチンとして呼び出します。」[p]
 
 [fadeout time=500]
 [wait time=500]
@@ -143,16 +143,16 @@ yuna:「次に、`scene2.ks`をサブルーチンとして呼び出します。�
 ; ★ サブルーチン用のファイル名を指定
 [fadein time=500]
 
-yuna:「サブルーチンから戻ってきました。」
-yuna:「[call]の途中や[return]の直前でセーブ＆ロードしても、正しく戻れたでしょうか？」
+yuna:「サブルーチンから戻ってきました。」[p]
+yuna:「[call]の途中や[return]の直前でセーブ＆ロードしても、正しく戻れたでしょうか？」[p]
 [log exp="f.sub_result"]
  ; サブルーチンからの戻り値ログ
 
 
-yuna:「次はアクションシーンを呼び出します。」
-yuna:「コールタグによるテストです。」
+yuna:「次はアクションシーンを呼び出します。」[p]
+yuna:「コールタグによるテストです。」[p]
 ; --- 5. アクションシーン連携([jump]と[return-to-novel])のテスト ---
-kaito:「いよいよアクションシーンへ突入！戻ってきたら結果を確認しよう。」
+kaito:「いよいよアクションシーンへ突入！戻ってきたら結果を確認しよう。」[p]
 
 [fadeout time=500]
 [wait time=500]
@@ -165,15 +165,15 @@ kaito:「いよいよアクションシーンへ突入！戻ってきたら結�
 ; 戻ってからキャラ表示
 [chara_show name="kaito" pos="right" time=500]
 
-kaito:「アクションシーンから戻ってきました！戦闘結果は &f.battle_result です。」
+kaito:「アクションシーンから戻ってきました！戦闘結果は &f.battle_result です。」[p]
 [log exp="f.battle_result"]
  ; 戦闘結果ログ
 
 [if exp="f.battle_result == 'win'"]
-  yuna:「勝利おめでとうございます！コインが&f.coin 個になりましたね！」
+  yuna:「勝利おめでとうございます！コインが&f.coin 個になりましたね！」[p]
   [eval exp="f.final_status = 'winner'"]
 [else]
-  yuna:「残念、敗北しましたね…コインは&f.coin 個のままだよ。」
+  yuna:「残念、敗北しましたね…コインは&f.coin 個のままだよ。」[p]
   [eval exp="f.final_status = 'loser'"]
 [endif]
 [log exp="f.final_status"] 
@@ -183,7 +183,7 @@ kaito:「アクションシーンから戻ってきました！戦闘結果は &
 
 ; --- 6. 最終確認セクション ---
 [cm]
-yuna:「すべてのテストポイントを通過しました。」
+yuna:「すべてのテストポイントを通過しました。」[p]
 [log exp="f.test_item"]   
  ; アイテム取得フラグ
 [log exp="f.test_flag"]  
@@ -198,5 +198,5 @@ yuna:「すべてのテストポイントを通過しました。」
  ; コイン数
 [log exp="sf.boot_count"]  
 ; 起動回数
-yuna:「これらの変数が全て正しい値であれば、テストは成功です！」
+yuna:「これらの変数が全て正しい値であれば、テストは成功です！」[p]
 [s]
