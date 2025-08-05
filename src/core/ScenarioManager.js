@@ -153,31 +153,32 @@ const ifState = this.ifStack.length > 0 ? this.ifStack[this.ifStack.length - 1] 
     
   // ScenarioManager.js の parse メソッド内のテキスト処理部分を、以下のように書き換えてください
 
+// ★★★ このブロックで置き換えてください ★★★
+
 } else if (trimedLine.length > 0) {
-// --- セリフまたは地の文 ---
-let speakerName = null;
-let dialogue = trimedLine;
-const speakerMatch = trimedLine.match(/^([a-zA-Z0-9_]+):/);
-
-
-if (speakerMatch) {
-    speakerName = speakerMatch[1];
-    dialogue = trimedLine.substring(speakerName.length + 1).trim();
-}
-
-this.stateManager.addHistory(speakerName, dialogue);
-this.highlightSpeaker(speakerName);
-const wrappedLine = this.manualWrap(dialogue);
-
-// ★★★ ここを await に変更し、onCompleteコールバックを削除 ★★★
-// これにより、タイピングが終わるまで次の行に進まなくなる
-await this.messageWindow.setText(wrappedLine, true, speakerName);
-const isSkipping = (this.mode === 'skip');
+    // --- セリフまたは地の文 ---
+    let speakerName = null;
+    let dialogue = trimedLine;
+    const speakerMatch = trimedLine.match(/^([a-zA-Z0-9_]+):/);
     
-    // スキップ中はタイピングしない (useTyping = false)
-    await this.messageWindow.setText(wrappedLine, !isSkipping, speakerName);
-// オートモードの処理などは、setTextの完了後に実行される
-}
+    if (speakerMatch) {
+        speakerName = speakerMatch[1];
+        dialogue = trimedLine.substring(speakerName.length + 1).trim();
+    }
+    
+    this.stateManager.addHistory(speakerName, dialogue);
+    this.highlightSpeaker(speakerName);
+    const wrappedLine = this.manualWrap(dialogue);
+    
+    // スキップモードかどうかで、タイピングの有無を決定
+    const useTyping = (this.mode !== 'skip');
+    
+    // setTextの呼び出しは、この1回だけにする
+    await this.messageWindow.setText(wrappedLine, useTyping, speakerName);
+    
+} 
+
+// ★★★ ここまで ★★★
 
 else{
 }}
