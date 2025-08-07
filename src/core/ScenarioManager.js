@@ -174,17 +174,21 @@ const ifState = this.ifStack.length > 0 ? this.ifStack[this.ifStack.length - 1] 
 
     // 1. テキストをスタイルチャンクの配列にパースする
     // ★ this. をつけて呼び出す
+       // --- ログ1: パース前の生テキスト ---
+    console.log('%c[DEBUG 1] Raw Dialogue:', 'color: blue; font-weight: bold;', dialogue);
+
     const textChunks = this.parseTextWithStyle(dialogue);
 
-    // 2. 各チャンクを自動改行処理にかける
-    // ★ this. をつけて呼び出す
+    // --- ログ2: スタイル分割後のチャンク配列 ---
+    console.log('%c[DEBUG 2] Styled Chunks (Before Wrap):', 'color: orange; font-weight: bold;', JSON.parse(JSON.stringify(textChunks)));
+
     const wrappedChunks = this.manualWrapRichText(textChunks);
 
-    // 3. MessageWindowにチャンク配列を渡す
+    // --- ログ3: 自動改行後のチャンク配列 ---
+    console.log('%c[DEBUG 3] Wrapped Chunks (After Wrap):', 'color: green; font-weight: bold;', JSON.parse(JSON.stringify(wrappedChunks)));
+
     const useTyping = (this.mode !== 'skip');
-    // ★ 新しいメソッド setRichText を呼び出す
     await this.messageWindow.setRichText(wrappedChunks, useTyping, speakerName);
-    
 }
 
 // ★★★ ここまで ★★★

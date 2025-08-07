@@ -82,6 +82,8 @@ export default class MessageWindow extends Container {
  * @returns {Promise<void>}
  */
 async setRichText(chunks, useTyping = true, speaker = null) {
+       // --- ログ4: MessageWindowが受け取ったチャンク配列 ---
+    console.log('%c[DEBUG 4] Received at MessageWindow:', 'color: purple; font-weight: bold;', JSON.parse(JSON.stringify(chunks)));
     this.reset(); // まずウィンドウをリセット
     this.currentSpeaker = speaker;
 
@@ -95,7 +97,7 @@ async setRichText(chunks, useTyping = true, speaker = null) {
 
     const defaultStyle = { fontFamily: this.textObject.style.fontFamily, fontSize: this.textObject.style.fontSize, fill: this.textObject.style.fill };
 
-    for (const chunk of chunks) {
+     for (const chunk of chunks) {
         if (chunk.text === '\n') {
             currentX = 0;
             currentY += lineHeight;
@@ -104,11 +106,13 @@ async setRichText(chunks, useTyping = true, speaker = null) {
 
         const style = { ...defaultStyle, ...chunk.style };
         
-        // 1文字ずつTextオブジェクトを作る (タイピングのため)
         for (const char of chunk.text) {
             const charObj = this.scene.add.text(currentX, currentY, char, style);
             textContainer.add(charObj);
             
+            // --- ログ5: 1文字ずつオブジェクトが生成されているか確認 ---
+            console.log(`[DEBUG 5] Created char: '${char}' at (${currentX}, ${currentY}) with width ${charObj.width}`);
+
             currentX += charObj.width;
 
             if (useTyping && this.textDelay > 0) {
