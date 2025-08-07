@@ -74,7 +74,7 @@ export default class MessageWindow extends Container {
         this.textDelay = newSpeed;
     }
 
-
+   // MessageWindow.js にこのコードを貼り付けてください
 
     /**
      * テキストを設定し、表示完了をPromiseで通知するメソッド (新バージョン)
@@ -203,77 +203,14 @@ export default class MessageWindow extends Container {
 
     // ★★★ ロード時にウィンドウの状態をリセットするためのメソッド ★★★
     reset() {
-    // 既存のタイマーやコンテナがあれば、安全に破棄する
-    if (this.charByCharTimer) {
-        this.charByCharTimer.remove();
-        this.charByCharTimer = null;
-    }
-    if (this.textContainer) {
-        this.textContainer.destroy();
-        this.textContainer = null;
-    }
-
-    // 状態をリセット
-    this.textObject.setText('').setVisible(false); // 基準オブジェクトは隠しておく
-    this.currentText = '';
-    this.currentSpeaker = null;
-    this.isTyping = false;
-    this.hideNextArrow();
-}
-
-async setRichText(chunks, useTyping = true, speaker = null) {
-    this.reset(); // 最初に必ず状態をリセットする
-
-    this.currentSpeaker = speaker;
-    this.isTyping = true;
-
-    // コンテナを生成
-    this.textContainer = this.scene.add.container(this.textObject.x, this.textObject.y);
-    this.add(this.textContainer);
-
-    // 描画の初期値
-    let currentX = 0;
-    let currentY = 0;
-    const lineHeight = parseInt(this.textObject.style.fontSize.replace('px', '')) * 1.4;
-    const defaultStyle = {
-        fontFamily: this.textObject.style.fontFamily,
-        fontSize: this.textObject.style.fontSize,
-        fill: this.textObject.style.fill
-    };
-
-    // ループ処理
-    for (const chunk of chunks) {
-        if (!chunk || !chunk.text) continue; // 安全装置：不正なチャンクはスキップ
-
-        const style = { ...defaultStyle, ...chunk.style };
-        const lines = chunk.text.split('\n');
-
-        for (let i = 0; i < lines.length; i++) {
-            const lineText = lines[i];
-
-            for (const char of lineText) {
-                const charObj = this.scene.add.text(currentX, currentY, char, style);
-                this.textContainer.add(charObj);
-                currentX += charObj.width;
-
-                if (useTyping && this.textDelay > 0) {
-                    await new Promise(r => setTimeout(r, this.textDelay));
-                }
-            }
-
-            if (i < lines.length - 1) {
-                currentX = 0;
-                currentY += lineHeight;
-            }
+        this.textObject.setText('');
+        this.currentText = '';
+        this.currentSpeaker = null;
+        this.isTyping = false;
+        if (this.charByCharTimer) {
+            this.charByCharTimer.remove();
         }
-    }
-
-    this.isTyping = false;
-    // async関数は、最後に到達すれば自動的に解決されたPromiseを返す
-
-
-    // ★ 基準となるtextObjectは常に存在し、空にしておく
-    this.textObject.setText('').setVisible(false);
+        this.hideNextArrow();
     }
 
     showNextArrow() {
