@@ -82,76 +82,59 @@ export default class MessageWindow extends Container {
  * @returns {Promise<void>}
  */
 async setRichText(chunks, useTyping = true, speaker = null) {
-    // まずウィンドウをリセットする (既存のテキストやタイマーをクリア)
+    // 1. ウィンドウをリセット
     this.reset(); 
     this.currentSpeaker = speaker;
-
-    // ★ 既存のtextObjectは非表示にして、座標の基準としてのみ使う
     this.textObject.setVisible(false);
 
-    // ★ 複数のTextオブジェクトを管理するコンテナ
-    // コンテナの座標を、元のtextObjectの位置に設定する
+    // 2. 描画用のコンテナを準備
     const textContainer = this.scene.add.container(this.textObject.x, this.textObject.y);
-    
-    // ★ このコンテナをMessageWindow自身に追加する
     this.add(textContainer);
-    // ★ textContainerが破棄されるように、管理リストに追加する
-    // あとでreset()メソッドで破棄する
     this.textContainer = textContainer;
 
-
+    // 3. 描画の初期値を設定
     let currentX = 0;
     let currentY = 0;
-    // デフォルトのfontSizeから行の高さを計算
     const lineHeight = parseInt(this.textObject.style.fontSize.replace('px', '')) * 1.4;
-
     const defaultStyle = { 
         fontFamily: this.textObject.style.fontFamily, 
         fontSize: this.textObject.style.fontSize, 
         fill: this.textObject.style.fill 
     };
 
-    // isTypingフラグをセット
+    // 4. タイピング処理を開始
     this.isTyping = true;
-
+    
+    // 5. ループ処理
     for (const chunk of chunks) {
-        // [br]や\nによる改行処理
-        if (chunk.text.includes('\n')) {
-            const lines = chunk.text.split('\n');
-            for (let i = 0; i < lines.length; i++) {
-                // 各行のテキストを処理
-                await typeLine(lines[i], chunk.style);
-                // 最後の行以外は改行
-                if (i < lines.length - 1) {
-                    currentX = 0;
-                    currentY += lineHeight;
+        const style = { ...defaultStyle, ...chunk.style };
+        const lines = chunk.text.split('\n');
+
+        for (let i = 0; i < lines.length; i++) {
+            const lineText = lines[i];
+
+            // 1文字ずつ描画
+            for (const char of lineText) {
+                const charObj = this.scene.add.text(currentX, currentY, char, style);
+                textContainer.add(charObj);
+                currentX += charObj.width;
+
+                if (useTyping && this.textDelay > 0) {
+                    await new Promise(r => setTimeout(r, this.textDelay));
                 }
             }
-            continue; // このチャンクの処理は終わり
-        }
-        
-        // 通常のテキストチャンクを処理
-        await typeLine(chunk.text, chunk.style);
-    }
-    
-    // 内部関数としてタイピング処理を定義
-    const typeLine = async (lineText, styleOverride) => {
-        const style = { ...defaultStyle, ...styleOverride };
-
-        for (const char of lineText) {
-            const charObj = this.scene.add.text(currentX, currentY, char, style);
-            textContainer.add(charObj);
             
-            currentX += charObj.width;
-
-            if (useTyping && this.textDelay > 0) {
-                await new Promise(r => setTimeout(r, this.textDelay));
+            // 最後の行以外は改行処理
+            if (i < lines.length - 1) {
+                currentX = 0;
+                currentY += lineHeight;
             }
         }
-    };
+    }
 
+    // 6. 完了処理
     this.isTyping = false;
-    return;
+    return; // Promise<void> を返す
 }
 
     /**

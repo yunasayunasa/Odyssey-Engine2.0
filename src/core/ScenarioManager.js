@@ -362,20 +362,14 @@ else{
  */
 // ★★★ フリーズ回避のため、一時的にこのコードに置き換えてください ★★★
 manualWrapRichText(chunks) {
-    // 現在は自動改行処理をスキップし、受け取ったチャンクをそのまま返す
-    console.warn('[DEBUG] manualWrapRichText is temporarily disabled.');
-    
-    // [br]タグだけは処理しておく
     const processedChunks = [];
     for (const chunk of chunks) {
-        const lines = chunk.text.split(/\[br\]/g);
-        for (let i = 0; i < lines.length; i++) {
-            processedChunks.push({ text: lines[i], style: chunk.style });
-            if (i < lines.length - 1) {
-                processedChunks.push({ text: '\n', style: {} });
-            }
-        }
+        // [br]タグだけを改行文字に変換する
+        const textWithNewlines = chunk.text.replace(/\[br\]/g, '\n');
+        processedChunks.push({ text: textWithNewlines, style: chunk.style });
     }
+    // ★ 現状、自動折り返しは行わない。手動改行のみサポート。
+    // これによりフリーズを完全に回避する。
     return processedChunks;
 }
 
