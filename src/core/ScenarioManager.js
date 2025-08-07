@@ -364,12 +364,9 @@ else{
 manualWrapRichText(chunks) {
     const processedChunks = [];
     for (const chunk of chunks) {
-        // [br]タグだけを改行文字に変換する
         const textWithNewlines = chunk.text.replace(/\[br\]/g, '\n');
         processedChunks.push({ text: textWithNewlines, style: chunk.style });
     }
-    // ★ 現状、自動折り返しは行わない。手動改行のみサポート。
-    // これによりフリーズを完全に回避する。
     return processedChunks;
 }
 

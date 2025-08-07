@@ -74,68 +74,7 @@ export default class MessageWindow extends Container {
         this.textDelay = newSpeed;
     }
 
-  /**
- * スタイル付きテキストチャンク配列を表示する (新バージョン)
- * @param {Array<object>} chunks - 改行適用済みのスタイル付きチャンク配列
- * @param {boolean} useTyping - テロップ表示を使うかどうか
- * @param {string|null} speaker - 話者名
- * @returns {Promise<void>}
- */
-async setRichText(chunks, useTyping = true, speaker = null) {
-    // 1. ウィンドウをリセット
-    this.reset(); 
-    this.currentSpeaker = speaker;
-    this.textObject.setVisible(false);
 
-    // 2. 描画用のコンテナを準備
-    const textContainer = this.scene.add.container(this.textObject.x, this.textObject.y);
-    this.add(textContainer);
-    this.textContainer = textContainer;
-
-    // 3. 描画の初期値を設定
-    let currentX = 0;
-    let currentY = 0;
-    const lineHeight = parseInt(this.textObject.style.fontSize.replace('px', '')) * 1.4;
-    const defaultStyle = { 
-        fontFamily: this.textObject.style.fontFamily, 
-        fontSize: this.textObject.style.fontSize, 
-        fill: this.textObject.style.fill 
-    };
-
-    // 4. タイピング処理を開始
-    this.isTyping = true;
-    
-    // 5. ループ処理
-    for (const chunk of chunks) {
-        const style = { ...defaultStyle, ...chunk.style };
-        const lines = chunk.text.split('\n');
-
-        for (let i = 0; i < lines.length; i++) {
-            const lineText = lines[i];
-
-            // 1文字ずつ描画
-            for (const char of lineText) {
-                const charObj = this.scene.add.text(currentX, currentY, char, style);
-                textContainer.add(charObj);
-                currentX += charObj.width;
-
-                if (useTyping && this.textDelay > 0) {
-                    await new Promise(r => setTimeout(r, this.textDelay));
-                }
-            }
-            
-            // 最後の行以外は改行処理
-            if (i < lines.length - 1) {
-                currentX = 0;
-                currentY += lineHeight;
-            }
-        }
-    }
-
-    // 6. 完了処理
-    this.isTyping = false;
-    return; // Promise<void> を返す
-}
 
     /**
      * テキストを設定し、表示完了をPromiseで通知するメソッド (新バージョン)
@@ -264,19 +203,74 @@ async setRichText(chunks, useTyping = true, speaker = null) {
 
     // ★★★ ロード時にウィンドウの状態をリセットするためのメソッド ★★★
     reset() {
-        this.textObject.setText('');
-        this.currentText = '';
-        this.currentSpeaker = null;
-        this.isTyping = false;
-        if (this.charByCharTimer) {
-            this.charByCharTimer.remove();
-        }
-        this.hideNextArrow();
-          // ★ textContainerが存在すれば破棄する処理を追加
+    // 既存のタイマーやコンテナがあれば、安全に破棄する
+    if (this.charByCharTimer) {
+        this.charByCharTimer.remove();
+        this.charByCharTimer = null;
+    }
     if (this.textContainer) {
         this.textContainer.destroy();
         this.textContainer = null;
     }
+
+    // 状態をリセット
+    this.textObject.setText('').setVisible(false); // 基準オブジェクトは隠しておく
+    this.currentText = '';
+    this.currentSpeaker = null;
+    this.isTyping = false;
+    this.hideNextArrow();
+}
+
+async setRichText(chunks, useTyping = true, speaker = null) {
+    this.reset(); // 最初に必ず状態をリセットする
+
+    this.currentSpeaker = speaker;
+    this.isTyping = true;
+
+    // コンテナを生成
+    this.textContainer = this.scene.add.container(this.textObject.x, this.textObject.y);
+    this.add(this.textContainer);
+
+    // 描画の初期値
+    let currentX = 0;
+    let currentY = 0;
+    const lineHeight = parseInt(this.textObject.style.fontSize.replace('px', '')) * 1.4;
+    const defaultStyle = {
+        fontFamily: this.textObject.style.fontFamily,
+        fontSize: this.textObject.style.fontSize,
+        fill: this.textObject.style.fill
+    };
+
+    // ループ処理
+    for (const chunk of chunks) {
+        if (!chunk || !chunk.text) continue; // 安全装置：不正なチャンクはスキップ
+
+        const style = { ...defaultStyle, ...chunk.style };
+        const lines = chunk.text.split('\n');
+
+        for (let i = 0; i < lines.length; i++) {
+            const lineText = lines[i];
+
+            for (const char of lineText) {
+                const charObj = this.scene.add.text(currentX, currentY, char, style);
+                this.textContainer.add(charObj);
+                currentX += charObj.width;
+
+                if (useTyping && this.textDelay > 0) {
+                    await new Promise(r => setTimeout(r, this.textDelay));
+                }
+            }
+
+            if (i < lines.length - 1) {
+                currentX = 0;
+                currentY += lineHeight;
+            }
+        }
+    }
+
+    this.isTyping = false;
+    // async関数は、最後に到達すれば自動的に解決されたPromiseを返す
+}
 
     // ★ 基準となるtextObjectは常に存在し、空にしておく
     this.textObject.setText('').setVisible(false);
