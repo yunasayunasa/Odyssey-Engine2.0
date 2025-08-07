@@ -270,7 +270,7 @@ async setRichText(chunks, useTyping = true, speaker = null) {
 
     this.isTyping = false;
     // async関数は、最後に到達すれば自動的に解決されたPromiseを返す
-}
+
 
     // ★ 基準となるtextObjectは常に存在し、空にしておく
     this.textObject.setText('').setVisible(false);
