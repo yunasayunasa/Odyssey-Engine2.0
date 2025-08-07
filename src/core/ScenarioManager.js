@@ -360,65 +360,23 @@ else{
  * @param {Array<object>} chunks - スタイル付きテキストチャンクの配列
  * @returns {Array<object>} - 改行が適用された新しいチャンク配列
  */
+// ★★★ フリーズ回避のため、一時的にこのコードに置き換えてください ★★★
 manualWrapRichText(chunks) {
-    const wrappedChunks = [];
-    const defaultStyle = { fontFamily: this.messageWindow.textObject.style.fontFamily, fontSize: this.messageWindow.textObject.style.fontSize };
-    const textBoxWidth = this.messageWindow.textBoxWidth;
-
-    let currentLineChunks = [];
-    let currentLineWidth = 0;
-
-    const flushLine = () => {
-        if (currentLineChunks.length > 0) {
-            // チャンクの末尾に改行を追加する代わりに、改行チャンクを挿入
-            wrappedChunks.push(...currentLineChunks, { text: '\n', style: {} });
-            currentLineChunks = [];
-            currentLineWidth = 0;
-        }
-    };
-
+    // 現在は自動改行処理をスキップし、受け取ったチャンクをそのまま返す
+    console.warn('[DEBUG] manualWrapRichText is temporarily disabled.');
+    
+    // [br]タグだけは処理しておく
+    const processedChunks = [];
     for (const chunk of chunks) {
-        const text = chunk.text.replace(/\[br\]/g, '\n'); // [br]を改行文字に
-        const style = { ...defaultStyle, ...chunk.style };
-        let currentWord = '';
-
-        for (let i = 0; i < text.length; i++) {
-            const char = text[i];
-            
-            if (char === '\n') {
-                if (currentWord) currentLineChunks.push({ text: currentWord, style: chunk.style });
-                flushLine();
-                currentWord = '';
-                continue;
+        const lines = chunk.text.split(/\[br\]/g);
+        for (let i = 0; i < lines.length; i++) {
+            processedChunks.push({ text: lines[i], style: chunk.style });
+            if (i < lines.length - 1) {
+                processedChunks.push({ text: '\n', style: {} });
             }
-
-            const testWord = currentWord + char;
-            const metrics = this.scene.add.text(0, 0, testWord, style).setVisible(false);
-            const wordWidth = metrics.width;
-            metrics.destroy();
-
-            if (currentLineWidth + wordWidth > textBoxWidth && currentLineWidth > 0) {
-                flushLine();
-            }
-
-            currentWord += char;
-            const wordMetrics = this.scene.add.text(0,0, currentWord, style).setVisible(false);
-            currentLineWidth += wordMetrics.width - (this.scene.add.text(0,0, currentWord.slice(0, -1), style).setVisible(false).width);
-            wordMetrics.destroy();
-            this.scene.children.getByName('tempText')?.destroy();
-        }
-        
-        if (currentWord) {
-            currentLineChunks.push({ text: currentWord, style: chunk.style });
         }
     }
-    
-    // 最後の行をフラッシュ
-    if (currentLineChunks.length > 0) {
-        wrappedChunks.push(...currentLineChunks);
-    }
-    
-    return wrappedChunks;
+    return processedChunks;
 }
 
     highlightSpeaker(speakerName) {
@@ -537,39 +495,25 @@ startAutoMode() {
  */
 parseTextWithStyle(rawDialogue) {
     const chunks = [];
-    // [font ...] or [resetfont] でテキストを分割する正規表現
-    const regex = /\[(?:font\s+([^\]]+)|resetfont)\]/g;
-    let lastIndex = 0;
-    let match;
-    let currentStyle = {}; // デフォルトスタイルは空オブジェクト
+    const parts = rawDialogue.split(/(\[(?:font\s+[^\]]+|resetfont)\])/g);
+    let currentStyle = {};
 
-    while ((match = regex.exec(rawDialogue)) !== null) {
-        // タグの前のテキストを追加
-        if (match.index > lastIndex) {
-            chunks.push({ text: rawDialogue.substring(lastIndex, match.index), style: { ...currentStyle } });
-        }
+    for (const part of parts) {
+        if (!part) continue;
 
-        // タグの処理
-        if (match[0].startsWith('[font')) {
-            // [font]タグのパラメータを解析してスタイルを更新
-            const paramsStr = match[1];
-            const params = this.parseTag(`[font ${paramsStr}]`).params; // 既存のparseTagを流用
-            if (params.color) currentStyle.color = `#${params.color.substring(2)}`; // '0x' を '#' に
+        if (part.startsWith('[font')) {
+            const params = this.parseTag(part).params;
+            if (params.color) {
+                const colorString = params.color.startsWith('0x') ? `#${params.color.substring(2)}` : params.color;
+                currentStyle.color = colorString;
+            }
             if (params.size) currentStyle.fontSize = `${params.size}px`;
-            // 他のスタイル（太字など）もここに追加可能
-        } else if (match[0] === '[resetfont]') {
-            // [resetfont]でスタイルをリセット
+        } else if (part === '[resetfont]') {
             currentStyle = {};
+        } else {
+            chunks.push({ text: part, style: { ...currentStyle } });
         }
-
-        lastIndex = regex.lastIndex;
     }
-
-    // 最後のタグ以降のテキストを追加
-    if (lastIndex < rawDialogue.length) {
-        chunks.push({ text: rawDialogue.substring(lastIndex), style: { ...currentStyle } });
-    }
-
     return chunks;
 }
 
