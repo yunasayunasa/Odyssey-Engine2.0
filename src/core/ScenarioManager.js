@@ -166,17 +166,26 @@ const ifState = this.ifStack.length > 0 ? this.ifStack[this.ifStack.length - 1] 
         dialogue = trimedLine.substring(speakerName.length + 1).trim();
     }
     
+    // 履歴への追加と話者のハイライトはここで行う
     this.stateManager.addHistory(speakerName, dialogue);
     this.highlightSpeaker(speakerName);
-    const wrappedLine = this.manualWrap(dialogue);
-    
-    // スキップモードかどうかで、タイピングの有無を決定
+
+    // --- ここからが新しいリッチテキスト処理 ---
+
+    // 1. テキストをスタイルチャンクの配列にパースする
+    // ★ this. をつけて呼び出す
+    const textChunks = this.parseTextWithStyle(dialogue);
+
+    // 2. 各チャンクを自動改行処理にかける
+    // ★ this. をつけて呼び出す
+    const wrappedChunks = this.manualWrapRichText(textChunks);
+
+    // 3. MessageWindowにチャンク配列を渡す
     const useTyping = (this.mode !== 'skip');
+    // ★ 新しいメソッド setRichText を呼び出す
+    await this.messageWindow.setRichText(wrappedChunks, useTyping, speakerName);
     
-    // setTextの呼び出しは、この1回だけにする
-    await this.messageWindow.setText(wrappedLine, useTyping, speakerName);
-    
-} 
+}
 
 // ★★★ ここまで ★★★
 
@@ -307,7 +316,7 @@ else{
         return { tagName, params };
     }
     
-    manualWrap(text) {
+   /* manualWrap(text) {
         // ★★★ 1. 最初に[br]を改行コード(\n)にすべて置換する ★★★
         const textWithBr = text.replace(/\[br\]/g, '\n');
 
@@ -340,7 +349,73 @@ else{
         
         // 最後に余分な改行が残ることがあるので、削除する
         return wrappedText.trimEnd();
+    }この下がエラーの場合個のコメントアウトを外して下のメソッドを消してください*/
+
+        /**
+ * スタイル付きテキストチャンク配列に自動改行を適用する
+ * @param {Array<object>} chunks - スタイル付きテキストチャンクの配列
+ * @returns {Array<object>} - 改行が適用された新しいチャンク配列
+ */
+manualWrapRichText(chunks) {
+    const wrappedChunks = [];
+    const defaultStyle = { fontFamily: this.messageWindow.textObject.style.fontFamily, fontSize: this.messageWindow.textObject.style.fontSize };
+    const textBoxWidth = this.messageWindow.textBoxWidth;
+
+    let currentLineChunks = [];
+    let currentLineWidth = 0;
+
+    const flushLine = () => {
+        if (currentLineChunks.length > 0) {
+            // チャンクの末尾に改行を追加する代わりに、改行チャンクを挿入
+            wrappedChunks.push(...currentLineChunks, { text: '\n', style: {} });
+            currentLineChunks = [];
+            currentLineWidth = 0;
+        }
+    };
+
+    for (const chunk of chunks) {
+        const text = chunk.text.replace(/\[br\]/g, '\n'); // [br]を改行文字に
+        const style = { ...defaultStyle, ...chunk.style };
+        let currentWord = '';
+
+        for (let i = 0; i < text.length; i++) {
+            const char = text[i];
+            
+            if (char === '\n') {
+                if (currentWord) currentLineChunks.push({ text: currentWord, style: chunk.style });
+                flushLine();
+                currentWord = '';
+                continue;
+            }
+
+            const testWord = currentWord + char;
+            const metrics = this.scene.add.text(0, 0, testWord, style).setVisible(false);
+            const wordWidth = metrics.width;
+            metrics.destroy();
+
+            if (currentLineWidth + wordWidth > textBoxWidth && currentLineWidth > 0) {
+                flushLine();
+            }
+
+            currentWord += char;
+            const wordMetrics = this.scene.add.text(0,0, currentWord, style).setVisible(false);
+            currentLineWidth += wordMetrics.width - (this.scene.add.text(0,0, currentWord.slice(0, -1), style).setVisible(false).width);
+            wordMetrics.destroy();
+            this.scene.children.getByName('tempText')?.destroy();
+        }
+        
+        if (currentWord) {
+            currentLineChunks.push({ text: currentWord, style: chunk.style });
+        }
     }
+    
+    // 最後の行をフラッシュ
+    if (currentLineChunks.length > 0) {
+        wrappedChunks.push(...currentLineChunks);
+    }
+    
+    return wrappedChunks;
+}
 
     highlightSpeaker(speakerName) {
         const bright = 0xffffff;
@@ -450,6 +525,49 @@ startAutoMode() {
         }
         return state;
     }
+    
+    /**
+ * スタイルタグを含むテキストを解析し、スタイル付きチャンクの配列に変換する
+ * @param {string} rawDialogue - 生のダイアログテキスト
+ * @returns {Array<object>} - 例: [{ text: "通常文", style: {} }, { text: "赤文字", style: { color: '#ff0000' } }]
+ */
+parseTextWithStyle(rawDialogue) {
+    const chunks = [];
+    // [font ...] or [resetfont] でテキストを分割する正規表現
+    const regex = /\[(?:font\s+([^\]]+)|resetfont)\]/g;
+    let lastIndex = 0;
+    let match;
+    let currentStyle = {}; // デフォルトスタイルは空オブジェクト
+
+    while ((match = regex.exec(rawDialogue)) !== null) {
+        // タグの前のテキストを追加
+        if (match.index > lastIndex) {
+            chunks.push({ text: rawDialogue.substring(lastIndex, match.index), style: { ...currentStyle } });
+        }
+
+        // タグの処理
+        if (match[0].startsWith('[font')) {
+            // [font]タグのパラメータを解析してスタイルを更新
+            const paramsStr = match[1];
+            const params = this.parseTag(`[font ${paramsStr}]`).params; // 既存のparseTagを流用
+            if (params.color) currentStyle.color = `#${params.color.substring(2)}`; // '0x' を '#' に
+            if (params.size) currentStyle.fontSize = `${params.size}px`;
+            // 他のスタイル（太字など）もここに追加可能
+        } else if (match[0] === '[resetfont]') {
+            // [resetfont]でスタイルをリセット
+            currentStyle = {};
+        }
+
+        lastIndex = regex.lastIndex;
+    }
+
+    // 最後のタグ以降のテキストを追加
+    if (lastIndex < rawDialogue.length) {
+        chunks.push({ text: rawDialogue.substring(lastIndex), style: { ...currentStyle } });
+    }
+
+    return chunks;
+}
 
     // ★★★ スキップ時にUIを非表示にする（推奨） ★★★
     hideInterfaceForSkip() {

@@ -74,7 +74,54 @@ export default class MessageWindow extends Container {
         this.textDelay = newSpeed;
     }
 
-   // MessageWindow.js にこのコードを貼り付けてください
+  /**
+ * スタイル付きテキストチャンク配列を表示する (新バージョン)
+ * @param {Array<object>} chunks - 改行適用済みのスタイル付きチャンク配列
+ * @param {boolean} useTyping - テロップ表示を使うかどうか
+ * @param {string|null} speaker - 話者名
+ * @returns {Promise<void>}
+ */
+async setRichText(chunks, useTyping = true, speaker = null) {
+    this.reset(); // まずウィンドウをリセット
+    this.currentSpeaker = speaker;
+
+    // 複数のTextオブジェクトを管理するコンテナ
+    const textContainer = this.scene.add.container(this.textObject.x, this.textObject.y);
+    this.add(textContainer);
+
+    let currentX = 0;
+    let currentY = 0;
+    const lineHeight = parseInt(this.textObject.style.fontSize) * 1.5; // 行の高さを適当に設定
+
+    const defaultStyle = { fontFamily: this.textObject.style.fontFamily, fontSize: this.textObject.style.fontSize, fill: this.textObject.style.fill };
+
+    for (const chunk of chunks) {
+        if (chunk.text === '\n') {
+            currentX = 0;
+            currentY += lineHeight;
+            continue;
+        }
+
+        const style = { ...defaultStyle, ...chunk.style };
+        
+        // 1文字ずつTextオブジェクトを作る (タイピングのため)
+        for (const char of chunk.text) {
+            const charObj = this.scene.add.text(currentX, currentY, char, style);
+            textContainer.add(charObj);
+            
+            currentX += charObj.width;
+
+            if (useTyping && this.textDelay > 0) {
+                await new Promise(r => setTimeout(r, this.textDelay));
+            }
+        }
+    }
+
+    // isTypingフラグなどの管理は、このメソッド内で行う必要がある
+    this.isTyping = false;
+    // タイピング完了を通知 (Promiseを返すので、returnするだけ)
+    return;
+}
 
     /**
      * テキストを設定し、表示完了をPromiseで通知するメソッド (新バージョン)
