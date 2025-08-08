@@ -7,24 +7,29 @@ export function handleLiveBreathStop(manager, params) {
     if (!name) { console.warn('[live_breath_stop] nameは必須です。'); return Promise.resolve(); }
     const chara = manager.scene.characters[name];
 
-    // キャラクターが存在し、かつ .vertices プロパティを持つか確認
-    if (!chara || !chara.vertices) {
-        return Promise.resolve(); // 対象がいなければ何もしない
+    // 対象がRopeオブジェクトかを確認
+    if (!chara || !chara.points) {
+        return Promise.resolve();
     }
 
-    // キャラクターに保存しておいた呼吸Tweenを取得
+    // 呼吸Tweenを取得して停止
     const breathTween = chara.getData('liveBreathTween');
-
     if (breathTween) {
-        // Tweenを停止
         breathTween.stop();
-        // データをクリア
         chara.setData('liveBreathTween', null);
         
-        // ★★★ メッシュの頂点をすべて初期位置に戻す ★★★
-        chara.resetVertices();
+        // Ropeの形状を、生成時の元の状態に手動でリセットする
+        const { width, height } = chara.texture.getSourceImage();
+        const points = [];
+        const horizontalSegments = 2;
+        const verticalSegments = 2;
+        for (let i = 0; i <= verticalSegments; i++) {
+            for (let j = 0; j <= horizontalSegments; j++) {
+                points.push(new Phaser.Math.Vector2(j * (width / horizontalSegments), i * (height / verticalSegments)));
+            }
+        }
+        // updatePointsに新しいpoints配列を渡して形状を更新
+        chara.updatePoints(points);
     }
-
-    // このタグも即座に完了する
     return Promise.resolve();
 }
