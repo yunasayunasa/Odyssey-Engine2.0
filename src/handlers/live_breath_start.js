@@ -1,10 +1,9 @@
 // ★★★ src/handlers/live_breath_start.js をこのコードで置き換えてください ★★★
-
 export function handleLiveBreathStart(manager, params) {
     const name = params.name;
     if (!name) { console.warn('[live_breath_start] nameは必須です。'); return Promise.resolve(); }
     const chara = manager.scene.characters[name];
-    if (!chara || !chara.points) { // Ropeオブジェクトか確認
+    if (!chara || !chara.points) {
         console.warn(`[live_breath_start] キャラクター[${name}]はRopeオブジェクトではありません。`);
         return Promise.resolve();
     }
@@ -14,17 +13,18 @@ export function handleLiveBreathStart(manager, params) {
     const speed = Number(params.speed) || 3500;
     const amount = Number(params.amount) || 1.5;
 
-    // Ropeのpoints配列を取得 (2x2グリッドなので9個のVector2オブジェクト)
-    // 0--1--2
-    // 3--4--5
-    // 6--7--8
     const points = chara.points;
+    // 頂点の元のY座標を保存しておく
+    const originalTopY = points[1].y;
+    const originalCenterY = points[4].y;
+
     const topCenterPoint = points[1];
     const centerPoint = points[4];
     
     const breathTween = manager.scene.tweens.add({
         targets: [topCenterPoint, centerPoint],
-        y: `-=${amount}`, // yプロパティを直接Tweenできる
+        // ★ yプロパティを、絶対値で指定する
+        y: { from: originalTopY, to: originalTopY - amount },
         duration: speed / 2,
         ease: 'Sine.easeInOut',
         yoyo: true,
