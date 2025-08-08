@@ -19,6 +19,11 @@ import { handleFadein } from './fadein.js';
 import { handleVideo } from './video.js';
 import { handleStopVideo } from './stopvideo.js';
 
+// --- 演出系 (Puppet) ---
+import { handlePuppetMove } from './puppet_move.js';
+import { handlePuppetIdleStart } from './puppet_idle_start.js';
+import { handlePuppetIdleStop } from './puppet_idle_stop.js';
+
 // --- 音声系 ---
 import { handlePlaySe } from './playse.js';
 import { handlePlayBgm } from './playbgm.js';
@@ -72,6 +77,11 @@ export const tagHandlers = {
     'fadein': handleFadein,
     'video': handleVideo,
     'stopvideo': handleStopVideo,
+
+    //パペット系
+     'puppet_move': handlePuppetMove,
+    'puppet_idle_start': handlePuppetIdleStart,
+    'puppet_idle_stop': handlePuppetIdleStop,
 
     // 音声系
     'playse': handlePlaySe,

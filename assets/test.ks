@@ -76,6 +76,21 @@ yuna:「じゃあ、私は向こうに歩いていくね。」
 [p]
 [chara_hide name="yuna"]
 
+; 画面外から人形劇のように登場
+[chara_show name=roger  pos_x=-200]
+[puppet_move name=roger x=640 time=2000]
+
+; 喋っている間、その場で揺れ始める
+[puppet_idle_start name=roger]
+roger:「こんにちは！ こうして揺れていると、なんだか生きているみたいでしょ？」
+[p]
+; 揺れを止める
+[puppet_idle_stop name=roger]
+
+roger:「……ぴたっ。」
+[p]
+
+
 ; --- ３．条件分岐と選択肢 ---
 [chara_show name="kaito" pos="right" time=500] 
 ; カイトが消えた後なので再表示
