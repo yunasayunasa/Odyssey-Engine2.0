@@ -77,8 +77,8 @@ yuna:「じゃあ、私は向こうに歩いていくね。」
 [chara_hide name="yuna"]
 
 ; 画面外から人形劇のように登場
-[chara_show name=roger  pos=left]
-[puppet_move name=roger x=640 time=2000]
+[chara_show name=roger  pos=left time=200]
+
 
 ; 喋っている間、その場で揺れ始める
 [puppet_idle_start name=roger]
@@ -88,6 +88,7 @@ roger:「こんにちは！ こうして揺れていると、なんだか生き�
 [puppet_idle_stop name=roger]
 
 roger:「……ぴたっ。」
+[puppet_move name=roger x=-440 time=2000]
 [p]
 
 
