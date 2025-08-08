@@ -114,22 +114,17 @@ yuna:「セリフを喋っている間も、このように生命感を表現で
 「一度、呼吸を止めます。」
 [p]
 
-; 速くて浅い呼吸
-[live_breath_start name="yuna" speed=1500 amount=0.8]
-「これは、速くて浅い呼吸です。[br]少し緊張しているように見えるかもしれませんね。」
-[p]
-[live_breath_stop name="yuna"]
-[wait time=500]
-
-; ゆっくりで深い呼吸
-[live_breath_start name="yuna"speed=5000 amount=3]
-「これは、ゆっくりで深い呼吸。[br]リラックスしているか、眠そうな感じでしょうか。」
+[mesh_show name="kaito" storage="kaito_normale" time=1000]
+"キャラクターを表示しました。[br]これは内部的に頂点を持つMeshオブジェクトです。"
 [p]
 
+[mesh_breath_start name="kaito"]
+"呼吸を開始。[br]今度は、キャラクターの輪郭や足元は動かず、肩と胸の部分だけが滑らかに上下しているはずです。"[p]
+yuko:「どう？ こちらの方が、より『呼吸』っぽく見えるんじゃないかしら？」
+[p]
+[mesh_breath_stop name="kaito"]
 
-; 4. 呼吸を停止します
-[live_breath_stop name="yuna"]
-「[live_breath_stop]で、動きが完全に止まりました。」
+"呼吸を停止しました。"
 [p]
 
 
