@@ -15,12 +15,10 @@ export function handleMeshShow(manager, params) {
     const y = params.y !== undefined ? Number(params.y) : manager.scene.scale.height / 2;
     const time = Number(params.time) || 0;
 
-    // 同名キャラが既に存在していれば削除
     if (manager.scene.characters[name]) {
         manager.scene.characters[name].destroy();
     }
 
-    // テクスチャ確認
     const texture = manager.scene.textures.get(storage);
     if (!texture || texture.key === '__MISSING') {
         console.error(`[mesh_show] テクスチャ[${storage}]が見つかりません。`);
@@ -33,9 +31,9 @@ export function handleMeshShow(manager, params) {
 
     console.log(`[mesh_show] width: ${width}, height: ${height}`);
 
-    // 分割数
     const h_segments = 2;
     const v_segments = 2;
+    const total_vertices = (h_segments + 1) * (v_segments + 1);
 
     const vertices = [];
     const uvs = [];
@@ -48,8 +46,8 @@ export function handleMeshShow(manager, params) {
             const u = j / h_segments;
             const vx = (u * width) - (width / 2);
             const vy = (v * height) - (height / 2);
-            vertices.push(vx, vy, 0);        // ← 修正：z=0 を追加
-            uvs.push(u, v);
+            vertices.push(vx, vy);
+            uvs.push(u, v);           // (u, v) ペアで追加
             colors.push(0xffffff);
             alphas.push(1);
         }
@@ -66,15 +64,17 @@ export function handleMeshShow(manager, params) {
         }
     }
 
-    console.log('[mesh_show] vertices:', vertices.length / 3);
+    console.log('[mesh_show] vertices:', vertices.length / 2);
     console.log('[mesh_show] uvs:', uvs.length / 2);
+    console.log('[mesh_show] colors:', colors.length);
+    console.log('[mesh_show] alphas:', alphas.length);
     console.log('[mesh_show] faces:', faces.length / 3, 'triangles');
 
-    // Mesh作成
     const mesh = manager.scene.add.mesh(x, y, storage, null, vertices, uvs, colors, alphas, faces);
 
+    mesh.setAlpha(1);
     mesh.setTint(0xffffff);
-mesh.setDepth(1000).setAlpha(1);
+
     manager.layers.character.add(mesh);
     manager.scene.characters[name] = mesh;
 
