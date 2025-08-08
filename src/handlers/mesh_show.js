@@ -1,6 +1,8 @@
+// ★★★ src/handlers/mesh_show.js をこの最終コードで置き換えてください ★★★
+
 /**
  * [mesh_show] タグ
- * キャラクターをMeshオブジェクトとして表示する
+ * キャラクターをMeshオブジェクトとして表示する (手動グリッド生成版)
  */
 export function handleMeshShow(manager, params) {
     const name = params.name;
@@ -23,16 +25,49 @@ export function handleMeshShow(manager, params) {
     }
     const { width, height } = texture.getSourceImage();
 
-    // Meshオブジェクトを生成するための頂点・UV・面情報
-    const vertices = [ -width / 2, -height / 2, width / 2, -height / 2, -width / 2, height / 2, width / 2, height / 2 ];
-    const uvs = [ 0, 0, 1, 0, 0, 1, 1, 1 ];
-    const faces = [ 0, 2, 3, 0, 3, 1 ];
+    // --- ここからが手動でのグリッド情報生成 ---
 
+    const h_segments = 2; // 水平分割数
+    const v_segments = 2; // 垂直分割数
+
+    const vertices = [];
+    const uvs = [];
+    
+    // 頂点(vertices)とUV座標を計算
+    for (let i = 0; i <= v_segments; i++) {
+        const v = i / v_segments; // UVのV座標 (0.0 ~ 1.0)
+        for (let j = 0; j <= h_segments; j++) {
+            const u = j / h_segments; // UVのU座標 (0.0 ~ 1.0)
+            
+            // 頂点座標は画像の中心を(0,0)とする相対座標
+            vertices.push((u * width) - (width / 2), (v * height) - (height / 2));
+            // UV座標
+            uvs.push(u, v);
+        }
+    }
+
+    // 面(faces)情報を計算
+    // 格子の一つ一つを2つの三角形で表現する
+    const faces = [];
+    for (let i = 0; i < v_segments; i++) {
+        for (let j = 0; j < h_segments; j++) {
+            const p1 = i * (h_segments + 1) + j;       // 左上
+            const p2 = i * (h_segments + 1) + (j + 1); // 右上
+            const p3 = (i + 1) * (h_segments + 1) + j; // 左下
+            const p4 = (i + 1) * (h_segments + 1) + (j + 1); // 右下
+            
+            faces.push(p1, p3, p4); // 1つ目の三角形
+            faces.push(p1, p4, p2); // 2つ目の三角形
+        }
+    }
+
+    // --- グリッド情報生成ここまで ---
+    
+    // 生成した情報を使ってMeshオブジェクトを作成
     const chara = manager.scene.add.mesh(x, y, storage, null, vertices, uvs, null, false, faces);
     
-    // 呼吸モーションのために2x2のグリッドに分割
-    chara.setGrid(2, 2); 
-    
+    // ★ setGridは不要なので削除
+
     manager.layers.character.add(chara);
     chara.setAlpha(0);
     manager.scene.characters[name] = chara;
