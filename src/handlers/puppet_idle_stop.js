@@ -1,3 +1,4 @@
+// ★★★ src/handlers/puppet_idle_stop.js をこのコードで置き換えてください ★★★
 /**
  * [puppet_idle_stop] タグ
  * キャラクターのその場での揺れを停止する
@@ -8,25 +9,28 @@ export function handlePuppetIdleStop(manager, params) {
     const chara = manager.scene.characters[name];
     if (!chara) { console.warn(`[puppet_idle_stop] キャラクター[${name}]が見つかりません。`); return Promise.resolve(); }
 
-    const idleTween = chara.getData('puppetIdleTween');
-    if (idleTween) {
-        idleTween.stop();
+    const wasBottomPivot = (chara.originY === 1.0);
+    const originalY = wasBottomPivot ? chara.y - (chara.height / 2) : chara.y;
+
+    // 角度のTweenを停止
+    const angleTween = chara.getData('puppetIdleTween');
+    if (angleTween) {
+        angleTween.stop();
         chara.setData('puppetIdleTween', null);
     }
-
-     // ★★★ ここから修正 ★★★
-    // 原点を中央に戻す前に、現在のY座標を保持
-    const currentY = chara.y;
-    const wasBottomPivot = (chara.originY === 1.0); // 足元軸だったか？
-
-    // 姿勢をまっすぐに戻し、原点も中央に戻す
-    chara.angle = 0;
-    chara.setOrigin(0.5, 0.5);
-
-    // ★ もし足元軸だったなら、座標を補正して見た目の位置を維持
-    if (wasBottomPivot) {
-        chara.y = currentY - (chara.height / 2);
+    
+    // ★ Y座標のTweenを停止
+    const yTween = chara.getData('puppetIdleYTween');
+    if (yTween) {
+        yTween.stop();
+        chara.setData('puppetIdleYTween', null);
     }
-    // ★★★ ここまで修正 ★★★
+
+    // 姿勢と原点をリセット
+    chara.setOrigin(0.5, 0.5);
+    chara.setAngle(0);
+    // ★ Y座標も元の位置に戻す
+    chara.y = originalY;
+
     return Promise.resolve();
 }

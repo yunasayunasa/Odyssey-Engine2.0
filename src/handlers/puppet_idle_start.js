@@ -1,6 +1,8 @@
+// ★★★ src/handlers/puppet_idle_start.js をこのコードで置き換えてください ★★★
+
 /**
  * [puppet_idle_start] タグ
- * キャラクターをその場でゆらゆら揺らし始める
+ * キャラクターをその場で生命感を持ってゆらゆら揺らし始める (デフォルト値強化版)
  */
 export function handlePuppetIdleStart(manager, params) {
     const name = params.name;
@@ -11,37 +13,72 @@ export function handlePuppetIdleStart(manager, params) {
     if (chara.getData('puppetIdleTween')) {
         chara.getData('puppetIdleTween').stop();
     }
+    if (chara.getData('puppetIdleYTween')) {
+        chara.getData('puppetIdleYTween').stop();
+    }
 
-    const swayAmount = Number(params.amount) || 2;
-    const swaySpeed = Number(params.speed) || 1000;
+    // --- ここからが「いい感じ」のデフォルト値を設定する部分 ---
+    
+    // パラメータが指定されていなければ、デフォルト値を使用する
+    // amount: 左右の揺れの角度(度)
+    const swayAmount = params.amount !== undefined ? Number(params.amount) : 2;
+
+    // speed: 揺れの基本速度(ミリ秒)。数値が小さいほど速い
+    const swaySpeed = params.speed !== undefined ? Number(params.speed) : 1200;
+
+    // y_amount: 上下動の幅(ピクセル数)
+    const yAmount = params.y_amount !== undefined ? Number(params.y_amount) : 3;
+
+    // randomness: 揺れ周期のランダムなズレ幅(ミリ秒)
+    const randomness = params.randomness !== undefined ? Number(params.randomness) : 150;
+
+    // pivot: 回転軸。'bottom'か'center'
     const pivot = params.pivot || 'bottom';
 
-    // ★★★ ここから修正 ★★★
-    if (pivot === 'bottom') {
-        // 原点を足元に変更する前に、現在のY座標を保持
-        const originalY = chara.y;
-        // 原点を足元に設定
-        chara.setOrigin(0.5, 1.0);
-        
-        // ★ 座標のズレを補正 ★
-        // 原点を中央から足元に変えると、画像の高さの半分だけ上にズレるので、
-        // その分だけY座標を足して、見た目の位置を元に戻す。
-        chara.y = originalY + (chara.height / 2);
+    // --- ここまでがデフォルト値の設定 ---
 
+    // 回転軸と座標の補正
+    let startY = chara.y;
+    if (pivot === 'bottom') {
+        if (chara.originY !== 1.0) startY = chara.y + (chara.height / 2);
+        chara.setOrigin(0.5, 1.0);
     } else {
+        if (chara.originY !== 0.5) startY = chara.y - (chara.height / 2);
         chara.setOrigin(0.5, 0.5);
     }
-    // ★★★ ここまで修正 ★★★
+    chara.y = startY;
 
-    const idleTween = manager.scene.tweens.add({
+    // Tween A: 左右の揺れ (角度)
+    const angleTween = manager.scene.tweens.add({
         targets: chara,
         angle: { from: -swayAmount, to: swayAmount },
         duration: swaySpeed,
         ease: 'Sine.easeInOut',
         yoyo: true,
-        repeat: -1
+        repeat: -1,
+        onRepeat: (tween) => {
+            const newDuration = swaySpeed + Phaser.Math.Between(-randomness, randomness);
+            tween.updateTo('duration', newDuration, true);
+        }
     });
 
-    chara.setData('puppetIdleTween', idleTween);
+    // Tween B: 上下の揺れ (Y座標)
+    const yTween = manager.scene.tweens.add({
+        targets: chara,
+        y: startY + yAmount,
+        duration: swaySpeed * 1.5, // 角度の揺れより少し遅い周期
+        ease: 'Sine.easeInOut',
+        yoyo: true,
+        repeat: -1,
+        onRepeat: (tween) => {
+            const newDuration = (swaySpeed * 1.5) + Phaser.Math.Between(-randomness, randomness);
+            tween.updateTo('duration', newDuration, true);
+        }
+    });
+
+    // 作成したTweenをキャラクターオブジェクトに保存
+    chara.setData('puppetIdleTween', angleTween);
+    chara.setData('puppetIdleYTween', yTween);
+
     return Promise.resolve();
 }
