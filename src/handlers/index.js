@@ -30,6 +30,12 @@ import { handleLiveBreathStart } from './live_breath_start.js';
 import { handleLiveBreathStop } from './live_breath_stop.js';
 import { handleLiveHide } from './live_hide.js';
 
+// --- 演出系 (Mesh) ---
+import { handleMeshShow } from './mesh_show.js';
+import { handleMeshBreathStart } from './mesh_breath_start.js';
+import { handleMeshBreathStop } from './mesh_breath_stop.js';
+import { handleMeshHide } from './mesh_hide.js';
+
 // --- 音声系 ---
 import { handlePlaySe } from './playse.js';
 import { handlePlayBgm } from './playbgm.js';
@@ -94,6 +100,12 @@ export const tagHandlers = {
     'live_breath_start': handleLiveBreathStart,
     'live_breath_stop': handleLiveBreathStop,
     'live_hide': handleLiveHide,
+
+    //mesh系
+    'mesh_show': handleMeshShow,
+    'mesh_breath_start': handleMeshBreathStart,
+    'mesh_breath_stop': handleMeshBreathStop,
+    'mesh_hide': handleMeshHide,
     
 
     // 音声系
