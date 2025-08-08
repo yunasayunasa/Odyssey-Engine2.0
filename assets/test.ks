@@ -77,7 +77,7 @@ yuna:「じゃあ、私は向こうに歩いていくね。」
 [chara_hide name="yuna"]
 
 ; 画面外から人形劇のように登場
-[chara_show name=roger  pos=left time=200]
+[chara_show name=roger  pos="left" time=200]
 
 
 ; 喋っている間、その場で揺れ始める
