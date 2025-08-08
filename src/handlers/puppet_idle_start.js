@@ -27,7 +27,7 @@ export function handlePuppetIdleStart(manager, params) {
     const swaySpeed = params.speed !== undefined ? Number(params.speed) : 1200;
 
     // y_amount: 上下動の幅(ピクセル数)
-    const yAmount = params.y_amount !== undefined ? Number(params.y_amount) : 3;
+    const yAmount = params.y_amount !== undefined ? Number(params.y_amount) : 60;
 
     // randomness: 揺れ周期のランダムなズレ幅(ミリ秒)
     const randomness = params.randomness !== undefined ? Number(params.randomness) : 150;
