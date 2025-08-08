@@ -95,7 +95,7 @@ roger:「……ぴたっ。」
 
 ; 1. live_showでキャラクターを表示します
 ;    Quadオブジェクトとして生成され、メッシュが有効になります
-[live_show name="yuna" storage="yuna_normal" pos="left" time=1000]
+[chara_show name="yuna" storage="yuna_normal" pos="left" time=1000]
 
 yuna:「[live_show]で表示しました。[br]まだ呼吸はしていません。」
 [p]
