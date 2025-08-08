@@ -1,6 +1,8 @@
+// ★★★ src/handlers/puppet_move.js をこのコードで完全に置き換えてください ★★★
+
 /**
  * [puppet_move] タグ
- * キャラクターを人形劇のように揺らしながら移動させる
+ * キャラクターを人形劇のように揺らしながら移動させる (座標補正 最終版)
  */
 export function handlePuppetMove(manager, params) {
     const name = params.name;
@@ -10,40 +12,55 @@ export function handlePuppetMove(manager, params) {
 
     const noWait = params.nowait === 'true';
 
-    // nowait=falseの場合、Promiseを返して完了を待つ
     return new Promise(resolve => {
-        // 1. パラメータのデフォルト値を設定
+        // 1. パラメータの取得
         const time = Number(params.time) || 2000;
-        const targetX = params.x !== undefined ? Number(params.x) : chara.x;
-        const targetY = params.y !== undefined ? Number(params.y) : chara.y;
+        // ★ 目標座標は、原点が中央(0.5, 0.5)であることを前提とした値
+        const finalTargetX = params.x !== undefined ? Number(params.x) : chara.x;
+        const finalTargetY = params.y !== undefined ? Number(params.y) : chara.y;
         
         const swayAmount = Number(params.sway_amount) || 10;
         const swaySpeed = Number(params.sway_speed) || 250;
         const angle = Number(params.angle) || 0;
         const pivot = params.pivot || 'bottom';
 
-        // 2. 回転軸(pivot)を設定
-         // ★★★ ここから修正 ★★★
-        if (pivot === 'bottom') {
-            const originalY = chara.y;
-            chara.setOrigin(0.5, 1.0);
-            // 補正を適用
-            chara.y = originalY + (chara.height / 2);
-        }
-        // ... (以降のpivotがtopやcenterの場合も同様の考え方) ...
-        // ★★★ ここまで修正 ★★★
+        // 2. pivotに応じて原点と座標を補正
+        let startY = chara.y;
+        let targetY = finalTargetY;
 
-        // 3. 複数のTweenを同時に実行
-        // Tween A: 全体の移動
+        if (pivot === 'bottom') {
+            // ★ 原点を変更する前に、現在の見た目のY座標を補正
+            if (chara.originY !== 1.0) { // まだ足元軸になっていない場合のみ
+                startY = chara.y + (chara.height / 2);
+            }
+            // ★ 目標のY座標も、足元軸に合わせるために補正
+            targetY = finalTargetY + (chara.height / 2);
+            
+            chara.setOrigin(0.5, 1.0);
+
+        } else {
+            // pivotがcenterやtopの場合は、もし足元軸になっていたら中央に戻す
+            if (chara.originY !== 0.5) {
+                startY = chara.y - (chara.height / 2);
+            }
+            targetY = finalTargetY;
+            chara.setOrigin(0.5, 0.5);
+        }
+        
+        // ★ 補正済みの開始Y座標をキャラクターに即時適用
+        chara.y = startY;
+
+        // 3. Tweenの定義
+        // Tween A: 全体の移動 (補正済みの座標へ)
         manager.scene.tweens.add({
             targets: chara,
-            x: targetX,
-            y: targetY,
+            x: finalTargetX, // X座標の補正は不要
+            y: targetY,      // ★ 補正済みの目標Y座標へ移動
             duration: time,
             ease: 'Sine.easeInOut'
         });
 
-        // Tween B: 左右の揺れ
+        // Tween B: 左右の揺れ (変更なし)
         manager.scene.tweens.add({
             targets: chara,
             angle: { from: angle - swayAmount, to: angle + swayAmount },
@@ -53,18 +70,20 @@ export function handlePuppetMove(manager, params) {
             repeat: -1,
         });
         
-        // 4. 移動完了時に揺れを止める
+        // 4. 移動完了時にすべてをリセット
         manager.scene.time.delayedCall(time, () => {
             manager.scene.tweens.killTweensOf(chara);
-            chara.setPosition(targetX, targetY);
-            chara.setAngle(0);
-            chara.setOrigin(0.5, 0.5);
             
-            // nowaitに関わらず、アニメーション完了時に解決する
-            resolve();
+            // ★ 最終的な状態を、原点(0.5, 0.5)基準の値で確定させる
+            chara.setOrigin(0.5, 0.5);
+            chara.setPosition(finalTargetX, finalTargetY);
+            chara.setAngle(0);
+            
+            if (!noWait) {
+                resolve();
+            }
         });
 
-        // nowait=trueの場合、即座に解決
         if (noWait) {
             resolve();
         }
