@@ -114,7 +114,7 @@ yuna:「セリフを喋っている間も、このように生命感を表現で
 「一度、呼吸を止めます。」
 [p]
 
-[mesh_show name="kaito" storage="kaito_normale" time=1000]
+[mesh_show name="kaito" storage="kaito_normal" time=1000]
 "キャラクターを表示しました。[br]これは内部的に頂点を持つMeshオブジェクトです。"
 [p]
 
