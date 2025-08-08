@@ -73,9 +73,8 @@ export function handleMeshShow(manager, params) {
     // Mesh作成
     const mesh = manager.scene.add.mesh(x, y, storage, null, vertices, uvs, colors, alphas, faces);
 
-    mesh.setAlpha(1);
     mesh.setTint(0xffffff);
-
+mesh.setDepth(1000).setAlpha(1);
     manager.layers.character.add(mesh);
     manager.scene.characters[name] = mesh;
 
