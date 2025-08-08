@@ -18,17 +18,24 @@ export function handleLiveShow(manager, params) {
         manager.scene.characters[name].destroy();
     }
 
-    // ★ Imageの代わりにQuadを使う
-    const chara = manager.scene.add.quad(x, y, storage);
-    manager.layers.character.add(chara);
+       // 1. new Phaser.GameObjects.Quad(...) でインスタンスを生成
+    const chara = new Phaser.GameObjects.Quad(manager.scene, x, y, storage);
 
-    // ★ 頂点を動かせるようにメッシュを有効化 (2x2グリッド = 9頂点)
+    // 2. manager.scene.add.existing(...) でシーンに手動で追加
+    manager.scene.add.existing(chara);
+
+    // 3. manager.layers.character (コンテナ) にも追加
+    manager.layers.character.add(chara);
+    
+    // ★★★ ここまでが修正箇所 ★★★
+
+
+    // 頂点を動かせるようにメッシュを有効化
     chara.setMesh(2, 2); 
     chara.setAlpha(0);
 
     // 管理リストに登録
     manager.scene.characters[name] = chara;
-
     // フェードインアニメーション
     return new Promise(resolve => {
         if (time > 0) {
