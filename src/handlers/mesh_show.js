@@ -70,7 +70,18 @@ export function handleMeshShow(manager, params) {
     console.log('[mesh_show] alphas:', alphas.length);
     console.log('[mesh_show] faces:', faces.length / 3, 'triangles');
 
-    const mesh = manager.scene.add.mesh(x, y, storage, null, vertices, uvs, colors, alphas, faces);
+  const mesh = manager.scene.add.mesh(
+    x, y,
+    storage,        // texture
+    null,           // frame
+    vertices,       // vertices
+    uvs,            // uvs
+    faces,          // indicies (faces)
+    false,          // containsZ (Z座標は使わないのでfalse)
+    null,           // normals (法線は使わないのでnull)
+    colors,         // colors
+    alphas          // alphas
+);
 
     mesh.setAlpha(1);
     mesh.setTint(0xffffff);
