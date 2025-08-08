@@ -24,6 +24,12 @@ import { handlePuppetMove } from './puppet_move.js';
 import { handlePuppetIdleStart } from './puppet_idle_start.js';
 import { handlePuppetIdleStop } from './puppet_idle_stop.js';
 
+// --- 演出系 (Live2D風) ---
+import { handleLiveShow } from './live_show.js';
+import { handleLiveBreathStart } from './live_breath_start.js';
+import { handleLiveBreathStop } from './live_breath_stop.js';
+import { handleLiveHide } from './live_hide.js';
+
 // --- 音声系 ---
 import { handlePlaySe } from './playse.js';
 import { handlePlayBgm } from './playbgm.js';
@@ -82,6 +88,13 @@ export const tagHandlers = {
      'puppet_move': handlePuppetMove,
     'puppet_idle_start': handlePuppetIdleStart,
     'puppet_idle_stop': handlePuppetIdleStop,
+
+    //live2D風系
+    'live_show': handleLiveShow,
+    'live_breath_start': handleLiveBreathStart,
+    'live_breath_stop': handleLiveBreathStop,
+    'live_hide': handleLiveHide,
+    
 
     // 音声系
     'playse': handlePlaySe,

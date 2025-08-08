@@ -91,6 +91,54 @@ roger:「……ぴたっ。」
 [puppet_move name=roger x=-440 time=2000]
 [p]
 
+; --- Live2D風モーションのテスト開始 ---
+
+; 1. live_showでキャラクターを表示します
+;    Quadオブジェクトとして生成され、メッシュが有効になります
+[live_show name="yuna" pos="left" time=1000]
+
+yuna:「[live_show]で表示しました。[br]まだ呼吸はしていません。」
+[p]
+
+
+; 2. 呼吸を開始します
+[live_breath_start name="yuna"]
+yuna:「[live_breath_start]を実行しました。[br]肩や胸のあたりが、ゆっくりと上下に動き始めたはずです。」
+[p]
+yuna:「セリフを喋っている間も、このように生命感を表現できます。」
+[p]
+
+
+; 3. 呼吸のパラメータを変更してみます
+[live_breath_stop name="yuna"]
+「一度、呼吸を止めます。」
+[p]
+
+; 速くて浅い呼吸
+[live_breath_start name="yuna" speed=1500 amount=0.8]
+「これは、速くて浅い呼吸です。[br]少し緊張しているように見えるかもしれませんね。」
+[p]
+[live_breath_stop name="yuna"]
+[wait time=500]
+
+; ゆっくりで深い呼吸
+[live_breath_start name="yuna"speed=5000 amount=3]
+「これは、ゆっくりで深い呼吸。[br]リラックスしているか、眠そうな感じでしょうか。」
+[p]
+
+
+; 4. 呼吸を停止します
+[live_breath_stop name="yuna"]
+「[live_breath_stop]で、動きが完全に止まりました。」
+[p]
+
+
+; 5. 最後にlive_hideで消去します
+[live_hide name="yuna" time=1000]
+[wait time=500]
+
+「テストは以上です。」
+[p]
 
 ; --- ３．条件分岐と選択肢 ---
 [chara_show name="kaito" pos="right" time=500] 
