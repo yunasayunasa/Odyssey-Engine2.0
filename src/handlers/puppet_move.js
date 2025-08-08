@@ -23,9 +23,15 @@ export function handlePuppetMove(manager, params) {
         const pivot = params.pivot || 'bottom';
 
         // 2. 回転軸(pivot)を設定
-        if (pivot === 'bottom') chara.setOrigin(0.5, 1.0);
-        else if (pivot === 'top') chara.setOrigin(0.5, 0);
-        else chara.setOrigin(0.5, 0.5);
+         // ★★★ ここから修正 ★★★
+        if (pivot === 'bottom') {
+            const originalY = chara.y;
+            chara.setOrigin(0.5, 1.0);
+            // 補正を適用
+            chara.y = originalY + (chara.height / 2);
+        }
+        // ... (以降のpivotがtopやcenterの場合も同様の考え方) ...
+        // ★★★ ここまで修正 ★★★
 
         // 3. 複数のTweenを同時に実行
         // Tween A: 全体の移動
