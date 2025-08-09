@@ -114,26 +114,6 @@ yuna:「セリフを喋っている間も、このように生命感を表現で
 「一度、呼吸を止めます。」
 [p]
 
-[mesh_show name="kaito" storage="kaito_normal" time=1000]
-"キャラクターを表示しました。[br]これは内部的に頂点を持つMeshオブジェクトです。"
-[p]
-
-[mesh_breath_start name="kaito"]
-"呼吸を開始。[br]今度は、キャラクターの輪郭や足元は動かず、肩と胸の部分だけが滑らかに上下しているはずです。"[p]
-yuko:「どう？ こちらの方が、より『呼吸』っぽく見えるんじゃないかしら？」
-[p]
-[mesh_breath_stop name="kaito"]
-
-"呼吸を停止しました。"
-[p]
-
-
-; 5. 最後にlive_hideで消去します
-[live_hide name="yuna" time=1000]
-[wait time=500]
-
-「テストは以上です。」
-[p]
 
 ; --- ３．条件分岐と選択肢 ---
 [chara_show name="kaito" pos="right" time=500] 
