@@ -88,6 +88,8 @@ roger:「こんにちは！ こうして揺れていると、なんだか生き�
 [puppet_idle_stop name=roger]
 
 roger:「……ぴたっ。」
+[p]
+[flip name="roger" ]
 [puppet_move name=roger x=-440 time=2000]
 [p]
 
