@@ -342,7 +342,7 @@ else{
         return wrappedText.trimEnd();
     }
 
-   /* highlightSpeaker(speakerName) {
+   highlightSpeaker(speakerName) {
         const bright = 0xffffff;
         const dark = 0x888888;
         for (const name in this.scene.characters) {
@@ -355,26 +355,9 @@ else{
                 }
             }
         }
-    }*/
-
-        // ★★★ ScenarioManager.js -> highlightSpeaker をこの最終コードで置き換えてください ★★★
-
-highlightSpeaker(speakerName) {
-    const brightAlpha = 1.0;  // 明るい（通常）
-    const darkAlpha = 0.65; // 少し暗くする
-
-    for (const name in this.scene.characters) {
-        const chara = this.scene.characters[name];
-        if (chara && chara.active) {
-            // ★ setAlphaは全てのゲームオブジェクトが持っている最も基本的なメソッド
-            if (speakerName === null || speakerName === name) {
-                chara.setAlpha(brightAlpha);
-            } else {
-                chara.setAlpha(darkAlpha);
-            }
-        }
     }
-}
+
+
 
     // ★★★ モードを切り替えるためのメソッド ★★★
        setMode(newMode) {
